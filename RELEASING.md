@@ -4,9 +4,9 @@
 container assets, and the built viewer. The development viewer and vendored
 session UI are private workspace packages; they are not separately published.
 
-Both GitHub repositories remain private. npm receives only the SDK archive's
+OpenEval's GitHub repository is public. npm receives only the SDK archive's
 explicit file allowlist. This repository starts from an SDK-only root commit;
-private benchmark content and its history belong to the separate client repo.
+private benchmark content and its history belong to the separate private client repo.
 
 ## Verify and publish
 
@@ -31,8 +31,7 @@ After the first publication, configure the npm package's trusted publisher:
 - Permit direct `npm publish`.
 
 The workflow uses GitHub-hosted runners and OIDC rather than an npm token.
-Provenance is disabled while the source repository is private; npm does not
-support provenance from private repositories. See
+Provenance is enabled for future releases from this public repository. See
 [npm trusted publishing](https://docs.npmjs.com/trusted-publishers).
 
 ## Upstream session UI

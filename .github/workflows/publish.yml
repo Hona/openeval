@@ -34,4 +34,4 @@ jobs:
             npm publish ./artifacts/*.tgz --access public
           fi
         env:
-          NPM_CONFIG_PROVENANCE: "false"
+          NPM_CONFIG_PROVENANCE: "true"
