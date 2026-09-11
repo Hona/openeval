@@ -1,0 +1,19 @@
+#!/bin/sh
+set -eu
+
+# Allow replies to the local control connection and normal DNS/public egress.
+# A development session has no access to host/LAN services or metadata endpoints.
+iptables -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+iptables -A OUTPUT -p udp --dport 53 -j ACCEPT
+iptables -A OUTPUT -p tcp --dport 53 -j ACCEPT
+for network in 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 169.254.0.0/16 100.64.0.0/10; do
+  iptables -A OUTPUT -d "$network" -j REJECT
+done
+ip6tables -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+ip6tables -A OUTPUT -p udp --dport 53 -j ACCEPT
+ip6tables -A OUTPUT -p tcp --dport 53 -j ACCEPT
+for network in fc00::/7 fe80::/10; do
+  ip6tables -A OUTPUT -d "$network" -j REJECT
+done
+
+exec setpriv --reuid=dev --regid=dev --init-groups --bounding-set=-all --inh-caps=-all --ambient-caps=-all "$@"

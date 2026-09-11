@@ -1,0 +1,10 @@
+import type { SessionMessageAssistant, SessionMessageAssistantTool } from "@opencode/client/promise";
+export declare function currentToolInput(tool: SessionMessageAssistantTool): Record<string, unknown>;
+export declare function currentToolMetadata(tool: SessionMessageAssistantTool): Record<string, unknown>;
+export declare function currentToolOutput(tool: SessionMessageAssistantTool): string;
+export declare function currentToolError(tool: SessionMessageAssistantTool): string;
+export declare function currentToolFailed(tool: SessionMessageAssistantTool): boolean;
+export declare function shellResultFailed(metadata: Record<string, unknown>): boolean;
+export declare function executeToolFailed(metadata: Record<string, unknown>): boolean;
+export declare function currentToolHasLoadedFiles(tool: SessionMessageAssistantTool): boolean;
+export declare function currentContentDefaultOpen(content: SessionMessageAssistant["content"][number], shellExpanded: boolean, editExpanded: boolean): boolean;

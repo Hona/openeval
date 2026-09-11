@@ -1,0 +1,37 @@
+name: Publish
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - name: Check release version
+        run: bun -e 'const p=await Bun.file("packages/openeval/package.json").json();if(process.env.GITHUB_REF_NAME!==`v${p.version}`)throw new Error("Tag and package version differ");'
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      - run: bun test
+      - run: bun run release:pack
+      - run: bun run release:verify
+      - name: Publish a new version
+        run: |
+          PACKAGE=$(bun -e 'const p=await Bun.file("packages/openeval/package.json").json();console.log(`${p.name}@${p.version}`)')
+          if npm view "$PACKAGE" version > /dev/null 2>&1; then
+            echo "$PACKAGE is already published"
+          else
+            npm publish ./artifacts/*.tgz --access public
+          fi
+        env:
+          NPM_CONFIG_PROVENANCE: "false"

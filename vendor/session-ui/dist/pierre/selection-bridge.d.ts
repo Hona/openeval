@@ -1,0 +1,21 @@
+import { type SelectedLineRange } from "@pierre/diffs";
+type SelectionKey = "ui.sessionReview.selection.line" | "ui.sessionReview.selection.lines";
+type SelectionVars = Record<string, string | number>;
+type PointerMode = "none" | "text" | "numbers";
+type Side = SelectedLineRange["side"];
+type LineSpan = Pick<SelectedLineRange, "start" | "end">;
+export declare function formatSelectedLineLabel(range: LineSpan, t: (key: SelectionKey, params: SelectionVars) => string): string;
+export declare function previewSelectedLines(source: string, range: LineSpan): string;
+export declare function cloneSelectedLineRange(range: SelectedLineRange): SelectedLineRange;
+export declare function lineInSelectedRange(range: SelectedLineRange | null | undefined, line: number, side?: Side): boolean;
+export declare function isSingleLineSelection(range: SelectedLineRange | null): boolean;
+export declare function toRange(source: Range | StaticRange): Range;
+export declare function restoreShadowTextSelection(root: ShadowRoot | undefined, range: Range | undefined): void;
+export declare function createLineNumberSelectionBridge(): {
+    begin(numberColumn: boolean, next: number | undefined): void;
+    track(buttons: number, next: number | undefined): boolean;
+    finish(): PointerMode;
+    consume(range: SelectedLineRange | null): boolean;
+    reset(): void;
+};
+export {};

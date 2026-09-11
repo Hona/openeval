@@ -1,0 +1,4 @@
+[test]
+# Keep retained candidate programs and task fixtures out of workspace unit tests.
+# https://bun.com/docs/runtime/bunfig#test-pathignorepatterns
+pathIgnorePatterns = ["**/results/**", "**/fixtures/**", "**/workspace/**"]

@@ -1,0 +1,201 @@
+{
+  "name": "@opencode/session-ui",
+  "version": "0.0.0-local.22111e4b3bf4",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/anomalyco/opencode.git",
+    "directory": "packages/session-ui"
+  },
+  "files": [
+    "src",
+    "dist",
+    "LICENSE",
+    "upstream.json",
+    "!src/**/*.test.*",
+    "!src/**/*.stories.*"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "exports": {
+    "./actions": {
+      "types": "./dist/actions.d.ts",
+      "import": "./src/actions.ts"
+    },
+    "./document": {
+      "types": "./dist/document.d.ts",
+      "import": "./src/document.ts"
+    },
+    "./message": {
+      "types": "./dist/message/current-message.d.ts",
+      "import": "./src/message/current-message.tsx"
+    },
+    "./timeline/projection": {
+      "types": "./dist/timeline/projection.d.ts",
+      "import": "./src/timeline/projection.ts"
+    },
+    "./timeline/detail": {
+      "types": "./dist/timeline/detail.d.ts",
+      "import": "./src/timeline/detail.ts"
+    },
+    "./timeline/row": {
+      "types": "./dist/timeline/session-timeline-row.d.ts",
+      "import": "./src/timeline/session-timeline-row.tsx"
+    },
+    "./timeline": {
+      "types": "./dist/timeline/session-timeline.d.ts",
+      "import": "./src/timeline/session-timeline.tsx"
+    },
+    "./basic-tool": {
+      "types": "./dist/components/basic-tool.d.ts",
+      "import": "./src/components/basic-tool.tsx"
+    },
+    "./dock-prompt": {
+      "types": "./dist/components/dock-prompt.d.ts",
+      "import": "./src/components/dock-prompt.tsx"
+    },
+    "./file": {
+      "types": "./dist/components/file.d.ts",
+      "import": "./src/components/file.tsx"
+    },
+    "./file-media": {
+      "types": "./dist/components/file-media.d.ts",
+      "import": "./src/components/file-media.tsx"
+    },
+    "./file-search": {
+      "types": "./dist/components/file-search.d.ts",
+      "import": "./src/components/file-search.tsx"
+    },
+    "./file-ssr": {
+      "types": "./dist/components/file-ssr.d.ts",
+      "import": "./src/components/file-ssr.tsx"
+    },
+    "./line-comment": {
+      "types": "./dist/components/line-comment.d.ts",
+      "import": "./src/components/line-comment.tsx"
+    },
+    "./line-comment-annotations": {
+      "types": "./dist/components/line-comment-annotations.d.ts",
+      "import": "./src/components/line-comment-annotations.tsx"
+    },
+    "./markdown": {
+      "types": "./dist/components/markdown.d.ts",
+      "import": "./src/components/markdown.tsx"
+    },
+    "./message-part": {
+      "types": "./dist/components/message-part.d.ts",
+      "import": "./src/components/message-part.tsx"
+    },
+    "./message-nav": {
+      "types": "./dist/components/message-nav.d.ts",
+      "import": "./src/components/message-nav.tsx"
+    },
+    "./session-review": {
+      "types": "./dist/components/session-review.d.ts",
+      "import": "./src/components/session-review.tsx"
+    },
+    "./session-retry": {
+      "types": "./dist/components/session-retry.d.ts",
+      "import": "./src/components/session-retry.tsx"
+    },
+    "./tool-count-label": {
+      "types": "./dist/components/tool-count-label.d.ts",
+      "import": "./src/components/tool-count-label.tsx"
+    },
+    "./tool-count-summary": {
+      "types": "./dist/components/tool-count-summary.d.ts",
+      "import": "./src/components/tool-count-summary.tsx"
+    },
+    "./tool-error-card": {
+      "types": "./dist/components/tool-error-card.d.ts",
+      "import": "./src/components/tool-error-card.tsx"
+    },
+    "./tool-status-title": {
+      "types": "./dist/components/tool-status-title.d.ts",
+      "import": "./src/components/tool-status-title.tsx"
+    },
+    "./session-diff": {
+      "types": "./dist/components/session-diff.d.ts",
+      "import": "./src/components/session-diff.ts"
+    },
+    "./message-file": {
+      "types": "./dist/components/message-file.d.ts",
+      "import": "./src/components/message-file.ts"
+    },
+    "./attachment-card": {
+      "types": "./dist/message/attachment-card.d.ts",
+      "import": "./src/message/attachment-card.tsx"
+    },
+    "./comment-card": {
+      "types": "./dist/message/comment-card.d.ts",
+      "import": "./src/message/comment-card.tsx"
+    },
+    "./markdown-stream": {
+      "types": "./dist/components/markdown-stream.d.ts",
+      "import": "./src/components/markdown-stream.ts"
+    },
+    "./markdown-cache": {
+      "types": "./dist/components/markdown-cache.d.ts",
+      "import": "./src/components/markdown-cache.tsx"
+    },
+    "./line-comment-styles": {
+      "types": "./dist/components/line-comment-styles.d.ts",
+      "import": "./src/components/line-comment-styles.ts"
+    },
+    "./pierre": {
+      "types": "./dist/pierre/index.d.ts",
+      "import": "./src/pierre/index.ts"
+    },
+    "./pierre/*": {
+      "types": "./dist/pierre/*.d.ts",
+      "import": "./src/pierre/*.ts"
+    },
+    "./context": {
+      "types": "./dist/context/index.d.ts",
+      "import": "./src/context/index.ts"
+    },
+    "./context/*": {
+      "types": "./dist/context/*.d.ts",
+      "import": "./src/context/*.tsx"
+    },
+    "./styles": "./src/styles/index.css",
+    "./storybook": {
+      "types": "./dist/storybook/index.d.ts",
+      "import": "./src/storybook/index.ts"
+    },
+    "./v2/*.css": "./src/v2/components/*.css",
+    "./v2/*": {
+      "types": "./dist/v2/components/*.d.ts",
+      "import": "./src/v2/components/*.tsx"
+    }
+  },
+  "dependencies": {
+    "@kobalte/core": "0.13.13",
+    "@opencode/client": "0.0.0-beta-19296",
+    "@opencode/ui": "0.0.0-beta-19296",
+    "@opencode/util": "0.0.0-beta-19296",
+    "@pierre/diffs": "1.2.10",
+    "@shikijs/stream": "4.4.3",
+    "@solid-primitives/event-listener": "2.4.6",
+    "@solid-primitives/media": "2.3.6",
+    "@solid-primitives/resize-observer": "2.2.0",
+    "@solidjs/meta": "0.29.4",
+    "diff": "8.0.4",
+    "effect": "4.0.0-rc.112",
+    "dompurify": "3.4.14",
+    "marked": "18.0.11",
+    "mermaid": "11.17.2",
+    "motion": "12.34.5",
+    "remend": "1.3.1",
+    "shiki": "4.4.3",
+    "solid-js": "1.9.15",
+    "strip-ansi": "7.1.2"
+  },
+  "peerDependencies": {
+    "solid-js": "1.9.15",
+    "@opencode/ui": "0.0.0-beta-19296"
+  }
+}

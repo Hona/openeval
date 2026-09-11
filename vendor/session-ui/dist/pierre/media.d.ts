@@ -1,0 +1,10 @@
+export type MediaKind = "image" | "audio" | "svg";
+type MediaValue = unknown;
+export declare function normalizeMimeType(type: string | undefined): string;
+export declare function fileExtension(path: string | undefined): string;
+export declare function mediaKindFromPath(path: string | undefined): MediaKind | undefined;
+export declare function isBinaryContent(value: MediaValue): boolean;
+export declare function dataUrlFromMediaValue(value: MediaValue, kind: MediaKind): string;
+export declare function svgTextFromValue(value: MediaValue): string;
+export declare function hasMediaValue(value: MediaValue): boolean;
+export {};

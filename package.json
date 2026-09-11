@@ -1,0 +1,28 @@
+{
+  "name": "openeval-workspace",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "bun@1.4.2",
+  "engines": {
+    "bun": ">=1.4.2"
+  },
+  "workspaces": [
+    "packages/*",
+    "vendor/session-ui"
+  ],
+  "scripts": {
+    "start": "bun packages/openeval/src/cli.ts",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "build:viewer": "bun run --cwd packages/viewer build",
+    "viewer": "bun --watch packages/viewer/src/dev.ts",
+    "release:pack": "bun scripts/pack.ts",
+    "release:verify": "bun scripts/verify-package.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "5.9.3"
+  },
+  "dependencies": {}
+}

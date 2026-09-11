@@ -1,0 +1,7 @@
+node_modules
+results
+*.tgz
+dist
+!vendor/session-ui/dist/
+artifacts
+packages/openeval/viewer

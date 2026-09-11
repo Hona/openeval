@@ -1,0 +1,33 @@
+{
+  "name": "@hona/openeval",
+  "version": "0.2.0",
+  "description": "Typed prompt-and-judge evaluations with isolated agents, recorded evidence, and a results viewer",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Hona/openeval.git",
+    "directory": "packages/openeval"
+  },
+  "engines": { "bun": ">=1.4.2" },
+  "bin": { "openeval": "src/cli.ts" },
+  "files": ["src", "viewer", "LICENSE", "README.md", "JUDGING.md", "!src/**/*.test.ts"],
+  "publishConfig": { "access": "public" },
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./types": "./src/types.ts",
+    "./results": "./src/app/read-results.ts",
+    "./view": "./src/view.ts",
+    "./session": "./src/session-replay.ts"
+  },
+  "dependencies": {
+    "@types/tar-stream": "3.1.4",
+    "@opencode/client": "0.0.0-beta-19296",
+    "@opencode/core": "0.0.0-beta-19296",
+    "@opencode/sdk": "0.0.0-beta-19296",
+    "@opencode/util": "0.0.0-beta-19296",
+    "drizzle-orm": "0.45.2",
+    "effect": "4.0.0-rc.112",
+    "tar-stream": "3.1.7"
+  }
+}
