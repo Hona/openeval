@@ -37,7 +37,23 @@ function App(props: { path: string }) {
   const [gallery, setGallery] = createSignal("results");
   const matches = createMemo(() => searchDocs(search()));
   let searchDialog!: HTMLDialogElement;
+  const closeMenu = () => {
+    setMenu(false);
+    document
+      .querySelector<HTMLButtonElement>(".mobile-toggle")
+      ?.focus({ preventScroll: true });
+  };
+  const toggleMenu = () => {
+    if (menu()) return closeMenu();
+    setMenu(true);
+    queueMicrotask(() =>
+      document
+        .querySelector<HTMLAnchorElement>("#docs-navigation nav a")
+        ?.focus({ preventScroll: true }),
+    );
+  };
   const openSearch = () => {
+    setMenu(false);
     setSearch("");
     searchDialog.showModal();
     searchDialog.querySelector("input")?.focus();
@@ -55,9 +71,20 @@ function App(props: { path: string }) {
         event.preventDefault();
         openSearch();
       }
+      if (event.key === "Escape" && menu()) closeMenu();
     };
     window.addEventListener("keydown", keyboard);
-    onCleanup(() => window.removeEventListener("keydown", keyboard));
+    const mobile = window.matchMedia(
+      "(max-width: 760px), (max-width: 1000px) and (pointer: coarse)",
+    );
+    const resized = () => {
+      if (!mobile.matches) setMenu(false);
+    };
+    mobile.addEventListener("change", resized);
+    onCleanup(() => {
+      window.removeEventListener("keydown", keyboard);
+      mobile.removeEventListener("change", resized);
+    });
   });
   const nav = () => (
     <>
@@ -104,7 +131,8 @@ function App(props: { path: string }) {
             variant="ghost-muted"
             aria-label={menu() ? "Close navigation" : "Open navigation"}
             aria-expanded={menu()}
-            onClick={() => setMenu(!menu())}
+            aria-controls="docs-navigation"
+            onClick={toggleMenu}
             icon={<Icon name="menu" />}
           />
           <a href="/" aria-label="OpenEval home">
@@ -121,6 +149,7 @@ function App(props: { path: string }) {
             size="small"
             variant="ghost-muted"
             class="search-trigger"
+            aria-label="Search documentation"
             onClick={openSearch}
           >
             <Icon name="magnifying-glass" />
@@ -134,7 +163,11 @@ function App(props: { path: string }) {
           </a>
         </div>
       </header>
-      <aside class="site-sidebar" classList={{ "is-open": menu() }}>
+      <aside
+        id="docs-navigation"
+        class="site-sidebar"
+        classList={{ "is-open": menu() }}
+      >
         <div class="workspace-label">
           <span class="status-dot" />
           <strong>openev.al</strong>
@@ -158,10 +191,10 @@ function App(props: { path: string }) {
         <button
           class="mobile-backdrop"
           aria-label="Close navigation"
-          onClick={() => setMenu(false)}
+          onClick={closeMenu}
         />
       </Show>
-      <main id="content" class="site-main" tabIndex={-1}>
+      <main id="content" class="site-main" tabIndex={-1} inert={menu()}>
         <Show
           when={home()}
           fallback={
@@ -202,8 +235,8 @@ function App(props: { path: string }) {
                 </h1>
                 <p>
                   A prompt, a rubric, and a real agent run.
-                  <br />
-                  Measure the behavior you care about. See why it passed.
+                  <br class="desktop-break" /> Measure the behavior you care
+                  about. See why it passed.
                 </p>
                 <div class="intro-actions">
                   <a class="action-link primary" href="/docs/quickstart/">
@@ -355,6 +388,11 @@ function App(props: { path: string }) {
         ref={searchDialog}
         class="search-dialog"
         aria-labelledby="search-title"
+        onClose={() =>
+          document
+            .querySelector<HTMLButtonElement>(".search-trigger")
+            ?.focus({ preventScroll: true })
+        }
         onClick={(event) => {
           if (event.target === searchDialog) searchDialog.close();
         }}
@@ -407,6 +445,7 @@ function App(props: { path: string }) {
 
 function DocPage(props: { doc: Doc }) {
   const index = () => docs.findIndex((d) => d.slug === props.doc.slug);
+  let outline!: HTMLDetailsElement;
   return (
     <div class="docs-layout">
       <article class="doc-page">
@@ -422,10 +461,31 @@ function DocPage(props: { doc: Doc }) {
           <h1>{props.doc.title}</h1>
           <p>{props.doc.description}</p>
         </header>
+        <details ref={outline} class="mobile-outline">
+          <summary>
+            <span>On this page</span>
+            <Icon name="chevron-down" />
+          </summary>
+          <nav aria-label="Page sections">
+            <For each={props.doc.sections}>
+              {(section) => (
+                <a
+                  href={`#${section.id}`}
+                  onClick={() => {
+                    outline.open = false;
+                  }}
+                >
+                  {section.title}
+                  <Icon name="arrow-right" />
+                </a>
+              )}
+            </For>
+          </nav>
+        </details>
         <For each={props.doc.sections}>
           {(section) => (
-            <section id={section.id} class="doc-section">
-              <h2>
+            <section class="doc-section" aria-labelledby={section.id}>
+              <h2 id={section.id}>
                 <a href={`#${section.id}`}>
                   {section.title}
                   <span aria-hidden="true">#</span>

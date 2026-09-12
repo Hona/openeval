@@ -23,7 +23,7 @@ for (const path of paths) {
   const html = await Bun.file(
     resolve(dist, path.slice(1), "index.html"),
   ).text();
-  if ([...html.matchAll(/rel="preload"[^>]+as="font"/g)].length !== 2)
+  if ([...html.matchAll(/<link\b(?=[^>]*\brel="preload")(?=[^>]*\bas="font")[^>]*>/g)].length !== 2)
     throw new Error(`Missing theme font preloads: ${path}`);
   if (html.includes("<!--app-html-->") || !html.includes('class="site-shell"'))
     throw new Error(`Page was not prerendered: ${path}`);

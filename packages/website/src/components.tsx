@@ -105,15 +105,23 @@ export function CodeBlock(props: {
   bare?: boolean;
 }) {
   return (
-    <div class="code-block" classList={{ "code-bare": props.bare }}>
+    <div
+      class="code-block"
+      classList={{
+        "code-bare": props.bare,
+        "code-prose": props.language === "markdown",
+      }}
+    >
       <div class="code-heading">
         <span>
           <Icon name={props.language === "shell" ? "console" : "code"} />
-          {props.file}
+          <span class="code-filename" title={props.file}>
+            {props.file}
+          </span>
         </span>
         <CopyButton text={props.code} label={`Copy ${props.file}`} compact />
       </div>
-      <pre aria-label={props.file}>
+      <pre aria-label={props.file} tabIndex={0}>
         <code>
           <For each={props.code.split("\n")}>
             {(line, index) => (
@@ -165,7 +173,13 @@ export function Flow(props: { steps: string[] }) {
 
 export function DataTable(props: { columns: string[]; rows: string[][] }) {
   return (
-    <div class="table-scroll">
+    <div
+      class="table-scroll"
+      classList={{ "wide-table": props.columns.length > 2 }}
+      role="region"
+      aria-label={props.columns.join(" / ")}
+      tabIndex={0}
+    >
       <table>
         <thead>
           <tr>
@@ -221,8 +235,15 @@ export function Screenshot(props: {
       </a>
       <figcaption>
         <Icon name="photo" />
-        {props.caption}
-        <span>Open full size ↗</span>
+        <span class="screenshot-caption">{props.caption}</span>
+        <a
+          class="screenshot-open"
+          href={`/images/${props.image}`}
+          target="_blank"
+          rel="noreferrer"
+        >
+          Open full size <Icon name="arrow-up-right" />
+        </a>
       </figcaption>
     </figure>
   );
@@ -317,7 +338,7 @@ export function ScoreCalculator() {
         </span>
       </div>
       <p class="utility-note">
-        Click a decision to cycle through pass → fail → unknown. The calculation
+        Select a decision to cycle through pass → fail → unknown. The calculation
         uses OpenEval's score projection.
       </p>
     </div>
@@ -373,7 +394,9 @@ export function Workbench() {
           <Icon name="flask" />
           ask-dialect
         </span>
-        <Badge>interactive example</Badge>
+        <Badge>
+          <span class="desktop-label">interactive </span>example
+        </Badge>
         <span class="quiet">No model calls</span>
       </div>
       <div class="workbench-grid">
@@ -542,7 +565,7 @@ export function Workbench() {
           </button>
           <p class="citation-help">
             <Icon name="link" />
-            Click a metric to locate its response evidence.
+            Select a metric to locate its response evidence.
           </p>
         </div>
       </div>

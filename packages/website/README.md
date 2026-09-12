@@ -8,9 +8,9 @@ same `@opencode/ui` components, OC-2 theme, and fonts as the results viewer.
 | `bun run site:dev` | Hot reload at http://127.0.0.1:4176 |
 | `bun run site:build` | Client build, SSR build, and static page generation |
 | `bun run site:verify` | Verify pages, links, assets, and the downloadable starter |
-| `bun run site:test` | Browser geometry checks at desktop, compact, and mobile sizes |
+| `bun run site:test` | Desktop, phone, tablet, and iPhone/WebKit reading and geometry checks |
 
-Install the test browser once with `bunx --no-install playwright install chromium --only-shell`
+Install the test browsers once with `bunx --no-install playwright install chromium webkit --only-shell`
 from `packages/website`.
 
 ## Content
@@ -33,6 +33,14 @@ search, copy controls, and illustrative interactions; it never calls a live mode
 - Search keeps its outer bounds while only the result list changes. Score text has a reserved column.
 - Theme fonts are preloaded and selected before first paint. A slow download keeps the fallback consistent across docs navigation; an explicit reload can use the warmed font cache.
 - Browser checks compare protected element bounds on every animation frame. This catches click-triggered shifts that the CLS metric excludes.
+
+## Responsive reading
+
+- Phone and compact touch layouts use 16px reading text and search inputs, 14px code, and 44px minimum primary touch targets.
+- Shared gutters align headings, panels, and actions. Safe-area insets protect the header and bottom controls on iPhones.
+- Prompt and rubric prose wraps; wide reference tables and source code scroll inside their own panels.
+- Mobile docs include a section outline, and screenshots have an explicit full-size action.
+- Checks cover 320–430px phones, tablet portrait, and iPhone portrait/landscape in WebKit, alongside the desktop stability checks.
 
 ## Cloudflare Pages
 

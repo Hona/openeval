@@ -7,7 +7,13 @@ export function selectFontsBeforePaint() {
   const root = document.documentElement;
   if (root.hasAttribute("data-site-fonts")) return;
   root.setAttribute("data-site-fonts", "fallback");
-  const key = "openeval-font-mode";
+  const assets = [
+    ...document.querySelectorAll('link[rel="preload"][as="font"]'),
+  ]
+    .map((link) => link.getAttribute("href"))
+    .sort()
+    .join(";");
+  const key = `openeval-font-mode:${assets || "development"}`;
   const navigation = performance.getEntriesByType("navigation")[0] as
     | PerformanceNavigationTiming
     | undefined;
@@ -18,14 +24,17 @@ export function selectFontsBeforePaint() {
       /* Storage can be disabled. */
     }
   };
-  // A slow first visit must not change the shared chrome on the next docs link.
-  // An explicit reload can opt into the now-cached theme fonts.
+  // Keep the visit's font choice across docs links, including Safari's cached
+  // font decoding. A new asset set or explicit reload can re-evaluate readiness.
   try {
+    const saved = sessionStorage.getItem(key);
     if (
       navigation?.type !== "reload" &&
-      sessionStorage.getItem(key) === "fallback"
-    )
+      (saved === "fallback" || saved === "theme")
+    ) {
+      root.setAttribute("data-site-fonts", saved);
       return;
+    }
   } catch {
     /* The per-document first-paint rule still applies. */
   }
