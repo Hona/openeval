@@ -280,18 +280,20 @@ p {
   width: 13px;
   opacity: 0.6;
 }
-.site-sidebar nav a:hover {
+.site-sidebar nav a:is(:hover, :focus-visible) {
   color: var(--site-text);
   background: var(--site-panel);
+}
+.site-sidebar nav a:focus-visible {
+  outline: none;
 }
 .site-sidebar nav a.active {
   background: var(--v2-overlay-simple-overlay-selected, #242424);
   color: var(--site-text);
-  box-shadow: inset 2px 0 var(--site-blue);
 }
 .site-sidebar nav a.active [data-slot="icon-svg"] {
   opacity: 1;
-  color: var(--v2-text-text-accent, #a2bcff);
+  color: inherit;
 }
 .sidebar-bottom {
   border-top: 1px solid var(--site-line);
@@ -1161,10 +1163,14 @@ tr:last-child td {
   color: var(--site-faint);
   font-size: 10px;
 }
-.doc-outline nav a:hover {
+.doc-outline nav a:is(:hover, :focus-visible),
+.mobile-outline nav a:is(:hover, :focus-visible) {
   color: var(--site-text);
-  border-left: 1px solid var(--site-blue);
-  margin-left: -1px;
+  background: var(--site-panel);
+}
+.doc-outline nav a:focus-visible,
+.mobile-outline nav a:focus-visible {
+  outline: none;
 }
 .outline-reference {
   display: grid;
