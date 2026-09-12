@@ -135,6 +135,23 @@ await runBenchmark("./my-benchmark", {
 });
 ```
 
+## Write evals with an agent
+
+Use the public [Eval Writing skill](https://github.com/Hona/openeval/tree/main/.opencode/skills/eval-writing)
+to turn a real failure into an eval, review a rubric, or investigate misleading
+scores. It guides an agent through concrete false-pass/false-failure examples,
+accepted alternatives, evidence requirements, and human-reviewed calibration.
+
+Copy the whole `.opencode/skills/eval-writing/` directory, including `references/`,
+into the same path in your project. For global use, copy it to
+`~/.config/opencode/skills/eval-writing/`. Then run **`/eval-writing`** in OpenCode.
+
+> Use eval-writing to review this task and rubric. Show me the strongest false
+> pass and false failure, then propose the smallest improvement.
+
+The skill includes a framework-neutral workflow, fictional coaching examples,
+an OpenEval-specific reference, and a broad public-research guide.
+
 ## Develop
 
 | Command | Purpose |
