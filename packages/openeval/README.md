@@ -4,6 +4,7 @@
   <p>Prompt-and-rubric evaluations for agents. Typed declarations, isolated runs, inspectable scores.</p>
   <p>
     <a href="https://openev.al">Website</a> ·
+    <a href="https://openeval.pages.dev">Live preview</a> ·
     <a href="https://openev.al/docs/quickstart/">Write your first eval</a> ·
     <a href="https://openev.al/docs/reference/">CLI reference</a> ·
     <a href="https://www.npmjs.com/package/@hona/openeval">npm</a>

@@ -24,7 +24,8 @@ search, copy controls, and illustrative interactions; it never calls a live mode
 
 ## Cloudflare Pages
 
-Connect `Hona/openeval`, production branch `main`, with these build settings:
+The `openeval` Pages project is connected to `Hona/openeval`, production branch
+`main`, and publishes to **https://openeval.pages.dev** with these build settings:
 
 | Setting | Value |
 | --- | --- |
@@ -37,3 +38,8 @@ Connect `Hona/openeval`, production branch `main`, with these build settings:
 GitHub pushes to `main` deploy through Pages' Git integration. The Pages subdomain
 serves previews while the custom domain completes registration and DNS setup.
 The site is static: there are no Pages Functions or application secrets.
+
+```mermaid
+flowchart LR
+  M["Push to main"] --> B["Build static pages"] --> V["Verify pages + starter"] --> P["Cloudflare Pages"]
+```
