@@ -1,18 +1,23 @@
-# OpenEval
+<div align="center">
+  <h1>OpenEval</h1>
+  <p><strong>Give your agent a task. Judge the evidence.</strong></p>
+  <p>A typed prompt-plus-LLM-judge SDK. Isolated agents, recorded work, and scores you can inspect.</p>
+  <p>
+    <a href="https://www.npmjs.com/package/@hona/openeval"><img src="https://img.shields.io/npm/v/%40hona%2Fopeneval?style=flat-square&color=66d38a" alt="npm version"></a>
+    <a href="https://bun.com"><img src="https://img.shields.io/badge/Bun-1.4.2%2B-f9f1e1?style=flat-square" alt="Bun 1.4.2 or later"></a>
+    <a href="https://github.com/Hona/openeval/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-66d38a?style=flat-square" alt="MIT license"></a>
+  </p>
+</div>
 
-A typed prompt-plus-LLM-judge SDK for Bun. Run agents in isolated containers,
-record their work, grade the evidence, and explore the results in a local viewer.
+![OpenEval results dashboard with model scores, scored checks, runtime, and cost](https://raw.githubusercontent.com/Hona/openeval/main/docs/images/results.png)
 
-## Install
+*Screenshots show the real viewer with illustrative demo data and fictional model
+labels. They are not benchmark measurements.*
 
-Requires Bun 1.4.2 or later, Docker, and an authenticated OpenCode installation.
-The agent runtime currently uses OpenCode `0.0.0-beta-19296`.
+## Write your first eval
 
-```sh
-bun add --exact @hona/openeval
-```
-
-## Declare a benchmark
+Start with a task in `prompt.md` and the behavior you want to measure in `judge.md`.
+OpenEval discovers eval folders automatically.
 
 ```text
 my-benchmark/
@@ -23,7 +28,48 @@ my-benchmark/
       judge.md
 ```
 
-`benchmark.ts`:
+**`evals/ask-dialect/prompt.md`** — the task, sent verbatim:
+
+```md
+Write a SQL query for the ten most recent orders for a customer.
+```
+
+**`evals/ask-dialect/judge.md`** — the criteria for grading the recorded answer:
+
+```md
+# Requests the SQL dialect
+
+## Metric: asked_dialect — Asks which SQL dialect to use
+
+Pass when the agent asks which database or SQL dialect is in use.
+Fail when it assumes a dialect without asking. Asking alongside a draft counts.
+
+## Metric: safe_parameters — Uses bound parameters
+
+Pass when the proposed query uses a bound customer-ID parameter and explains
+how to supply its value. Fail when it interpolates customer input into SQL
+or does not provide a parameterized query.
+```
+
+One recording can answer both questions: **did the agent ask for the dialect?**
+And **did it use bound parameters?** Each metric is `0`, `1`, or `null` when
+evidence is insufficient. The judge supplies citations to the recording. A shared native
+judge agent supplies the evidence and submission protocol; rubrics contain the
+task-specific criteria. See [JUDGING.md](JUDGING.md).
+
+## Choose models and run
+
+Requires Bun 1.4.2 or later, Docker, and an authenticated OpenCode installation.
+The agent runtime currently uses OpenCode `0.0.0-beta-19296`.
+
+Install the SDK inside `my-benchmark`:
+
+```sh
+bun add --exact @hona/openeval
+```
+
+Add **`benchmark.ts`**, replacing the model references with models connected in
+OpenCode:
 
 ```ts
 import type { Benchmark } from "@hona/openeval";
@@ -34,32 +80,6 @@ export default {
   repetitions: 3,
 } satisfies Benchmark;
 ```
-
-Replace the model references with models connected in OpenCode.
-
-`evals/ask-dialect/prompt.md`:
-
-```md
-Write a SQL query for the ten most recent orders for a customer.
-```
-
-`evals/ask-dialect/judge.md`:
-
-```md
-# Requests the SQL dialect
-
-## Metric: asked_dialect — Asks which SQL dialect to use
-
-Pass when the agent asks which database or SQL dialect is in use.
-Fail when it assumes a dialect without asking. Asking alongside a draft counts.
-```
-
-Prompts are sent verbatim. Each metric is `0`, `1`, or `null` when evidence is
-insufficient. The judge supplies citations to the recording. A shared native
-judge agent supplies the evidence and submission protocol; rubrics contain the
-task-specific criteria. See [JUDGING.md](JUDGING.md).
-
-## Run and inspect
 
 From your benchmark directory:
 
@@ -72,6 +92,20 @@ bunx --bun @hona/openeval view
 
 The viewer opens at `http://127.0.0.1:4173`. Use `--benchmark <directory>` to point
 any command at another benchmark, or `--port <port>` for another viewer port.
+
+## Inspect the evidence
+
+Select an eval to see its individual metrics. Open a run to read the candidate's
+session and the judge's reasoning, then follow citations back to the evidence.
+
+![SQL eval drilldown with a judge decision, separate metric scores, and evidence links](https://raw.githubusercontent.com/Hona/openeval/main/docs/images/judgment.png)
+
+The live queue separates candidate work from judging, with worker utilization,
+progress, costs, and an estimated finish time.
+
+![Live eval queue showing queued, in-progress, completed, and needs-attention stages](https://raw.githubusercontent.com/Hona/openeval/main/docs/images/queue.png)
+
+## Scoring and incremental runs
 
 `run` resumes the current aggregate and reuses unchanged work. `--new` starts a
 separate result. Repeat `--only-eval`, `--only-model`, or `--only-repetition` to
