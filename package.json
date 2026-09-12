@@ -17,6 +17,10 @@
     "typecheck": "tsc --noEmit",
     "build:viewer": "bun run --cwd packages/viewer build",
     "viewer": "bun --watch packages/viewer/src/dev.ts",
+    "site:dev": "bun run --cwd packages/website dev",
+    "site:build": "bun run --cwd packages/website build",
+    "site:verify": "bun run --cwd packages/website verify",
+    "site:preview": "bun run --cwd packages/website preview",
     "release:pack": "bun scripts/pack.ts",
     "release:verify": "bun scripts/verify-package.ts"
   },

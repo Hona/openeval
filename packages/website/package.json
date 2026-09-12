@@ -1,0 +1,24 @@
+{
+  "name": "@hona/openeval-site",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun prepare.ts && vite --host 127.0.0.1 --port 4176 --strictPort",
+    "build": "bun build.ts",
+    "verify": "bun verify.ts",
+    "preview": "vite preview --host 127.0.0.1 --port 4176 --strictPort",
+    "deploy": "wrangler pages deploy dist --project-name openeval --branch main"
+  },
+  "dependencies": {
+    "@hona/openeval": "workspace:*",
+    "@opencode/ui": "0.0.0-beta-19296",
+    "solid-js": "1.9.15"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.3.3",
+    "fflate": "0.8.2",
+    "vite": "8.2.2",
+    "vite-plugin-solid": "2.11.14",
+    "wrangler": "4.131.1"
+  }
+}

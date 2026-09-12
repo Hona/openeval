@@ -5,3 +5,6 @@ dist
 !vendor/session-ui/dist/
 artifacts
 packages/openeval/viewer
+.ssr
+packages/website/public/images/
+packages/website/public/starter.zip

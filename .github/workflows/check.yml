@@ -18,3 +18,5 @@ jobs:
       - run: bun test
       - run: bun run release:pack
       - run: bun run release:verify
+      - run: bun run site:build
+      - run: bun run site:verify

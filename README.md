@@ -1,7 +1,13 @@
 <div align="center">
   <h1>OpenEval</h1>
-  <p><strong>Give your agent a task. Judge the evidence.</strong></p>
-  <p>A typed prompt-plus-LLM-judge SDK. Isolated agents, recorded work, and scores you can inspect.</p>
+  <p><strong>Write the task. Judge the evidence.</strong></p>
+  <p>Prompt-and-rubric evaluations for agents. Typed declarations, isolated runs, inspectable scores.</p>
+  <p>
+    <a href="https://openev.al">Website</a> ·
+    <a href="https://openev.al/docs/quickstart/">Write your first eval</a> ·
+    <a href="https://openev.al/docs/reference/">CLI reference</a> ·
+    <a href="https://www.npmjs.com/package/@hona/openeval">npm</a>
+  </p>
   <p>
     <a href="https://www.npmjs.com/package/@hona/openeval"><img src="https://img.shields.io/npm/v/%40hona%2Fopeneval?style=flat-square&color=66d38a" alt="npm version"></a>
     <a href="https://bun.com"><img src="https://img.shields.io/badge/Bun-1.4.2%2B-f9f1e1?style=flat-square" alt="Bun 1.4.2 or later"></a>
@@ -9,37 +15,30 @@
   </p>
 </div>
 
-![OpenEval results dashboard with model scores, scored checks, runtime, and cost](docs/images/results.png)
+![The OpenEval workbench: rubric source, a sample SQL response, and linked metric decisions](docs/images/workbench.png)
 
-*Screenshots show the real viewer with illustrative demo data and fictional model
-labels. They are not benchmark measurements.*
+*Interactive documentation example. Viewer screenshots use illustrative data and fictional model labels.*
 
-## Write your first eval
+## An eval is two files
 
-Start with a task in `prompt.md` and the behavior you want to measure in `judge.md`.
-OpenEval discovers eval folders automatically.
+| File | What you write | Who reads it |
+| --- | --- | --- |
+| `prompt.md` | A natural, focused task | Candidate agent |
+| `judge.md` | Named metrics and pass/fail criteria | Judge agent |
+| `eval.ts` *(optional)* | Workspace preparation and early stopping | Host |
 
-```text
-my-benchmark/
-  benchmark.ts
-  evals/
-    ask-dialect/
-      prompt.md
-      judge.md
-```
-
-**`evals/ask-dialect/prompt.md`** — the task, sent verbatim:
+**`evals/ask-dialect/prompt.md`**
 
 ```md
 Write a SQL query for the ten most recent orders for a customer.
 ```
 
-**`evals/ask-dialect/judge.md`** — the criteria for grading the recorded answer:
+**`evals/ask-dialect/judge.md`**
 
 ```md
 # Requests the SQL dialect
 
-## Metric: asked_dialect — Asks which SQL dialect to use
+## Metric: asked_dialect — Asks for the SQL dialect
 
 Pass when the agent asks which database or SQL dialect is in use.
 Fail when it assumes a dialect without asking. Asking alongside a draft counts.
@@ -51,25 +50,24 @@ how to supply its value. Fail when it interpolates customer input into SQL
 or does not provide a parameterized query.
 ```
 
-One recording can answer both questions: **did the agent ask for the dialect?**
-And **did it use bound parameters?** Each metric is `0`, `1`, or `null` when
-evidence is insufficient. The judge supplies citations to the recording. A shared native
-judge agent supplies the evidence and submission protocol; rubrics contain the
-task-specific criteria. See [JUDGING.md](packages/openeval/JUDGING.md).
+| Recorded response | Asks for dialect | Bound parameters |
+| --- | --- | --- |
+| Asks which DB; provides a bound-parameter draft | **1** | **1** |
+| Assumes PostgreSQL; uses `$1` | **0** | **1** |
+| Only asks which database | **1** | **0** |
+| Required recording is unavailable | **null** | **null** |
 
-## Choose models and run
+→ [Write good rubrics](https://openev.al/docs/rubrics/) · [Download the SQL starter](https://openev.al/starter.zip)
 
-Requires Bun 1.4.2 or later, Docker, and an authenticated OpenCode installation.
-The agent runtime currently uses OpenCode `0.0.0-beta-19296`.
+## Choose models. Run. Inspect.
 
-Install the SDK inside `my-benchmark`:
+Requires **Bun 1.4.2+**, **Docker**, and connected models in **OpenCode**.
 
 ```sh
 bun add --exact @hona/openeval
 ```
 
-Add **`benchmark.ts`**, replacing the model references with models connected in
-OpenCode:
+**`benchmark.ts`** — replace the model references with your connected models:
 
 ```ts
 import type { Benchmark } from "@hona/openeval";
@@ -81,87 +79,69 @@ export default {
 } satisfies Benchmark;
 ```
 
-From your benchmark directory:
-
 ```sh
 bunx --bun @hona/openeval image
-bunx --bun @hona/openeval plan
-bunx --bun @hona/openeval run
+bunx --bun @hona/openeval plan --only-eval ask-dialect
+bunx --bun @hona/openeval run --only-repetition 1
 bunx --bun @hona/openeval view
 ```
 
-The viewer opens at `http://127.0.0.1:4173`. Use `--benchmark <directory>` to point
-any command at another benchmark, or `--port <port>` for another viewer port.
+The viewer opens at **http://127.0.0.1:4173**. `run` resumes the same aggregate;
+scope flags select work while retaining existing scores.
 
-## Inspect the evidence
+```mermaid
+flowchart LR
+  P["prompt.md"] --> C["Isolated candidate"] --> E["Recording"]
+  J["judge.md"] --> G["Judge + citations"]
+  E --> G --> S["Metric scores"] --> V["Results viewer"]
+```
 
-Select an eval to see its individual metrics. Open a run to read the candidate's
-session and the judge's reasoning, then follow citations back to the evidence.
+## See what earned the score
 
-![SQL eval drilldown with a judge decision, separate metric scores, and evidence links](docs/images/judgment.png)
+![Model scores, completed checks, runtime, and cost in the results viewer](docs/images/results.png)
 
-The live queue separates candidate work from judging, with worker utilization,
-progress, costs, and an estimated finish time.
+| Capability | What you get | Guide |
+| --- | --- | --- |
+| Multiple metrics | Independent decisions from one recording | [Rubrics](https://openev.al/docs/rubrics/) |
+| Controlled workspaces | Readable files, pinned Git inputs, preparation | [Workspaces](https://openev.al/docs/workspaces/) |
+| Small batches | Eval, model, repetition, and cost controls | [Running](https://openev.al/docs/running/) |
+| Transparent scores | Equal eval weights; bounds for unresolved checks | [Scoring](https://openev.al/docs/scoring/) |
+| Evidence inspection | Sessions, tool results, artifacts, and citations | [Evidence](https://openev.al/docs/evidence/) |
+| Rejudging | New judgments from retained, immutable recordings | [Evidence](https://openev.al/docs/evidence/#revise) |
 
-![Live eval queue showing queued, in-progress, completed, and needs-attention stages](docs/images/queue.png)
+<details>
+<summary><strong>Inspect a judgment and its evidence</strong></summary>
 
-## Scoring and incremental runs
+![SQL eval drilldown with individual metric decisions and evidence links](docs/images/judgment.png)
 
-`run` resumes the current aggregate and reuses unchanged work. `--new` starts a
-separate result. Repeat `--only-eval`, `--only-model`, or `--only-repetition` to
-execute a small scope while retaining the full aggregate. `--max-cost <usd>`
-sets a scheduling budget for the invocation. Run `openeval --help` for commands.
+</details>
 
-Scores average repetitions per metric, metrics per eval, then evals equally.
-Unresolved checks produce completion bounds until the final percentage is known.
-The viewer provides metric drilldowns and recorded candidate and judge sessions.
-Elapsed time measures active execution intervals, counting overlapping work once.
+<details>
+<summary><strong>Watch candidate and judge work in the live queue</strong></summary>
 
-## Prepare a workspace
+![Live queue with separate execution and judging stages](docs/images/queue.png)
 
-An eval's optional `workspace/` directory supplies files. An optional `eval.ts`
-can declare a pinned Git repository or readable revision overlays and preparation
-commands:
+</details>
+
+## Use the SDK
 
 ```ts
-import type { Eval } from "@hona/openeval";
+import { runBenchmark } from "@hona/openeval";
 
-export default {
-  prepare: [{ cwd: ".", argv: ["bun", "install", "--frozen-lockfile"] }],
-} satisfies Eval;
+await runBenchmark("./my-benchmark", {
+  onlyEvals: ["ask-dialect"],
+  onlyRepetitions: [1],
+});
 ```
 
-Preparation runs before recording the initial candidate workspace. Candidate
-containers receive project inputs, never judge rubrics or evaluator storage.
-Candidates finish naturally, meet an opted-in irreversible judge decision, or
-time out after at most 45 minutes. Finalized recordings remain immutable.
+## Develop
 
-## SDK
+| Command | Purpose |
+| --- | --- |
+| `bun run site:dev` | Landing page and docs with hot reload on port 4176 |
+| `bun run site:build && bun run site:verify` | Prerender pages and verify links and starter files |
+| `bun run typecheck && bun test` | Local SDK checks; no live models |
+| `bun run release:pack && bun run release:verify` | Verify the actual npm archive in a separate consumer |
 
-```ts
-import { runBenchmark, serveResults } from "@hona/openeval";
-
-await runBenchmark("./my-benchmark");
-```
-
-The package also exports types, result readers, snapshot and rejudge functions,
-and reusable view/session data through `@hona/openeval/types`, `/results`,
-`/view`, and `/session`.
-
-## Develop and release
-
-```sh
-bun install --frozen-lockfile
-bun run typecheck
-bun test
-bun run release:pack
-bun run release:verify
-```
-
-The private benchmark client is maintained in a separate repository. It installs
-an exact published SDK version. This repository contains only the reusable SDK,
-CLI, viewer, and development inputs. See [RELEASING.md](RELEASING.md).
-
-OpenEval is MIT licensed. The vendored session UI retains its upstream MIT
-license and revision in `vendor/session-ui`. Built viewer distributions include
-third-party license notices.
+- [Release guide](RELEASING.md) · [Judge protocol](packages/openeval/JUDGING.md)
+- MIT licensed. The viewer includes upstream third-party license notices.
