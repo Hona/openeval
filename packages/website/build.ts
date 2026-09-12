@@ -1,8 +1,9 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { docs, docHref } from "./src/content";
 import { SITE } from "./src/examples";
+import { selectFontsBeforePaint } from "./src/fonts";
 import "./prepare";
 
 const directory = fileURLToPath(new URL("./", import.meta.url));
@@ -29,6 +30,18 @@ const { renderPage } = await import(
   pathToFileURL(resolve(directory, ".ssr/entry-server.js")).href
 );
 const template = await Bun.file(resolve(directory, "dist/index.html")).text();
+const fonts = (await readdir(resolve(directory, "dist/assets"))).filter(
+  (name) =>
+    /^(Inter-.*\.ttf|JetBrainsMonoNerdFontMono-Regular-.*\.woff2)$/.test(name),
+);
+if (fonts.length !== 2)
+  throw new Error("Expected the two OC-2 fonts for early preload");
+const fontPreloads = fonts
+  .map(
+    (name) =>
+      `<link rel="preload" href="/assets/${name}" as="font" type="font/${name.endsWith("woff2") ? "woff2" : "ttf"}" crossorigin>`,
+  )
+  .join("");
 const pages = [
   {
     path: "/",
@@ -61,7 +74,11 @@ for (const page of pages) {
       /<meta name="description" content="[^"]*"\s*\/>/,
       `<meta name="description" content="${escape(page.description)}" />`,
     )
-    .replace("<!--page-head-->", head)
+    .replace("<!--page-head-->", fontPreloads + head)
+    .replace(
+      "</head>",
+      `<script>(${selectFontsBeforePaint.toString()})()</script></head>`,
+    )
     .replace("<!--hydration-->", rendered.hydration)
     .replace("<!--app-html-->", rendered.html);
   const path =

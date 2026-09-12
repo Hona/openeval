@@ -22,6 +22,7 @@ import {
   InstallCommand,
   RenderBlock,
   Screenshot,
+  StableTabPanel,
   Workbench,
 } from "./components";
 
@@ -302,27 +303,32 @@ function App(props: { path: string }) {
                   </Tabs.Trigger>
                   <Tabs.Trigger value="queue">Live queue</Tabs.Trigger>
                 </Tabs.List>
-                <Tabs.Content value="results">
-                  <Screenshot
-                    image="results.png"
-                    alt="OpenEval results viewer with per-model scores and run costs"
-                    caption="One score per model, with metrics available in the eval drilldown. Illustrative data."
-                  />
-                </Tabs.Content>
-                <Tabs.Content value="judgment">
-                  <Screenshot
-                    image="judgment.png"
-                    alt="Judge inspector showing metric decisions and evidence citations"
-                    caption="Read the candidate and judge sessions side by side with metric decisions. Illustrative data."
-                  />
-                </Tabs.Content>
-                <Tabs.Content value="queue">
-                  <Screenshot
-                    image="queue.png"
-                    alt="Live queue with separate candidate and judge stages"
-                    caption="Follow execution, judging, worker use, and estimated completion. Illustrative data."
-                  />
-                </Tabs.Content>
+                <div class="stable-tabs-panels screenshot-panels">
+                  <StableTabPanel value="results" selected={gallery()}>
+                    <Screenshot
+                      image="results.png"
+                      eager
+                      alt="OpenEval results viewer with per-model scores and run costs"
+                      caption="One score per model, with metrics available in the eval drilldown. Illustrative data."
+                    />
+                  </StableTabPanel>
+                  <StableTabPanel value="judgment" selected={gallery()}>
+                    <Screenshot
+                      image="judgment.png"
+                      eager
+                      alt="Judge inspector showing metric decisions and evidence citations"
+                      caption="Read the candidate and judge sessions side by side with metric decisions. Illustrative data."
+                    />
+                  </StableTabPanel>
+                  <StableTabPanel value="queue" selected={gallery()}>
+                    <Screenshot
+                      image="queue.png"
+                      eager
+                      alt="Live queue with separate candidate and judge stages"
+                      caption="Follow execution, judging, worker use, and estimated completion. Illustrative data."
+                    />
+                  </StableTabPanel>
+                </div>
               </Tabs>
             </section>
             <section class="quick-reference">

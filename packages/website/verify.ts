@@ -6,14 +6,25 @@ import { strFromU8, unzipSync } from "fflate";
 import { loadBenchmark } from "@hona/openeval";
 import { docs, docHref } from "./src/content";
 import { prompt, SITE } from "./src/examples";
+import { screenshotDimensions } from "./src/media";
 
 const directory = fileURLToPath(new URL("./", import.meta.url));
 const dist = resolve(directory, "dist");
+for (const [name, size] of Object.entries(screenshotDimensions)) {
+  const bytes = await Bun.file(resolve(dist, "images", name)).arrayBuffer();
+  const png = new DataView(bytes);
+  if (png.getUint32(16) !== size.width || png.getUint32(20) !== size.height)
+    throw new Error(
+      `Image dimensions changed; update its reserved space: ${name}`,
+    );
+}
 const paths = ["/", ...docs.map((doc) => docHref(doc.slug))];
 for (const path of paths) {
   const html = await Bun.file(
     resolve(dist, path.slice(1), "index.html"),
   ).text();
+  if ([...html.matchAll(/rel="preload"[^>]+as="font"/g)].length !== 2)
+    throw new Error(`Missing theme font preloads: ${path}`);
   if (html.includes("<!--app-html-->") || !html.includes('class="site-shell"'))
     throw new Error(`Page was not prerendered: ${path}`);
   if (!html.includes(`rel="canonical" href="${SITE}${path}"`))

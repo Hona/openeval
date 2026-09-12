@@ -20,3 +20,12 @@ jobs:
       - run: bun run release:verify
       - run: bun run site:build
       - run: bun run site:verify
+      - run: bunx --no-install playwright install --with-deps chromium --only-shell
+        working-directory: packages/website
+      - run: bun run site:test
+      - uses: actions/upload-artifact@v6
+        if: failure()
+        with:
+          name: website-browser-traces
+          path: packages/website/test-results/
+          if-no-files-found: ignore

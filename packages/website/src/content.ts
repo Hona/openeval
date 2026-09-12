@@ -5,6 +5,7 @@ import {
   rubric,
   runCommands,
 } from "./examples";
+import type { ScreenshotName } from "./media";
 
 export type Block =
   | { type: "text"; text: string }
@@ -12,7 +13,7 @@ export type Block =
   | { type: "table"; columns: string[]; rows: string[][] }
   | { type: "note"; title: string; text: string }
   | { type: "flow"; steps: string[] }
-  | { type: "image"; image: string; alt: string; caption: string }
+  | { type: "image"; image: ScreenshotName; alt: string; caption: string }
   | { type: "calculator" };
 export type Section = { id: string; title: string; blocks: Block[] };
 export type Doc = {

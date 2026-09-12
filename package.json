@@ -20,6 +20,7 @@
     "site:dev": "bun run --cwd packages/website dev",
     "site:build": "bun run --cwd packages/website build",
     "site:verify": "bun run --cwd packages/website verify",
+    "site:test": "bun run --cwd packages/website test:browser",
     "site:preview": "bun run --cwd packages/website preview",
     "release:pack": "bun scripts/pack.ts",
     "release:verify": "bun scripts/verify-package.ts"

@@ -6,6 +6,7 @@
     "dev": "bun prepare.ts && vite --host 127.0.0.1 --port 4176 --strictPort",
     "build": "bun build.ts",
     "verify": "bun verify.ts",
+    "test:browser": "playwright test",
     "preview": "vite preview --host 127.0.0.1 --port 4176 --strictPort",
     "deploy": "wrangler pages deploy dist --project-name openeval --branch main"
   },
@@ -15,6 +16,7 @@
     "solid-js": "1.9.15"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "@tailwindcss/vite": "4.3.3",
     "fflate": "0.8.2",
     "vite": "8.2.2",

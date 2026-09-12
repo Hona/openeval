@@ -7,6 +7,26 @@ import { Tabs } from "@opencode/ui/tabs";
 import { modelScore } from "@hona/openeval/view";
 import { benchmark, install, prompt, query, rubric } from "./examples";
 import type { Block } from "./content";
+import { screenshotDimensions, type ScreenshotName } from "./media";
+
+/** Inactive panels still reserve their natural size, but cannot receive focus. */
+export function StableTabPanel(props: {
+  value: string;
+  selected: string;
+  children: JSX.Element;
+}) {
+  return (
+    <Tabs.Content
+      value={props.value}
+      forceMount
+      class="stable-tab-panel"
+      inert={props.selected !== props.value}
+      aria-hidden={props.selected !== props.value}
+    >
+      {props.children}
+    </Tabs.Content>
+  );
+}
 
 function Highlight(props: { line: string; language?: string }) {
   const tokens = () =>
@@ -177,9 +197,10 @@ export function DataTable(props: { columns: string[]; rows: string[][] }) {
 }
 
 export function Screenshot(props: {
-  image: string;
+  image: ScreenshotName;
   alt: string;
   caption: string;
+  eager?: boolean;
 }) {
   return (
     <figure class="screenshot">
@@ -192,7 +213,9 @@ export function Screenshot(props: {
         <img
           src={`/images/${props.image}`}
           alt={props.alt}
-          loading="lazy"
+          width={screenshotDimensions[props.image].width}
+          height={screenshotDimensions[props.image].height}
+          loading={props.eager ? "eager" : "lazy"}
           decoding="async"
         />
       </a>
@@ -329,6 +352,19 @@ export function Workbench() {
     "judge.md": rubric,
     "benchmark.ts": benchmark,
   };
+  const responses = [
+    {
+      id: "asks",
+      quote:
+        "“Which database are you using—PostgreSQL, MySQL, SQLite, or SQL Server?”",
+      context: "If PostgreSQL, here is a parameterized draft:",
+    },
+    {
+      id: "assumes",
+      quote: "“Here is the PostgreSQL query for your orders.”",
+      context: "The answer continues with a bound parameter:",
+    },
+  ];
   const pass = () => response() === "asks";
   return (
     <section class="workbench" aria-label="Interactive eval example">
@@ -387,18 +423,20 @@ export function Workbench() {
                 {(name) => <Tabs.Trigger value={name}>{name}</Tabs.Trigger>}
               </For>
             </Tabs.List>
-            <For each={Object.entries(files)}>
-              {([name, value]) => (
-                <Tabs.Content value={name}>
-                  <CodeBlock
-                    file={name}
-                    code={value}
-                    language={name.endsWith("ts") ? "typescript" : "markdown"}
-                    bare
-                  />
-                </Tabs.Content>
-              )}
-            </For>
+            <div class="stable-tabs-panels">
+              <For each={Object.entries(files)}>
+                {([name, value]) => (
+                  <StableTabPanel value={name} selected={file()}>
+                    <CodeBlock
+                      file={name}
+                      code={value}
+                      language={name.endsWith("ts") ? "typescript" : "markdown"}
+                      bare
+                    />
+                  </StableTabPanel>
+                )}
+              </For>
+            </div>
           </Tabs>
           <div class="editor-hint">
             <Icon name="arrow-right" />
@@ -415,7 +453,7 @@ export function Workbench() {
           <div class="response-switch">
             <Button
               size="small"
-              variant={pass() ? "neutral" : "ghost-muted"}
+              variant="ghost-muted"
               aria-pressed={pass()}
               onClick={() => setResponse("asks")}
             >
@@ -423,25 +461,39 @@ export function Workbench() {
             </Button>
             <Button
               size="small"
-              variant={!pass() ? "neutral" : "ghost-muted"}
+              variant="ghost-muted"
               aria-pressed={!pass()}
               onClick={() => setResponse("assumes")}
             >
               Assumes dialect
             </Button>
           </div>
-          <p
-            class="response-quote"
+          <div
+            class="response-quote stable-copy"
             classList={{ cited: citation() === "asked_dialect" }}
           >
-            {pass()
-              ? "“Which database are you using—PostgreSQL, MySQL, SQLite, or SQL Server?”"
-              : "“Here is the PostgreSQL query for your orders.”"}
-          </p>
-          <span class="response-context">
-            {pass()
-              ? "If PostgreSQL, here is a parameterized draft:"
-              : "The answer continues with a bound parameter:"}
+            <For each={responses}>
+              {(item) => (
+                <p
+                  aria-hidden={response() !== item.id}
+                  inert={response() !== item.id}
+                >
+                  {item.quote}
+                </p>
+              )}
+            </For>
+          </div>
+          <span class="response-context stable-copy">
+            <For each={responses}>
+              {(item) => (
+                <span
+                  aria-hidden={response() !== item.id}
+                  inert={response() !== item.id}
+                >
+                  {item.context}
+                </span>
+              )}
+            </For>
           </span>
           <pre
             class="response-code"
