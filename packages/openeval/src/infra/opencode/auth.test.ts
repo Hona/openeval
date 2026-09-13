@@ -3,7 +3,7 @@ import { Database } from "bun:sqlite";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
-import { createCredentialSnapshot } from "./auth";
+import { createCredentialSnapshot, credentialsFor } from "./auth";
 
 const directories: string[] = [];
 
@@ -88,6 +88,27 @@ test("copies only requested active credentials without refresh tokens or expiry 
   expect(value.access).toBe("access-token");
   expect(value.refresh).toBe("");
   expect(value.expires).toBe(1);
+  const previous = process.env.OPENCODE_DB;
+  process.env.OPENCODE_DB = source;
+  try {
+    expect(
+      credentialsFor(
+        ["provider/root", "other/worker", "provider/reviewer"],
+        false,
+      )
+        .map((row) => row.id)
+        .sort(),
+    ).toEqual(["oauth", "unrelated"]);
+    expect(credentialsFor("provider/root", false).map((row) => row.id)).toEqual(
+      ["oauth"],
+    );
+    expect(() =>
+      credentialsFor(["provider/root", "missing/worker"], false),
+    ).toThrow("No active OpenCode connection for missing");
+  } finally {
+    if (previous === undefined) delete process.env.OPENCODE_DB;
+    else process.env.OPENCODE_DB = previous;
+  }
   const original = new Database(source, { readonly: true });
   try {
     const row = original

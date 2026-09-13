@@ -90,6 +90,47 @@ bunx --bun @hona/openeval view
 The viewer opens at **http://127.0.0.1:4173**. `run` resumes the same aggregate;
 scope flags select work while retaining existing scores.
 
+### Choose the candidate agent
+
+Candidates use OpenCode's `build` agent by default. Set `candidate.agent` to
+start another agent, and use `candidate.agents` for native OpenCode agent
+definitions, including workers with their own models:
+
+```ts
+export default {
+  models: ["provider/coordinator-model"],
+  judge: { model: "provider/judge-model" },
+  candidate: {
+    agent: "coordinator",
+    agents: {
+      coordinator: {
+        mode: "primary",
+        system: "Delegate to worker when useful. Wait for its result and check the work before answering.",
+      },
+      worker: {
+        mode: "subagent",
+        model: "provider/worker-model",
+        description: "Complete delegated tasks.",
+      },
+    },
+  },
+} satisfies Benchmark;
+```
+
+`models` selects the starting session's model, overriding a model in its agent
+definition. Workers with no model inherit their parent's model. Connect each
+explicit worker provider in OpenCode; only the required active credentials are
+copied into the container. Custom providers go in `candidate.providers`.
+
+Changing the starting agent, agent definitions, or relevant provider settings
+collects new candidate evidence. Use separate benchmark directories or `run --new`
+to retain comparisons between team configurations with the same starting model.
+Candidate accounting includes child sessions; judge usage is tracked separately.
+Execution ends when the starting session finishes, so coordinators must await
+their workers before returning. Background continuations after that point are
+not supported. This configures native OpenCode agents; it does not copy plugins
+or other files from your local OpenCode setup.
+
 ```mermaid
 flowchart LR
   P["prompt.md"] --> C["Isolated candidate"] --> E["Recording"]

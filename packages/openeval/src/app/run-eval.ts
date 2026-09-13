@@ -32,15 +32,13 @@ export async function runEval(
   const directory = resolve(context.directory, "eval-runs", run.id);
   const outcome = await executeCandidate(
     {
+      ...context.definition.candidate,
       model: slot.model,
       prompt: definition.prompt,
       workspace,
       prepare: definition.settings.prepare ?? [],
-      timeoutMs: context.definition.candidate.timeoutMs,
-      websearch: context.definition.candidate.websearch,
       container: context.definition.container,
       imageId: context.runtime.imageId,
-      providers: context.definition.candidate.providers,
     },
     directory,
     (event) => {

@@ -65,6 +65,12 @@ export async function runSession(
 ): Promise<SessionResult> {
   const location = { directory: input.directory };
   await client.plugin.awaitActivation({ location });
+  const { data: agent } = await client.agent.get({
+    agentID: input.agent,
+    location,
+  });
+  if (agent.mode === "subagent")
+    throw new Error(`Agent cannot start a session: ${input.agent}`);
   const models = await client.model.list({ location });
   const selected = parseModel(input.model);
   const model = models.data.find(
@@ -300,7 +306,7 @@ export async function runSession(
     accounting: stats
       ? {
           costUSD: stats.cost,
-          sessions: stats.sessions,
+          sessions: stats.sessions + stats.subagents,
           steps: stats.steps,
           tokens: stats.tokens,
         }

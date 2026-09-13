@@ -55,15 +55,23 @@ export function createCredentialSnapshot(
     db.close(true);
   }
 }
-export const credentialsFor = (model: ModelRef, websearch: "exa" | false) => {
-  const provider = model.split("/")[0];
-  const integration = provider.startsWith("console-") ? "opencode" : provider;
+export const credentialsFor = (
+  model: ModelRef | readonly ModelRef[],
+  websearch: "exa" | false,
+) => {
+  const integrations = (typeof model === "string" ? [model] : model).map(
+    (ref) => {
+      const provider = ref.split("/")[0];
+      return provider.startsWith("console-") ? "opencode" : provider;
+    },
+  );
   const required = [
-    ...new Set([integration, ...(websearch ? ["opencode", "exa"] : [])]),
+    ...new Set([...integrations, ...(websearch ? ["opencode", "exa"] : [])]),
   ];
   const credentials = createCredentialSnapshot(undefined, required);
-  if (!credentials.some((row) => row.integration_id === integration))
-    throw new Error(`No active OpenCode connection for ${integration}`);
+  for (const integration of new Set(integrations))
+    if (!credentials.some((row) => row.integration_id === integration))
+      throw new Error(`No active OpenCode connection for ${integration}`);
   return credentials;
 };
 export const databaseWithCredentials = (

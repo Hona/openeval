@@ -11,6 +11,7 @@ import type {
 import { CANDIDATE_TIMEOUT_MS } from "../types";
 import { rubricMetrics } from "../judgment";
 import { monitorPolicy } from "./monitor-policy";
+import { candidateModels } from "../infra/opencode/candidate";
 import {
   fingerprint,
   hash,
@@ -207,6 +208,12 @@ export async function loadBenchmark(
   )
     throw new Error("benchmark.ts contains unsupported settings");
   const models = definition.models.map(modelRef);
+  const agent = definition.candidate?.agent ?? "build";
+  if (typeof agent !== "string" || !agent.trim())
+    throw new Error("Candidate agent must be a non-empty string");
+  const selectedAgent = definition.candidate?.agents?.[agent];
+  if (selectedAgent?.disabled || selectedAgent?.mode === "subagent")
+    throw new Error(`Candidate agent cannot start a session: ${agent}`);
   if (new Set(models).size !== models.length)
     throw new Error("Benchmark contains duplicate models");
   const timeoutMs = positive(
@@ -216,6 +223,12 @@ export async function loadBenchmark(
   );
   if (timeoutMs > CANDIDATE_TIMEOUT_MS)
     throw new Error("Candidate timeout cannot exceed 45 minutes");
+  candidateModels(models[0], {
+    ...definition.candidate,
+    agent,
+    timeoutMs,
+    websearch: definition.candidate?.websearch ?? "exa",
+  }).forEach(modelRef);
   const evalRoot = resolve(directory, "evals");
   const directories = (await readdir(evalRoot, { withFileTypes: true }))
     .filter((entry) => entry.isDirectory() && !entry.name.startsWith("."))
@@ -246,6 +259,10 @@ export async function loadBenchmark(
     repetitions: positive(definition.repetitions, 3, "Repetitions"),
     concurrency,
     candidate: {
+      agent,
+      ...(definition.candidate?.agents
+        ? { agents: definition.candidate.agents }
+        : {}),
       timeoutMs,
       websearch: definition.candidate?.websearch ?? "exa",
       ...(definition.candidate?.providers

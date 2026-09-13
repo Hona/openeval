@@ -3,6 +3,7 @@ export type {
   Eval,
   ModelRef,
   ProviderDefinitions,
+  AgentDefinitions,
   Judge,
   BenchmarkRun,
   EvalRun,

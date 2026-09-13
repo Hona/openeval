@@ -7,6 +7,7 @@ import type {
 import { fingerprint } from "../infra/files";
 import { JUDGE_PROTOCOL } from "../judgment";
 import { JUDGE_AGENT } from "../infra/judging/agent";
+import { candidateModels } from "../infra/opencode/candidate";
 
 /** Declared, candidate-visible inputs. Harness implementation hashes are provenance. */
 export function candidateFingerprint(
@@ -16,21 +17,25 @@ export function candidateFingerprint(
   runtime: BenchmarkRun["runtime"],
 ) {
   const item = definition.evals.find((item) => item.id === evalId)!;
-  const [name] = model.split("#"),
-    slash = name.indexOf("/");
-  const provider = definition.candidate.providers?.[name.slice(0, slash)];
-  const { models, ...settings } = provider ?? {};
   return fingerprint({
     prompt: item.prompt,
     source: item.sourceHash,
     model,
     image: runtime.imageId,
     candidate: {
+      agent: definition.candidate.agent,
+      agents: definition.candidate.agents,
       timeoutMs: definition.candidate.timeoutMs,
       websearch: definition.candidate.websearch,
-      provider: provider
-        ? { ...settings, model: models?.[name.slice(slash + 1)] }
-        : undefined,
+      providers: candidateModels(model, definition.candidate).map((ref) => {
+        const [name] = ref.split("#"),
+          slash = name.indexOf("/");
+        const provider = definition.candidate.providers?.[name.slice(0, slash)];
+        const { models, ...settings } = provider ?? {};
+        return provider
+          ? { ...settings, model: models?.[name.slice(slash + 1)] }
+          : undefined;
+      }),
     },
     container: {
       engine: definition.container.engine,

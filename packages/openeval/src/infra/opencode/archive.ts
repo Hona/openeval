@@ -72,7 +72,7 @@ export async function readArchivedSession(
             : "Session did not complete")),
     accounting: {
       costUSD: stats.cost,
-      sessions: stats.sessions,
+      sessions: stats.sessions + stats.subagents,
       steps: stats.steps,
       tokens: stats.tokens,
     },

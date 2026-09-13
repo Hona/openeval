@@ -13,22 +13,20 @@ import { CandidateContainer } from "./oci";
 import { EvidenceCapture } from "../evidence";
 import { createSessionDatabase, OPENCODE_VERSION } from "../opencode/host";
 import { credentialsFor, removeCredentials } from "../opencode/auth";
+import { candidateModels } from "../opencode/candidate";
 import { runSession, clientFor, type SessionResult } from "../opencode/session";
 import { readArchivedSession } from "../opencode/archive";
 import { hash, errorMessage, writeJson } from "../files";
 import type { EvidenceFeed } from "../../evidence";
 import { readDurableCheckpoint } from "../opencode/checkpoint";
 
-type CandidateInput = {
+type CandidateInput = BenchmarkDefinition["candidate"] & {
   model: ModelRef;
   prompt: string;
   workspace: string;
   prepare: readonly PreparationStep[];
-  timeoutMs: number;
-  websearch: "exa" | false;
   container: BenchmarkDefinition["container"];
   imageId: string;
-  providers?: BenchmarkDefinition["candidate"]["providers"];
 };
 type CandidateResult = {
   state: "completed" | "stopped" | "failed" | "timed_out";
@@ -60,16 +58,15 @@ export async function executeCandidate(
     const seedDatabase = resolve(staging, "opencode.db");
     await createSessionDatabase(
       seedDatabase,
-      credentialsFor(input.model, input.websearch),
+      credentialsFor(candidateModels(input.model, input), input.websearch),
     );
     container = await CandidateContainer.create(input.container, input.imageId);
     await container.prepare(
       input.workspace,
       seedDatabase,
-      input.websearch,
+      input,
       input.prepare,
       staging,
-      input.providers,
     );
     const initial = resolve(staging, "initial");
     await container.snapshot(initial, staging);
@@ -101,7 +98,7 @@ export async function executeCandidate(
         client,
         {
           model: input.model,
-          agent: "build",
+          agent: input.agent,
           prompt: input.prompt,
           directory: "/workspace",
           timeoutMs: input.timeoutMs,

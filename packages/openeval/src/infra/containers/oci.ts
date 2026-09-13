@@ -11,6 +11,7 @@ import { engineCommand } from "./docker";
 import { extractWorkspaceArchive } from "./transfer";
 import { treeHash, fingerprint, writeJson } from "../files";
 import { OPENCODE_VERSION } from "../opencode/host";
+import { candidateConfiguration } from "../opencode/candidate";
 import { judgingFingerprint } from "../judging";
 
 const runtimeDirectory = fileURLToPath(new URL("./runtime/", import.meta.url));
@@ -148,19 +149,16 @@ export class CandidateContainer {
   async prepare(
     workspace: string,
     database: string,
-    websearch: "exa" | false,
+    candidate: BenchmarkDefinition["candidate"],
     steps: readonly PreparationStep[],
     staging: string,
-    providers?: BenchmarkDefinition["candidate"]["providers"],
   ) {
     await this.upload(workspace, "/workspace", staging);
     await this.upload(database, "/home/dev/.local/share/opencode", staging);
     const config = resolve(staging, "opencode.json");
     await writeJson(config, {
+      ...candidateConfiguration(candidate),
       plugins: ["/opt/opencode/noninteractive"],
-      permissions: [{ action: "*", resource: "*", effect: "allow" }],
-      websearch: websearch ? { provider: websearch } : false,
-      ...(providers ? { providers } : {}),
     });
     await this.upload(config, "/home/dev/.config/opencode", staging);
     for (const step of steps) {

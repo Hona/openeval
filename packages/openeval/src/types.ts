@@ -12,6 +12,9 @@ export type Engine = "docker" | "podman";
 export type ProviderDefinitions = NonNullable<
   Extract<ConfigEntry, { type: "document" }>["info"]["providers"]
 >;
+export type AgentDefinitions = NonNullable<
+  Extract<ConfigEntry, { type: "document" }>["info"]["agents"]
+>;
 export type SessionState =
   "running" | "completed" | "stopped" | "failed" | "timed_out";
 export type Stage = "candidate" | "judge";
@@ -28,6 +31,10 @@ export type Benchmark = {
   repetitions?: number;
   concurrency?: number;
   candidate?: {
+    /** Starting OpenCode agent. Defaults to build; models selects its model. */
+    agent?: string;
+    /** Native OpenCode definitions, including subagents and their models. */
+    agents?: AgentDefinitions;
     timeoutMs?: number;
     websearch?: "exa" | false;
     providers?: ProviderDefinitions;
@@ -81,6 +88,8 @@ export type BenchmarkDefinition = {
   repetitions: number;
   concurrency: number;
   candidate: {
+    agent: string;
+    agents?: AgentDefinitions;
     timeoutMs: number;
     websearch: "exa" | false;
     providers?: ProviderDefinitions;

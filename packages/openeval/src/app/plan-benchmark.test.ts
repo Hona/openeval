@@ -20,7 +20,7 @@ const definition: BenchmarkDefinition = {
   models: ["local/candidate"],
   repetitions: 1,
   concurrency: 1,
-  candidate: { timeoutMs: 1000, websearch: false },
+  candidate: { agent: "build", timeoutMs: 1000, websearch: false },
   judge: { model: "local/judge", timeoutMs: 1000, websearch: false },
   container: { engine: "docker", image: "fixture", cpus: 1, memoryMiB: 1024 },
   evals: [
@@ -43,6 +43,52 @@ const runtime: BenchmarkRun["runtime"] = {
   candidateHash: "candidate-runtime",
   judgeHash: "judge-runtime",
 };
+
+test("candidate reuse includes the starting agent, workers and their provider settings", () => {
+  const candidate: BenchmarkDefinition["candidate"] = {
+    ...definition.candidate,
+    agent: "coordinator",
+    agents: {
+      worker: { mode: "subagent", model: "worker/solver", system: "Solve." },
+    },
+    providers: { worker: { name: "Worker provider" } },
+  };
+  const hash = (value: BenchmarkDefinition["candidate"]) =>
+    candidateFingerprint(
+      { ...definition, candidate: value },
+      "answer",
+      "local/candidate",
+      runtime,
+    );
+  const before = hash(candidate);
+  for (const change of [
+    { ...candidate, agent: "build" },
+    {
+      ...candidate,
+      agents: {
+        worker: { ...candidate.agents!.worker, model: "worker/other" },
+      },
+    },
+    {
+      ...candidate,
+      agents: { worker: { ...candidate.agents!.worker, system: "Review." } },
+    },
+    {
+      ...candidate,
+      providers: { worker: { name: "Changed worker provider" } },
+    },
+  ])
+    expect(hash(change)).not.toBe(before);
+  expect(
+    hash({
+      ...candidate,
+      providers: {
+        ...candidate.providers,
+        unrelated: { name: "Unused provider" },
+      },
+    }),
+  ).toBe(before);
+});
 
 test.each([
   {
