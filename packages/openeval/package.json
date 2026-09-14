@@ -1,6 +1,6 @@
 {
   "name": "@hona/openeval",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Typed prompt-and-judge evaluations with isolated agents, recorded evidence, and a results viewer",
   "license": "MIT",
   "repository": {

@@ -6,6 +6,7 @@ import {
   loadBenchmark,
   buildImage,
   addModels,
+  removeModels,
   retryEvalRun,
   judgeRun,
   serveResults,
@@ -39,6 +40,7 @@ Commands:
   snapshot <run> <name>  Export a score snapshot
   merge-runs <to> <from> Merge results into one aggregate
   add-models <run>       Add models with repeated --model flags
+  remove-models <run>    Remove active models while retaining their evidence
   retry <run> <eval-run> Retry a candidate execution
   rejudge <run> <eval-run> Judge the saved evidence again
 
@@ -46,7 +48,7 @@ Options:
   --benchmark <dir>      Benchmark directory (default: current directory)
   --run <dir>            Resume a specific result directory
   --new                 Start a new result
-  --model <provider/id>  Add a model to the benchmark
+  --model <provider/id>  Model to add or remove (repeatable)
   --only-model <ref>     Execute only this model (repeatable)
   --only-eval <id>       Execute only this eval (repeatable)
   --only-repetition <n>  Execute only this repetition (repeatable)
@@ -125,6 +127,16 @@ Requires Bun 1.4.2+, Docker, and an authenticated OpenCode installation.`);
     if (!args[1])
       throw new Error("add-models requires a benchmark run directory");
     console.log((await addModels(resolve(args[1]), models())).directory);
+  } else if (command === "remove-models") {
+    if (!args[1])
+      throw new Error("remove-models requires a benchmark run directory");
+    const result = await removeModels(resolve(args[1]), models());
+    console.log(JSON.stringify({
+      directory: result.directory,
+      removed: result.removed,
+      retiredSlots: result.retiredSlots,
+      status: result.benchmark.state,
+    }, null, 2));
   } else if (command === "retry" || command === "rejudge") {
     if (!args[1] || !args[2])
       throw new Error(
@@ -137,7 +149,7 @@ Requires Bun 1.4.2+, Docker, and an authenticated OpenCode installation.`);
     console.log(JSON.stringify(result, null, 2));
   } else
     throw new Error(
-      "Commands: image, plan, run, view, add-models, merge-runs, retry, rejudge, snapshot",
+      "Commands: image, plan, run, view, add-models, remove-models, merge-runs, retry, rejudge, snapshot",
     );
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));

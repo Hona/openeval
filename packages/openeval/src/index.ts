@@ -38,6 +38,7 @@ export {
   type RunBenchmarkOptions,
 } from "./app/run-benchmark";
 export { addModels } from "./app/add-models";
+export { removeModels } from "./app/remove-models";
 export type { CostEstimate } from "./app/cost-plan";
 export { mergeBenchmarkRuns } from "./app/merge-runs";
 export { retryEvalRun } from "./app/retry-run";

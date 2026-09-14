@@ -90,6 +90,18 @@ bunx --bun @hona/openeval view
 The viewer opens at **http://127.0.0.1:4173**. `run` resumes the same aggregate;
 scope flags select work while retaining existing scores.
 
+To remove a model from an existing aggregate, remove its entry from
+`benchmark.ts`, then retire its active selections:
+
+```sh
+bunx --bun @hona/openeval snapshot ./results/RUN before-model-removal
+bunx --bun @hona/openeval remove-models ./results/RUN --model provider/retired-model
+```
+
+This retains the model's recorded executions, judgments, and artifacts. It
+does not run candidates or judges, and requires a stopped benchmark run.
+Models still declared in `benchmark.ts` can be added back by a later `run`.
+
 ```mermaid
 flowchart LR
   P["prompt.md"] --> C["Isolated candidate"] --> E["Recording"]
