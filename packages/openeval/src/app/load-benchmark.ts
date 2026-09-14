@@ -28,7 +28,7 @@ const positive = (value: unknown, fallback: number, label: string) => {
 export const modelRef = (value: unknown): ModelRef => {
   if (
     typeof value !== "string" ||
-    !/^[\w.-]+\/[^\s/#]+(?:#[\w.-]+)?$/.test(value)
+    !/^[\w.-]+\/[^\s/#]+(?:\/[^\s/#]+)*(?:#[\w.-]+)?$/.test(value)
   )
     throw new Error(`Invalid model reference: ${String(value)}`);
   return value as ModelRef;

@@ -34,8 +34,13 @@ import { ResultReader } from "@hona/openeval/results";
 import { modelScore } from "@hona/openeval/view";
 import { emptyStage } from "@hona/openeval/session";
 import { fileURLToPath } from "node:url";
-const definition: Benchmark = { models: ["example/candidate"], judge: { model: "example/judge" } };
+const definition: Benchmark = { models: ["example/team/candidate#high"], judge: { model: "example/team/judge#low" } };
 if (typeof loadBenchmark !== "function" || typeof ResultReader !== "function" || typeof modelScore !== "function" || typeof emptyStage !== "function") throw new Error("Invalid public exports");
+await Bun.write("./fixture/benchmark.ts", "export default " + JSON.stringify(definition));
+await Bun.write("./fixture/evals/answer/prompt.md", "Answer the question.");
+await Bun.write("./fixture/evals/answer/judge.md", "## Metric: correct — Correct answer\\nPass when correct.");
+const loaded = await loadBenchmark("./fixture");
+if (loaded.models[0] !== definition.models[0] || loaded.judge.model !== definition.judge.model) throw new Error("Namespaced model references were not preserved");
 const assetsPath = fileURLToPath(new URL("../viewer/", import.meta.resolve("@hona/openeval")));
 const server = await serveResults({ resultsPath: "./results", port: 0, assetsPath });
 try {
