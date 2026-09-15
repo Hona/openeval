@@ -15,8 +15,8 @@ import { measureRecording } from "../recording/metrics";
 import {
   evidencePage as page,
   evidenceTextPage as textPage,
-  type ViewerEvidence,
-} from "../../viewer-export";
+  type EvidenceDocument,
+} from "../../evidence-query";
 type InferenceResponse = { text: string; textBlocks?: string[] };
 type ArtifactPolicy = { excludeDirectories: string[] };
 
@@ -429,28 +429,8 @@ export class CandidateEvidence {
     return structuredClone(this.manifest.tools);
   }
 
-  /** Complete values for a host-side publisher; the publisher must sanitize them. */
-  async viewerData(
-    allowedArtifacts: readonly string[] = [],
-  ): Promise<ViewerEvidence> {
-    const artifacts: ViewerEvidence["artifacts"] = { initial: [], final: [] };
-    for (const revision of ["initial", "final"] as const) {
-      for (const file of this.manifest[revision]?.files ?? []) {
-        if (!allowedArtifacts.includes(file.path)) continue;
-        if (file.symlink !== undefined || file.bytes > 1024 * 1024)
-          throw new Error(
-            `Public artifact must be UTF-8 text of at most 1 MiB: ${file.path}`,
-          );
-        artifacts[revision].push({
-          path: file.path,
-          bytes: file.bytes,
-          sha256: file.sha256,
-          text: new TextDecoder("utf-8", { fatal: true }).decode(
-            await this.bytes(file),
-          ),
-        });
-      }
-    }
+  /** Complete recording values for evidence consumers. Artifact reads stay lazy. */
+  document(): Omit<EvidenceDocument, "artifacts"> {
     return {
       summary: this.summary(),
       response: this.manifest.response.text,
@@ -471,7 +451,6 @@ export class CandidateEvidence {
         directory: this.directory,
         hash: this.hash,
       }),
-      artifacts,
     };
   }
 

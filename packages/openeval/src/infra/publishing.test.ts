@@ -1,6 +1,10 @@
 import { expect, test } from "bun:test";
 import { Publication } from "./publishing";
-import { queryViewerEvidence, type ViewerEvidence } from "../viewer-export";
+import {
+  queryEvidenceDocument,
+  type EvidenceDocument,
+} from "../evidence-query";
+import { publishEvidence, publishSession } from "./publication-recordings";
 import type { SessionStage } from "../view";
 
 const secret = "demo_canary_6Qh7fR9k2zNt8W4pV5sD";
@@ -71,7 +75,7 @@ test("public sessions retain real tool results while excluding credentials and p
     ],
   };
   const before = JSON.stringify(stage);
-  const output = policy.session(stage);
+  const output = publishSession(stage, policy);
   const encoded = JSON.stringify(output);
   expect(encoded).not.toContain(secret);
   expect(encoded).not.toContain("NEVER_PUBLISH");
@@ -130,8 +134,8 @@ test("publication sanitizes whole values before generating previews or pages", (
         hash: "a".repeat(64),
       },
     },
-  } as unknown as ViewerEvidence;
-  const data = policy.evidence(input);
+  } as unknown as EvidenceDocument;
+  const data = publishEvidence(input, policy);
   const json = JSON.stringify(data);
   expect(json).not.toContain(secret);
   expect(json).not.toContain(secret.slice(0, 10));
@@ -141,24 +145,24 @@ test("publication sanitizes whole values before generating previews or pages", (
   );
   expect(data.response).toEndWith("APPLE");
   expect(
-    queryViewerEvidence(data, { action: "response", offset: 1190 }),
+    queryEvidenceDocument(data, { action: "response", offset: 1190 }),
   ).toMatchObject({ text: expect.stringContaining("withheld") });
-  expect(queryViewerEvidence(data, { action: "message", id: "m" }).text).toBe(
+  expect(queryEvidenceDocument(data, { action: "message", id: "m" }).text).toBe(
     data.response,
   );
   expect(
-    queryViewerEvidence(data, { action: "metrics", metric: "tokens.input" }),
+    queryEvidenceDocument(data, { action: "metrics", metric: "tokens.input" }),
   ).toMatchObject({ value: 100 });
   expect(() =>
-    queryViewerEvidence(data, {
+    queryEvidenceDocument(data, {
       action: "metrics",
       metric: "__proto__.constructor",
     }),
   ).toThrow();
   expect(() =>
-    queryViewerEvidence(data, { action: "artifact", path: "../secret" }),
+    queryEvidenceDocument(data, { action: "artifact", path: "../secret" }),
   ).toThrow();
   expect(() =>
-    queryViewerEvidence(data, { action: "events", offset: -1 }),
+    queryEvidenceDocument(data, { action: "events", offset: -1 }),
   ).toThrow();
 });

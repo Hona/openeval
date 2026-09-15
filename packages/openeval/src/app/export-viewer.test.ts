@@ -11,7 +11,10 @@ import { verifyViewerExport } from "./verify-viewer-export";
 import { readBenchmarkRun } from "./read-run";
 import { Results } from "../infra/sqlite";
 import type { BenchmarkRun } from "../types";
-import { queryViewerEvidence, type ViewerEvidence } from "../viewer-export";
+import {
+  queryEvidenceDocument,
+  type EvidenceDocument,
+} from "../evidence-query";
 
 test("a public export retains scores and citations, filters private data, and never changes the source", async () => {
   const root = await mkdtemp(
@@ -162,8 +165,8 @@ test("a public export retains scores and citations, filters private data, and ne
     expect(audit.judge.code.output.private.apiKey).toContain("withheld");
     const evidence = (await Bun.file(
       resolve(output, manifest.evidence[judge][""].path),
-    ).json()) as ViewerEvidence;
-    expect(queryViewerEvidence(evidence, { action: "response" }).text).toBe(
+    ).json()) as EvidenceDocument;
+    expect(queryEvidenceDocument(evidence, { action: "response" }).text).toBe(
       "READY",
     );
     expect(readBenchmarkRun(directory)).toEqual(before);

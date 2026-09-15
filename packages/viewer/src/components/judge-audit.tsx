@@ -8,35 +8,29 @@ import {
 } from "solid-js";
 import { Icon } from "@opencode/ui/icon";
 import { Select } from "@opencode/ui/select";
-import type { JudgeAudit } from "../types";
+import type { EvidenceQuery } from "@hona/openeval";
 import { duration, stateLabel, formatPercent } from "../model";
 import { topSecret } from "../privacy";
-import { viewerSource } from "../data-source";
+import { useViewer } from "../data/context";
 
 type Query = {
-  action: string;
+  action: EvidenceQuery["action"];
   id?: string;
   offset?: number;
   path?: string;
   revision?: "initial" | "final";
   metric?: string;
 };
-async function get<T>(url: string): Promise<T> {
-  return viewerSource.get<T>(url);
-}
-
 /** A numbered decision ledger linked to the exact, immutable evidence each turn read. */
 export function JudgeAuditPanel(props: {
   benchmarkId: string;
   judgeId: string;
   onSelectJudge: (id: string) => void;
 }) {
+  const { source } = useViewer();
   const [audit, actions] = createResource(
     () => !topSecret() && `${props.benchmarkId}:${props.judgeId}`,
-    () =>
-      get<JudgeAudit>(
-        `/api/judge-checks?${new URLSearchParams({ benchmark: props.benchmarkId, judge: props.judgeId })}`,
-      ),
+    () => source.judge(props.benchmarkId, props.judgeId),
   );
   const [selected, setSelected] = createSignal("");
   const [query, setQuery] = createSignal<Query>({ action: "summary" });
@@ -45,22 +39,13 @@ export function JudgeAuditPanel(props: {
     () =>
       !topSecret() && !!selected() ? { check: selected(), ...query() } : false,
     (input) => {
-      const params = new URLSearchParams({
-        benchmark: props.benchmarkId,
-        judge: props.judgeId,
-        check:
-          input.check === "judgment"
-            ? (audit()?.judge.decisionCheckId ?? "")
-            : input.check,
-        action: input.action,
-      });
-      if (input.id !== undefined) params.set("id", input.id);
-      if (input.offset !== undefined)
-        params.set("offset", String(input.offset));
-      if (input.path) params.set("path", input.path);
-      if (input.revision) params.set("revision", input.revision);
-      if (input.metric) params.set("metric", input.metric);
-      return get<Record<string, unknown>>(`/api/check-evidence?${params}`);
+      const { check, ...query } = input;
+      return source.evidence(
+        props.benchmarkId,
+        props.judgeId,
+        check === "judgment" ? (audit()?.judge.decisionCheckId ?? "") : check,
+        query,
+      );
     },
   );
   createEffect(() => {
@@ -395,13 +380,15 @@ export function JudgeAuditPanel(props: {
                       class="checkpoint-actions"
                     >
                       <For
-                        each={[
-                          "summary",
-                          "messages",
-                          "tools",
-                          "events",
-                          "response",
-                        ]}
+                        each={
+                          [
+                            "summary",
+                            "messages",
+                            "tools",
+                            "events",
+                            "response",
+                          ] as const
+                        }
                       >
                         {(action) => (
                           <button

@@ -121,6 +121,24 @@ reviewed JSON live under `/demo/`; it makes no provider requests or live SSE
 connections. Trace data is loaded as needed and checked against the manifest's
 SHA-256 hashes. The homepage and Markdown use the same exported overview.
 
+### Viewer module boundaries
+
+| Layer | Responsibility |
+| --- | --- |
+| `viewer/src/data/types.ts` | Typed reads, subscriptions, and UI capabilities |
+| `viewer/src/data/context.tsx` | Inject the selected source into components |
+| `viewer/src/data/server.ts` | Local HTTP endpoints and SSE lifecycle |
+| `viewer/src/data/saved.ts` | Export manifests, lazy files, and integrity checks |
+| `openeval/src/evidence-query.ts` | Viewer-independent evidence documents and queries |
+| `openeval/src/infra/publication-recordings.ts` | Select artifacts and project recordings for publication |
+| `openeval/src/infra/publishing.ts` | Credential filtering and publication policy |
+
+Paths in this table are relative to `packages/`. `main.tsx` selects the source;
+the UI calls methods such as `summary`, `judge`, and `watchSession`. Only the
+server adapter constructs API URLs or event streams. Components use declared
+capabilities for details, activity, and live updates. The evidence layer has no
+dependency on the viewer export format.
+
 ```mermaid
 flowchart LR
   M["Push to main"] --> B["Build static pages"] --> V["Verify pages + starter"] --> P["Cloudflare Pages"]

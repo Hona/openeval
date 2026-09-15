@@ -6,13 +6,21 @@ import { ResultReader, evalResultId } from "./read-results";
 import { readRecording } from "../infra/opencode/read-recording";
 import { CandidateEvidence } from "../infra/evidence";
 import { Publication } from "../infra/publishing";
+import {
+  publicationDocument,
+  publishEvidence,
+  publishSession,
+} from "../infra/publication-recordings";
+import {
+  queryEvidenceDocument,
+  type EvidenceDocument,
+} from "../evidence-query";
 import { credentialsFor } from "../infra/opencode/auth";
 import { Results } from "../infra/sqlite";
 import {
   mergeRuntime,
   runtimeMs,
   sumCosts,
-  queryViewerEvidence,
   type EvalRunSummary,
   type ViewerAsset,
   type ViewerExport,
@@ -191,14 +199,14 @@ export async function exportViewer(
         after = page.at(-1)!.sequence;
       }
       manifest.sessions[run.id] = await put(
-        policy.session(await readRecording(directory, run, records)),
+        publishSession(await readRecording(directory, run, records), policy),
       );
     }
     const evidence = new Map<
       string,
       {
         asset: ViewerAsset;
-        data: Awaited<ReturnType<CandidateEvidence["viewerData"]>>;
+        data: EvidenceDocument;
       }
     >();
     for (const judge of judges) {
@@ -218,8 +226,9 @@ export async function exportViewer(
             resolve(directory, check.reference.directory),
             check.reference.hash,
           );
-          const published = policy.evidence(
-            await source.viewerData(options.artifacts),
+          const published = publishEvidence(
+            await publicationDocument(source, options.artifacts),
+            policy,
           );
           saved = { data: published, asset: await put(published) };
           evidence.set(check.reference.hash, saved);
@@ -242,7 +251,7 @@ export async function exportViewer(
                       ? { path: citation.path, revision: citation.revision }
                       : {}),
                   };
-          queryViewerEvidence(saved, query);
+          queryEvidenceDocument(saved, query);
         }
     }
     const modelMetrics: ViewerModelMetrics[] =

@@ -1,7 +1,3 @@
-import type { SessionMessageInfo } from "@opencode/client";
-import type { SessionStage } from "../view";
-import type { ViewerEvidence } from "../viewer-export";
-
 const withheld = "[withheld from public export]";
 const privateKey =
   /^(?:authorization|proxyauthorization|cookie|setcookie|apikey|accesstoken|refreshtoken|clientsecret|password|secret|token|credentials|credential|privatekey)$/i;
@@ -31,17 +27,6 @@ const credentialMatch = (rule: number, value: string) => {
     )
   );
 };
-export function pick<T extends object, K extends keyof T>(
-  value: T,
-  keys: readonly K[],
-): Pick<T, K> {
-  return Object.fromEntries(
-    keys
-      .filter((key) => value[key] !== undefined)
-      .map((key) => [key, value[key]]),
-  ) as Pick<T, K>;
-}
-
 /** Filter before paging/preview generation. Nothing here edits the retained evidence. */
 export class Publication {
   readonly redactions: Record<string, number> = {};
@@ -61,6 +46,7 @@ export class Publication {
   }
   omit(reason: string) {
     this.redactions[reason] = (this.redactions[reason] ?? 0) + 1;
+    return withheld;
   }
   text(value: string, depth = 0): string {
     if (depth > 100)
@@ -126,160 +112,6 @@ export class Publication {
       return result;
     };
     return visit(value, depth) as T;
-  }
-  session(stage: SessionStage): SessionStage {
-    return this.json({
-      prompt: stage.prompt,
-      model: stage.model,
-      sessions: stage.sessions.map((session) => ({
-        ...pick(session, [
-          "sessionID",
-          "title",
-          "parentID",
-          "created",
-          "model",
-          "agent",
-          "status",
-        ]),
-        diffs: [],
-        parts: {},
-        messages: session.messages.map((message) => {
-          if (message.metadata) this.omit("message-metadata");
-          if (message.type === "assistant")
-            return {
-              ...pick(message, [
-                "type",
-                "id",
-                "time",
-                "agent",
-                "model",
-                "finish",
-                "cost",
-                "tokens",
-                "error",
-                "retry",
-              ]),
-              content: message.content.map((part) => {
-                if (part.type !== "tool") {
-                  if (part.state) this.omit("provider-state");
-                  return part.type === "reasoning"
-                    ? pick(part, ["type", "text", "time"])
-                    : pick(part, ["type", "text"]);
-                }
-                const state = { ...part.state };
-                if (state.status === "streaming") {
-                  this.omit("incomplete-tool-input");
-                  state.input = withheld;
-                } else if ("content" in state && state.content)
-                  state.content = state.content.map((content) => {
-                    if (content.type === "text") return content;
-                    this.omit("attachment");
-                    return {
-                      type: "text" as const,
-                      text: "[Attachment omitted from public export]",
-                    };
-                  }) as typeof state.content;
-                return {
-                  ...pick(part, ["type", "id", "name", "time", "executed"]),
-                  state,
-                };
-              }),
-            };
-          if (message.type === "user" && message.files?.length)
-            this.omit("attachment");
-          const keys = [
-            "type",
-            "id",
-            "time",
-            "text",
-            "description",
-            "skill",
-            "name",
-            "agent",
-            "model",
-            "previous",
-            "location",
-            "shellID",
-            "command",
-            "status",
-            "exit",
-            "output",
-            "summary",
-            "recent",
-            "reason",
-            "cost",
-            "tokens",
-            "error",
-          ];
-          return Object.fromEntries(
-            Object.entries(message).filter(([key]) => keys.includes(key)),
-          ) as SessionMessageInfo;
-        }),
-      })),
-    });
-  }
-  evidence(input: ViewerEvidence): ViewerEvidence {
-    const data = this.json({
-      ...input,
-      events: input.events.map((record) => {
-        const keys = [
-          "sessionID",
-          "assistantMessageID",
-          "id",
-          "name",
-          "agent",
-          "model",
-          "parentID",
-          "title",
-          "ordinal",
-          "text",
-          "input",
-          "content",
-          "error",
-          "executed",
-          "finish",
-          "status",
-          "inboxID",
-          "item",
-          "reason",
-          "attempt",
-          "time",
-          "output",
-          "duration",
-          "usage",
-        ];
-        const eventData = Object.fromEntries(
-          Object.entries(record.event.data).filter(([key]) =>
-            keys.includes(key),
-          ),
-        );
-        if (/\.(?:delta|input\.started)$/.test(record.event.type)) {
-          this.omit("stream-fragment");
-          return {
-            ...record,
-            event: {
-              type: record.event.type,
-              data: {
-                ...pick(eventData, [
-                  "sessionID",
-                  "assistantMessageID",
-                  "id",
-                  "ordinal",
-                ]),
-                publication:
-                  "Incremental content omitted; complete messages and tools are available.",
-              },
-            },
-          };
-        }
-        return {
-          ...record,
-          event: { type: record.event.type, data: eventData },
-        };
-      }),
-    });
-    data.summary.responsePreview = data.response.slice(0, 1200);
-    return data;
   }
   assertClean(text: string) {
     if (this.secrets.some((secret) => text.includes(secret)))
