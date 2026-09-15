@@ -9,7 +9,7 @@ const runtime = Effect.runFork(
         hostname: "0.0.0.0",
         port: 4096,
         password: process.env.OPENCODE_SERVER_PASSWORD,
-        app: { name: "opencode", version: "0.0.0-beta-19296" },
+        app: { name: "opencode", version: "2.0.3" },
         database: { path: "/home/dev/.local/share/opencode/opencode.db" },
         events: { persist: true },
       });

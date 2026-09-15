@@ -13,10 +13,10 @@
   "dependencies": {
     "@hona/openeval": "workspace:*",
     "@kobalte/core": "0.13.13",
-    "@opencode/client": "0.0.0-beta-19296",
+    "@opencode/client": "2.0.3",
     "@opencode/session-ui": "workspace:*",
-    "@opencode/ui": "0.0.0-beta-19296",
-    "@opencode/util": "0.0.0-beta-19296",
+    "@opencode/ui": "2.0.3",
+    "@opencode/util": "2.0.3",
     "@solidjs/meta": "0.29.4",
     "solid-js": "1.9.15"
   }

@@ -74,8 +74,9 @@ a JudgeRun error. A hybrid judgment is selected only after both sources succeed.
 | native.schema() | The pinned OpenCode schema module |
 
 Native readers initialize lazily and are disposed by the runner. SDK operations
-affect only their disposable copy. The native archive version must match the
-reader version. Files and database copies are checked against recorded hashes.
+and native schema upgrades affect only their disposable copy. The recorded
+OpenCode version remains available separately from the reader version. Files and
+database copies are checked against recorded hashes.
 These APIs expose recorded data, not the user's live OpenCode service.
 
 For independent inspection:

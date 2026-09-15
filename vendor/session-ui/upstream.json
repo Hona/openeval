@@ -2,5 +2,5 @@
   "commit": "22111e4b3bf461311f9204b653bab1faf6462321",
   "package": "packages/session-ui",
   "namespaceRewrite": "@opencode-ai/ → @opencode/",
-  "publishedDependencies": "0.0.0-beta-19296"
+  "publishedDependencies": "2.0.3"
 }

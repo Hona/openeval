@@ -108,6 +108,10 @@ See the [canonical terminology](https://openev.al/docs/terminology/) and the
 
 Requires **Bun 1.4.2+**, **Docker**, and connected models in **OpenCode**.
 
+OpenEval 0.3.1 pins the production OpenCode packages at **2.0.3**. Run the
+`image` command after upgrading to build `openeval-runtime:2.0.3`. Recorded runs
+retain the OpenCode version that actually executed them.
+
 ```sh
 bun add --exact @hona/openeval
 ```

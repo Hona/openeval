@@ -615,7 +615,7 @@ export const docs: Doc[] = [
             "typescript",
           ),
           text(
-            "The runner owns reader lifetimes and initializes native services only when requested. Native reads are bound to the recorded database, not your live OpenCode service. The archive's OpenCode version must match the pinned reader version.",
+            "The runner owns reader lifetimes and initializes native services only when requested. Native reads are bound to the recorded database, not your live OpenCode service. The SDK opens supported native schemas on disposable copies; recorded and reader versions remain distinct metadata.",
           ),
         ],
       },

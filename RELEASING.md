@@ -41,6 +41,10 @@ Provenance is enabled for future releases from this public repository. See
 
 ## Upstream session UI
 
+OpenEval 0.3.1 uses production `@opencode/*` 2.0.3 dependencies in the SDK,
+viewer, and candidate image. `@opencode/session-ui` is not published, so its
+vendored source remains pinned while its published dependencies use 2.0.3.
+
 `vendor/session-ui/upstream.json` records the upstream commit and namespace
 rewrite used for the vendored UI. Source, declarations, and the original MIT
 license are checked in so a checkout can build without a local upstream repo.

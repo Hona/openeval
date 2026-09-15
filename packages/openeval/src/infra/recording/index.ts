@@ -49,10 +49,6 @@ export async function openRecording(
   const copyDatabase = async (name: string) => {
     if (!archive || !input.runDirectory)
       throw new Error("This recording has no native OpenCode database");
-    if (archive.opencodeVersion !== OPENCODE_VERSION)
-      throw new Error(
-        `Native reader ${OPENCODE_VERSION} cannot open archive version ${archive.opencodeVersion}`,
-      );
     const bytes = await Bun.file(
       resolve(input.runDirectory, archive.database),
     ).bytes();

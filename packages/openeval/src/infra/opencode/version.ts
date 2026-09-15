@@ -1,1 +1,2 @@
-export const OPENCODE_VERSION = "0.0.0-beta-19296";
+export const OPENCODE_VERSION = "2.0.3";
+export const RUNTIME_IMAGE = `openeval-runtime:${OPENCODE_VERSION}`;

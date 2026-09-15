@@ -13,6 +13,8 @@ import {
   savedJudgeFingerprint,
 } from "./input-fingerprints";
 import { planBenchmark, slotId } from "./plan-benchmark";
+import { judgeFingerprint } from "./input-fingerprints";
+import { finishBenchmark } from "./run-benchmark";
 
 const definition: BenchmarkDefinition = {
   name: "SDK fixture",
@@ -146,3 +148,127 @@ test.each([
     ).toBe(original);
   },
 );
+
+test("completion respects admitted work while retaining scored results from an older runtime", () => {
+  const current: BenchmarkDefinition = {
+    ...definition,
+    evals: ["retained", "collected"].map((id) => ({
+      ...definition.evals[0],
+      id,
+    })),
+  };
+  const updated = { ...runtime, imageId: "new-image" };
+  using results = new Results(":memory:");
+  const now = new Date().toISOString();
+  const collectedSlot = slotId("collected", current.models[0], 1);
+  results.saveBenchmark({
+    id: "benchmark_scope",
+    name: "Scope",
+    source: current.directory,
+    createdAt: now,
+    updatedAt: now,
+    state: "running",
+    definition: current,
+    runtime: updated,
+    scheduledSlotIds: [collectedSlot],
+    execution: {
+      startedAt: now,
+      onlyEvals: ["collected"],
+      estimatedUSD: 0,
+      spentUSD: 0,
+      deferred: 0,
+    },
+  });
+  for (const item of current.evals) {
+    const used = item.id === "retained" ? runtime : updated;
+    const slot: Slot = {
+      id: slotId(item.id, current.models[0], 1),
+      evalId: item.id,
+      model: current.models[0],
+      repetition: 1,
+      active: true,
+      candidateHash: candidateFingerprint(
+        current,
+        item.id,
+        current.models[0],
+        used,
+      ),
+      judgeHash: judgeFingerprint(current, item.id),
+      evalRunId: null,
+      judgeRunId: null,
+    };
+    const candidate = results.startEval(slot, {
+      evalId: item.id,
+      model: slot.model,
+      repetition: 1,
+      prompt: item.prompt,
+      candidateHash: slot.candidateHash,
+      sourceHash: item.sourceHash,
+      imageId: used.imageId,
+      timeoutMs: 1000,
+      earlyStop: false,
+      runtime: used,
+    });
+    const evidence = { directory: "evidence", hash: item.id };
+    results.finishEval({
+      ...candidate,
+      state: "completed",
+      completedAt: now,
+      elapsedMs: 0,
+      evidence,
+    });
+    const judge = results.startJudge({
+      evalRunId: candidate.id,
+      evidence,
+      rubric: item.judge,
+      kind: "llm",
+      agent: JUDGE_AGENT,
+      model: current.judge.model,
+      judgeHash: slot.judgeHash,
+      timeoutMs: 1000,
+      websearch: false,
+      mode: "final",
+      runtimeHash: used.judgeHash,
+      protocol: JUDGE_PROTOCOL,
+      criteria: item.criteria,
+    });
+    results.finishJudge({
+      ...judge,
+      state: "completed",
+      completedAt: now,
+      elapsedMs: 0,
+      judgment: {
+        value: 1,
+        reason: "Recorded answer",
+        scores: {
+          answer: {
+            value: 1,
+            reason: "Recorded answer",
+            evidence: [{ kind: "response" }],
+            source: "judge.md",
+          },
+        },
+      },
+    });
+  }
+  const before = results.evalRuns();
+  const context = {
+    directory: "/benchmark",
+    definition: current,
+    runtime: updated,
+    results,
+  };
+  expect(
+    planBenchmark(current, updated, results).find(
+      (item) => item.slot.evalId === "retained",
+    )?.action,
+  ).toBe("candidate");
+  expect(finishBenchmark(context).state).toBe("completed");
+  expect(results.evalRuns()).toEqual(before);
+  results.saveBenchmark({
+    ...results.benchmark!,
+    state: "running",
+    scheduledSlotIds: [slotId("retained", current.models[0], 1)],
+  });
+  expect(finishBenchmark(context).state).toBe("incomplete");
+});

@@ -11,6 +11,7 @@ import type {
 import { CANDIDATE_TIMEOUT_MS } from "../types";
 import { rubricCriteria } from "../judgment";
 import { compileCodeJudge } from "../infra/judging/code-source";
+import { RUNTIME_IMAGE } from "../infra/opencode/version";
 import { monitorPolicy } from "./monitor-policy";
 import {
   fingerprint,
@@ -290,7 +291,7 @@ export async function loadBenchmark(
     },
     container: {
       engine,
-      image: definition.container?.image ?? "openeval-runtime:0.2",
+      image: definition.container?.image ?? RUNTIME_IMAGE,
       cpus: positive(definition.container?.cpus, 2, "CPU count"),
       memoryMiB: positive(definition.container?.memoryMiB, 4096, "Memory"),
     },

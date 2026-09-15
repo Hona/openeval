@@ -84,11 +84,14 @@ export function finishBenchmark(context: ExecutionContext) {
     benchmarkScores(context.definition, slots, judges).every(
       (score) => score.percentage !== null,
     );
+  // Scoped collection deliberately retains older selected executions elsewhere.
+  // Only admitted work must match this invocation's runtime and judge inputs.
+  const admitted = new Set(context.results.benchmark!.scheduledSlotIds);
   const currentInputs = planBenchmark(
     context.definition,
     context.runtime,
     context.results,
-  ).every((item) => item.action === "reuse");
+  ).every((item) => !admitted.has(item.slot.id) || item.action === "reuse");
   const previous = context.results.benchmark!;
   const ended = [...executions, ...judges]
     .map((run) => run.completedAt)

@@ -121,7 +121,7 @@ test("native access reads paginated history before compaction and preserves the 
         sessionId: sessionID,
         database: "native.db",
         databaseHash: originalHash,
-        opencodeVersion: OPENCODE_VERSION,
+        opencodeVersion: "recorded-fixture-version",
       },
     };
     {
@@ -136,6 +136,8 @@ test("native access reads paginated history before compaction and preserves the 
         context.native.schema(),
       ]);
       expect(db).toBe(repeatedDb);
+      expect(context.native.version).toBe("recorded-fixture-version");
+      expect(context.native.readerVersion).toBe(OPENCODE_VERSION);
       expect(schema.Session).toBeDefined();
       expect(() => db.exec("CREATE TABLE forbidden (id INTEGER)")).toThrow();
       expect((await context.recording.messages(sessionID)).length).toBe(107);

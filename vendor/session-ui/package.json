@@ -174,9 +174,9 @@
   },
   "dependencies": {
     "@kobalte/core": "0.13.13",
-    "@opencode/client": "0.0.0-beta-19296",
-    "@opencode/ui": "0.0.0-beta-19296",
-    "@opencode/util": "0.0.0-beta-19296",
+    "@opencode/client": "2.0.3",
+    "@opencode/ui": "2.0.3",
+    "@opencode/util": "2.0.3",
     "@pierre/diffs": "1.2.10",
     "@shikijs/stream": "4.4.3",
     "@solid-primitives/event-listener": "2.4.6",
@@ -196,6 +196,6 @@
   },
   "peerDependencies": {
     "solid-js": "1.9.15",
-    "@opencode/ui": "0.0.0-beta-19296"
+    "@opencode/ui": "2.0.3"
   }
 }
