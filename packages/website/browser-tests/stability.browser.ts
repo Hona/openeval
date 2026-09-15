@@ -143,8 +143,8 @@ test("source tabs and response choices keep the workbench and following sections
       selectors,
     );
   await expect(page.locator(".judgment-heading")).toContainText("2 / 2 passed");
-  for (const metric of await page.locator(".metric-decision").all())
-    await stableClick(page, metric, selectors);
+  for (const criterion of await page.locator(".criterion-decision").all())
+    await stableClick(page, criterion, selectors);
   const inactive = page.locator('.stable-tab-panel[aria-hidden="true"]');
   expect(await inactive.count()).toBeGreaterThan(0);
   expect(

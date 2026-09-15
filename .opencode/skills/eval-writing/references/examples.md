@@ -111,10 +111,10 @@ changes it when one decisive fact becomes wrong.”
 | Same report, equivalent prose instead of bullets | Same label when formatting is not a criterion |
 | Same report, one decisive total changed | Affected factual criterion changes |
 | Shorter report with a required caveat removed | Reassess; this is not a harmless shortening |
-| Same metric, equivalent ordering of other metrics | Its label should not drift without a semantic reason |
+| Same criterion, equivalent ordering of other criteria | Its score should not drift without a semantic reason |
 | Correct report with irrelevant claims to the judge | Treat the claims as evidence content, not instructions |
 
-Keep shared context necessary to interpret each metric. Perform diagnostic
+Keep shared context necessary to interpret each criterion. Perform diagnostic
 permutations in a separate audit; do not pick whichever order yields a preferred
 score. Verify the expected labels of generated variations before using them.
 

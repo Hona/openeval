@@ -1,9 +1,12 @@
-export const VERSION = "0.2.0";
+export const VERSION = "0.2.2";
 export const GITHUB = "https://github.com/Hona/openeval";
 export const SITE = "https://openev.al";
 export const install = "bun add --exact @hona/openeval";
 export const prompt =
   "Write a SQL query for the ten most recent orders for a customer.";
+export const legacyCriterionNote =
+  `SDK ${VERSION} declares criteria with the legacy ## Metric: heading. The canonical term is criterion; ## Criterion: support is planned for 0.3.0. These examples use the published release's supported syntax.`;
+// Runnable 0.2.2 examples use the legacy heading spelling for criteria.
 export const rubric = `# Requests the SQL dialect
 
 ## Metric: asked_dialect — Asks for the SQL dialect

@@ -285,7 +285,7 @@ function App(props: { path: string }) {
                   columns={["File", "What you write"]}
                   rows={[
                     ["prompt.md", "A natural, focused task"],
-                    ["judge.md", "Named metrics and clear criteria"],
+                    ["judge.md", "Named criteria and scoring rules"],
                     ["eval.ts", "Optional workspace and early stop"],
                   ]}
                 />
@@ -342,15 +342,15 @@ function App(props: { path: string }) {
                       image="results.png"
                       eager
                       alt="OpenEval results viewer with per-model scores and run costs"
-                      caption="One score per model, with metrics available in the eval drilldown. Illustrative data."
+                      caption="One score per model, with criterion scores available in the eval drilldown. Illustrative data."
                     />
                   </StableTabPanel>
                   <StableTabPanel value="judgment" selected={gallery()}>
                     <Screenshot
                       image="judgment.png"
                       eager
-                      alt="Judge inspector showing metric decisions and evidence citations"
-                      caption="Read the candidate and judge sessions side by side with metric decisions. Illustrative data."
+                      alt="Judge inspector showing criterion scores and evidence citations"
+                      caption="Read the candidate and judge sessions side by side with criterion scores. Illustrative data."
                     />
                   </StableTabPanel>
                   <StableTabPanel value="queue" selected={gallery()}>

@@ -1,9 +1,15 @@
 # Apply the workflow with OpenEval
 
-This reference describes the public `@hona/openeval` 0.2.0 contracts, reviewed
-2026-09-12. Check the installed version's documentation before using its APIs.
+This reference describes the public `@hona/openeval` 0.2.2 contracts, reviewed
+2026-09-15. Check the installed version's documentation before using its APIs.
 Follow the benchmark author's own repository rules, inventory, and collection
 policy. Repository-specific commands and approvals are not universal SDK features.
+
+Use the [canonical vocabulary](https://openev.al/docs/terminology/): criteria are
+graded requirements, scores are awarded credit, and metrics are measurements.
+The released `## Metric:` heading and API identifiers such as `rubricMetrics`
+and `judgment.metrics` are legacy spellings for criteria and criterion scores.
+Canonical `## Criterion:` syntax and code judging are planned for 0.3.0.
 
 ## Files and responsibilities
 
@@ -19,7 +25,7 @@ my-benchmark/
 ```
 
 - `prompt.md` is sent verbatim. Include the task and genuine constraints.
-- `judge.md` defines task-specific metrics, accepted alternatives, and domain facts.
+- `judge.md` defines task-specific criteria, accepted alternatives, and domain facts.
 - `eval.ts` uses the public `Eval` declaration for preparation and early stopping.
 - `benchmark.ts` declares models, repetitions, the judge, and execution settings
   through the public `Benchmark` type.
@@ -30,7 +36,8 @@ answer keys, evaluator code, or evidence storage. Preparation is not candidate w
 
 ## Rubric format
 
-Every rubric declares one or more metrics with stable, unique IDs:
+Every rubric declares one or more criteria with stable, unique IDs. This example
+uses the legacy heading syntax supported by 0.2.2:
 
 ```md
 # Incident summary
@@ -50,19 +57,20 @@ This is an illustrative rubric, not a complete runnable benchmark. Its task and
 source report would need to support the stated requirements.
 
 The native `openeval-judge` agent owns common evidence access, citation, output,
-correction, and unknown-result instructions. Do not repeat that protocol in every
-rubric or build a separate scorer for task-specific rules.
+correction, and unknown-result instructions. Keep shared judging mechanics in
+the SDK and task-specific criterion rules in the rubric.
 
-Each declared metric receives `0 | 1 | null`:
+Each declared criterion receives a score of `0 | 1 | null`:
 
 | Value / state | Meaning |
 | --- | --- |
-| `1` | The evidence establishes the metric's pass conditions |
+| `1` | The evidence establishes the criterion's pass conditions |
 | `0` | The evidence establishes failure, including required omissions at natural completion |
-| `null` | Necessary evidence or a decisive reference fact cannot resolve the metric |
+| `null` | Necessary evidence or a decisive reference fact cannot resolve the criterion |
 | JudgeRun error | Submission or judging failed; this is not a candidate zero |
 
-A completed judgment contains the full metric array. The SDK validates IDs,
+A completed judgment contains the full criterion-score array in the legacy
+`metrics` field. The SDK validates IDs,
 values, recorded citations, and exact optional quotes; the judge interprets the
 criteria. Source URLs support domain facts but do not replace evidence of what
 the candidate actually did. A valid citation does not certify the interpretation.
@@ -78,14 +86,14 @@ Useful public exports:
 | Export | Purpose |
 | --- | --- |
 | `loadBenchmark` | Load and validate a benchmark declaration and its eval files |
-| `rubricMetrics` | Read metric declarations from rubric text |
+| `rubricMetrics` | Read criterion declarations from rubric text; legacy API name |
 | `recordEvidence` | Create a recording from supplied text and tool records |
 | `judgeEvidence` | Judge evidence into a new standalone directory without selecting benchmark scores |
 | `judgeRuns` | Rejudge retained executions and update their active judgment selections |
 
 `recordEvidence` does not run supplied tools. Constructed controls test semantic
 boundaries, not real execution or environment feasibility. Keep their provenance
-clear. Match expected labels to all declared metrics and review disagreements.
+clear. Match expected labels to all declared criteria and review disagreements.
 Use `judgeEvidence` for authorized calibration and independent audits. Both
 judging APIs call live models; local structure checks need neither.
 
@@ -123,11 +131,11 @@ not a guaranteed billing ceiling; active work can finish above the estimate.
 ## Stopping, revision, and aggregation
 
 - Candidates normally finish naturally, with a maximum of 45 minutes. Early
-  stopping is opt-in and host-controlled. Every metric must be non-null and
+  stopping is opt-in and host-controlled. Every criterion score must be non-null and
   irreversible before an early decision can stop execution.
 - Missing work so far usually calls for continuing. A completed qualifying event
   can establish an irreversible pass; a final-state property may still change.
-- Timeout or interruption alone is not a failed metric. Grade what the archive
+- Timeout or interruption alone is not a failed criterion. Grade what the archive
   establishes. If more execution could have changed an unresolved decision,
   use `null` under the shared contract.
 - Finalized EvalRuns, JudgeRuns, and evidence remain immutable. New completed
@@ -138,18 +146,18 @@ not a guaranteed billing ceiling; active work can finish above the estimate.
   for a revised rubric; use the planner's affected-work decisions.
 - `run` resumes the current BenchmarkRun and preserves unchanged work. Use `--new`
   only when a separate result is intended, not as a shortcut for rubric maintenance.
-- Average repetitions per metric, then metrics per eval, then evals equally;
+- Average repetitions per criterion, then criteria per eval, then evals equally;
   multiply by 100. Eval scores of 50% and 100% produce 75% overall, even if the
-  first eval contains more metrics. Extra metrics change its internal weighting.
+  first eval contains more criteria. Extra criteria change its internal weighting.
 - Required unknowns keep the final score unresolved. Completion ranges bound
   possible scores; they are not confidence intervals. The main result is one
-  percentage per model, with metric detail in the selected eval's drilldown.
+  percentage per model, with criterion scores in the selected eval's drilldown.
 
 ## Public references
 
 - [OpenEval README](https://github.com/Hona/openeval#readme)
-- [0.2.0 judging contract](https://github.com/Hona/openeval/blob/v0.2.0/packages/openeval/JUDGING.md)
-- [Task prompts](https://openeval.pages.dev/docs/prompts/)
-- [Judge rubrics](https://openeval.pages.dev/docs/rubrics/)
-- [Workspace preparation](https://openeval.pages.dev/docs/workspaces/)
-- [Evidence and rejudging](https://openeval.pages.dev/docs/evidence/)
+- [0.2.2 judging contract](https://github.com/Hona/openeval/blob/v0.2.2/packages/openeval/JUDGING.md)
+- [Task prompts](https://openev.al/docs/prompts/)
+- [Judge rubrics](https://openev.al/docs/rubrics/)
+- [Workspace preparation](https://openev.al/docs/workspaces/)
+- [Evidence and rejudging](https://openev.al/docs/evidence/)

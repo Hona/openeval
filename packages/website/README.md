@@ -23,6 +23,12 @@ from `packages/website`.
 - `prepare.ts`: copy public screenshots and produce the starter ZIP.
 - `build.ts`: prerender all routes, metadata, sitemap, and the 404 page.
 
+Use [the canonical vocabulary](../../TERMINOLOGY.md) in every label, example,
+caption, and authoring guide. Criteria are graded requirements; scores are
+awarded credit; metrics are measurements. The terminology page is checked against
+the root glossary during CI and `site:verify`. Runnable examples target 0.2.2
+and explicitly identify its legacy `## Metric:` syntax.
+
 Pages contain readable HTML before JavaScript loads. JavaScript adds file tabs,
 search, copy controls, and illustrative interactions; it never calls a live model.
 
@@ -45,7 +51,7 @@ search, copy controls, and illustrative interactions; it never calls a live mode
 ## Cloudflare Pages
 
 The `openeval` Pages project is connected to `Hona/openeval`, production branch
-`main`, and publishes to **https://openeval.pages.dev** with these build settings:
+`main`, and publishes to **https://openev.al** with these build settings:
 
 | Setting | Value |
 | --- | --- |
@@ -56,7 +62,7 @@ The `openeval` Pages project is connected to `Hona/openeval`, production branch
 | `NODE_VERSION` | `24` |
 
 GitHub pushes to `main` deploy through Pages' Git integration. The Pages subdomain
-serves previews while the custom domain completes registration and DNS setup.
+https://openeval.pages.dev serves the same production deployment.
 The site is static: there are no Pages Functions or application secrets.
 
 ```mermaid

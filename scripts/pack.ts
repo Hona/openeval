@@ -17,6 +17,7 @@ await cp(resolve(root, "LICENSE"), resolve(packageDirectory, "LICENSE"));
 await Bun.write(resolve(packageDirectory, "README.md"), (await Bun.file(resolve(root, "README.md")).text())
   .replaceAll("packages/openeval/JUDGING.md", "JUDGING.md")
   .replaceAll("(docs/images/", "(https://raw.githubusercontent.com/Hona/openeval/main/docs/images/")
+  .replace("(TERMINOLOGY.md)", "(https://openev.al/docs/terminology/)")
   .replace("(RELEASING.md)", "(https://github.com/Hona/openeval/blob/main/RELEASING.md)"));
 await mkdir(resolve(root, "artifacts"), { recursive: true });
 await run(["bun", "pm", "pack", "--destination", resolve(root, "artifacts")], packageDirectory);

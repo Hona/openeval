@@ -1,5 +1,11 @@
 # Judging recorded work
 
+Use the [canonical terminology](https://openev.al/docs/terminology/): a criterion
+is a named graded requirement, a score is awarded credit, and a metric is a
+measurement such as token count or cost. This document describes the released
+0.2.2 LLM-judging contract. Its literal `## Metric:` headings and `metrics` API
+fields are legacy names for criteria and criterion scores.
+
 ## Shared judge agent
 
 OpenEval uses the native OpenCode V2 primary agent `openeval-judge` for final
@@ -13,16 +19,17 @@ the eval rubric. It remains present across compaction. User turns identify the
 phase; structured context and decisions move through registered Code Mode tools.
 The tools use native Effect schemas for argument validation and catalog types.
 
-Every JudgeRun requires its shared profile in `input.agent`, explicit metrics,
+Every JudgeRun requires its shared profile in `input.agent`, explicit criteria,
 mode, runtime hash, and protocol. The effective
 native configuration is archived at `configuration/opencode.json` in its judge
 directory. The profile contributes to the judge input fingerprint, so a shared
 prompt change schedules rejudging using saved evidence. Candidate input
 fingerprints do not include the judge profile.
 
-## Eval metric rubrics
+## Eval rubrics
 
-Declare one or more metrics in `judge.md`:
+Declare one or more criteria in `judge.md`. The example uses the legacy heading
+syntax required by SDK 0.2.2:
 
 ```md
 # Advice quality
@@ -35,21 +42,21 @@ Fail when a recommendation is unavailable now, or the requested advice is omitte
 Judge later recommendations at their explicitly stated stage.
 ```
 
-Keep metric-specific rules, accepted alternatives, and domain facts in that file.
-The LLM applies these rules. The SDK validates the declared IDs, binary metric
+Keep criterion-specific rules, accepted alternatives, and domain facts in that file.
+The LLM applies these rules. The SDK validates the declared IDs, binary criterion
 values, recorded evidence references, and exact optional quotes. It calculates
-the equal-weight metric mean. A missing metric or invalid citation is a judge
-protocol error; missing source evidence can produce a null metric. Every rubric
+the equal-weight mean of criterion scores. A missing criterion or invalid citation is a judge
+protocol error; missing source evidence can produce a null criterion score. Every rubric
 must declare at least one `## Metric: id — Label`, and every judgment contains
-the complete metric array.
+the complete criterion-score array in the legacy `metrics` field.
 
 ## Structured tool submissions
 
 | Tool | Data |
 | --- | --- |
-| `judge_context` | Current request ID, phase, metric declarations, and evidence index |
+| `judge_context` | Current request ID, phase, criterion declarations, and evidence index |
 | `candidate_evidence` | Recorded responses, tools, events, messages, and artifacts |
-| `submit_judgment` | Scores keyed by metric ID, with reasons and citations |
+| `submit_judgment` | Scores keyed by criterion ID, with reasons and citations |
 | `continue_judging` | An early check's reason for needing more evidence |
 
 Native argument validation and citation validation return errors directly to the
@@ -61,20 +68,21 @@ submission fails the JudgeRun rather than assigning a candidate zero.
 Tool schemas stay stable across checks. Each request ID is bound to one fixed
 evidence view. Only the first valid submission is accepted; stale, concurrent, or
 cancelled submissions cannot overwrite it or affect a later check. Early
-submissions require every metric to be non-null and irreversible. Final grading
-permits null metrics and rejects `continue_judging`.
+submissions require every criterion score to be non-null and irreversible. Final grading
+permits null criterion scores and rejects `continue_judging`.
 
 Accepted submissions and semantic rejections are recorded in
 `judgment-submissions.json`, with their request/check IDs and checkpoints. Native
 schema failures are retained in the native tool transcript.
 
-Every decided metric cites recorded evidence. Citations can name a response,
+Every decided criterion score cites recorded evidence. Citations can name a response,
 message ID, tool-call ID, event sequence, or initial/final artifact path. The
 evidence reference/checkpoint binds those citations to the exact recording.
 Source URLs are supplementary domain references, not substitutes for citations
 to the candidate's work.
 
-For example, the judge submits this from Code Mode after inspecting the recording:
+For example, the judge submits this from Code Mode after inspecting the recording.
+The literal `metrics` argument is the released protocol's criterion-score map:
 
 ```js
 const context = await tools.judge_context({});
@@ -95,7 +103,7 @@ await tools.submit_judgment({
 });
 ```
 
-The host stores the metric array and aggregate value `0.5`. A citation's optional `quote` must occur
+The host stores the criterion-score array and aggregate value `0.5`. A citation's optional `quote` must occur
 literally in the referenced response/tool/message/event/artifact. An artifact
 citation must specify `path` and `revision` (`initial` or `final`); other record
 citations specify `id`. Semantic interpretation remains the judge's job.

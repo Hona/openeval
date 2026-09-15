@@ -16,7 +16,7 @@
   </p>
 </div>
 
-![The OpenEval workbench: rubric source, a sample SQL response, and linked metric decisions](https://raw.githubusercontent.com/Hona/openeval/main/docs/images/workbench.png)
+![The OpenEval workbench: rubric source, a sample SQL response, and linked criterion scores](https://raw.githubusercontent.com/Hona/openeval/main/docs/images/workbench.png)
 
 *Interactive documentation example. Viewer screenshots use illustrative data and fictional model labels.*
 
@@ -25,7 +25,7 @@
 | File | What you write | Who reads it |
 | --- | --- | --- |
 | `prompt.md` | A natural, focused task | Candidate agent |
-| `judge.md` | Named metrics and pass/fail criteria | Judge agent |
+| `judge.md` | A rubric with named criteria and scoring rules | LLM judge |
 | `eval.ts` *(optional)* | Workspace preparation and early stopping | Host |
 
 **`evals/ask-dialect/prompt.md`**
@@ -35,6 +35,10 @@ Write a SQL query for the ten most recent orders for a customer.
 ```
 
 **`evals/ask-dialect/judge.md`**
+
+SDK 0.2.2 uses the legacy `## Metric:` spelling below to declare a **criterion**.
+The canonical `## Criterion:` spelling is planned for 0.3.0. See
+[release compatibility](https://openev.al/docs/terminology/#compatibility).
 
 ```md
 # Requests the SQL dialect
@@ -59,6 +63,23 @@ or does not provide a parameterized query.
 | Required recording is unavailable | **null** | **null** |
 
 → [Write good rubrics](https://openev.al/docs/rubrics/) · [Download the SQL starter](https://openev.al/starter.zip)
+
+## One vocabulary
+
+A **benchmark** contains **evals**. Each eval defines a task and a **rubric**.
+**Judges** produce **scores** for the rubric's **criteria**. Runs also record
+**metrics** such as cost, tokens, and tool reliability.
+
+- A **criterion** is a named requirement being graded, such as `safe_parameters`.
+- A **score** is awarded credit, normalized from 0 to 1, or an aggregate of it.
+- A **metric** is an observed or calculated measurement. A criterion must
+  explicitly use that measurement for it to affect the grade.
+- A **judgment** is the judge's output. **BenchmarkRun**, **EvalRun**, and
+  **JudgeRun** name recorded executions, rather than reusable definitions.
+
+See the [canonical terminology](https://openev.al/docs/terminology/) and the
+[website glossary](https://openev.al/docs/terminology/). The published SDK remains
+LLM-judged; the glossary identifies the planned 0.3.0 code-judging names separately.
 
 ## Choose models. Run. Inspect.
 
@@ -106,7 +127,7 @@ Models still declared in `benchmark.ts` can be added back by a later `run`.
 flowchart LR
   P["prompt.md"] --> C["Isolated candidate"] --> E["Recording"]
   J["judge.md"] --> G["Judge + citations"]
-  E --> G --> S["Metric scores"] --> V["Results viewer"]
+  E --> G --> S["Criterion scores"] --> V["Results viewer"]
 ```
 
 ## See what earned the score
@@ -115,7 +136,7 @@ flowchart LR
 
 | Capability | What you get | Guide |
 | --- | --- | --- |
-| Multiple metrics | Independent decisions from one recording | [Rubrics](https://openev.al/docs/rubrics/) |
+| Multiple criteria | Independent scores from one recording | [Rubrics](https://openev.al/docs/rubrics/) |
 | Controlled workspaces | Readable files, pinned Git inputs, preparation | [Workspaces](https://openev.al/docs/workspaces/) |
 | Small batches | Eval, model, repetition, and cost controls | [Running](https://openev.al/docs/running/) |
 | Transparent scores | Equal eval weights; bounds for unresolved checks | [Scoring](https://openev.al/docs/scoring/) |
@@ -125,7 +146,7 @@ flowchart LR
 <details>
 <summary><strong>Inspect a judgment and its evidence</strong></summary>
 
-![SQL eval drilldown with individual metric decisions and evidence links](https://raw.githubusercontent.com/Hona/openeval/main/docs/images/judgment.png)
+![SQL eval drilldown with individual criterion scores and evidence links](https://raw.githubusercontent.com/Hona/openeval/main/docs/images/judgment.png)
 
 </details>
 

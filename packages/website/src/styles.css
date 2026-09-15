@@ -696,7 +696,7 @@ p {
   color: var(--site-faint);
   font-size: 9px;
 }
-.metric-decision {
+.criterion-decision {
   width: 100%;
   display: flex;
   align-items: center;
@@ -710,12 +710,12 @@ p {
   text-align: left;
   font-size: 10px;
 }
-.metric-decision.selected,
-.metric-decision:hover {
+.criterion-decision.selected,
+.criterion-decision:hover {
   background: var(--site-panel);
   color: var(--site-text);
 }
-.metric-decision > span:last-child {
+.criterion-decision > span:last-child {
   display: flex;
   align-items: center;
   gap: 3px;
@@ -1937,14 +1937,14 @@ tr:last-child td {
   .workbench-status [data-slot="icon-svg"] {
     width: 16px;
   }
-  .metric-decision {
+  .criterion-decision {
     min-height: 48px;
     gap: 12px;
     padding: 10px 6px;
     font-size: 16px;
     line-height: 1.5;
   }
-  .metric-decision > span:last-child {
+  .criterion-decision > span:last-child {
     min-width: 4.2em;
     flex-shrink: 0;
     font-size: 14px;
@@ -2426,6 +2426,51 @@ tr:last-child td {
   .doc-section > p,
   .doc-heading p {
     max-width: 65ch;
+  }
+}
+@media (max-width: 760px) {
+  .doc-section[aria-labelledby="terms"] .table-scroll {
+    border: 0;
+  }
+  .doc-section[aria-labelledby="terms"] table,
+  .doc-section[aria-labelledby="terms"] tbody {
+    display: block;
+    min-width: 0;
+    width: 100%;
+  }
+  .doc-section[aria-labelledby="terms"] thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .doc-section[aria-labelledby="terms"] tbody tr {
+    display: block;
+    padding: 16px;
+    border: 1px solid var(--site-line);
+    border-radius: 5px;
+  }
+  .doc-section[aria-labelledby="terms"] tbody tr + tr {
+    margin-top: 12px;
+  }
+  .doc-section[aria-labelledby="terms"] tbody th,
+  .doc-section[aria-labelledby="terms"] tbody td {
+    display: block;
+    width: auto;
+    padding: 0;
+    border: 0;
+    overflow-wrap: anywhere;
+  }
+  .doc-section[aria-labelledby="terms"] tbody td {
+    margin-top: 8px;
+  }
+  .doc-section[aria-labelledby="terms"] tbody td:last-child {
+    color: var(--site-faint);
+    font-size: 14px;
+  }
+  .doc-section[aria-labelledby="terms"] tbody td:last-child::before {
+    content: "Example: ";
   }
 }
 @media (prefers-reduced-motion: reduce) {

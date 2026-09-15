@@ -40,7 +40,7 @@ test("landing has readable text, aligned actions, and 44px touch targets", async
         ".intro-actions .primary",
         ".workbench-editor [role=tab]",
         ".response-switch button",
-        ".metric-decision",
+        ".criterion-decision",
         ".viewer-section [role=tab]",
         ".screenshot-open",
       ].map(box),
@@ -86,6 +86,7 @@ test("all authoring pages fit the viewport and use 16px reading text", async ({
 }) => {
   for (const slug of [
     "quickstart",
+    "terminology",
     "prompts",
     "rubrics",
     "workspaces",

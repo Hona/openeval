@@ -35,6 +35,15 @@ the public research behind the guidance. These paths are relative to this skill.
 
 ## 1. Define the claim before the rubric
 
+Use the [OpenEval vocabulary](https://openev.al/docs/terminology/) when working
+with OpenEval: criteria are named graded requirements, scores are awarded
+credit, and metrics are measurements such as tokens or cost. A rubric defines
+criteria and scoring rules; a judge applies them; a judgment records the output.
+Use BenchmarkRun, EvalRun, and JudgeRun for execution records. Check the installed
+release before using canonical heading or API spellings; 0.2.2 uses legacy
+`## Metric:` headings for criteria. The OpenEval reference below documents that
+compatibility boundary.
+
 Use information already available. Ask up to three high-value questions at a time,
 only where the answer could change a criterion or label. Start with:
 

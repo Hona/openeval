@@ -259,8 +259,8 @@ export function ScoreCalculator() {
   const score = createMemo(() =>
     modelScore(
       "example",
-      definitions.map((metric, index) => ({
-        ...metric,
+      definitions.map((criterion, index) => ({
+        ...criterion,
         value: values()[index],
         expected: 1,
         scored: values()[index] === null ? 0 : 1,
@@ -281,21 +281,21 @@ export function ScoreCalculator() {
     <div class="calculator">
       <div class="panel-label">
         <Icon name="status" />
-        Score explorer<span>Illustration · one repetition per metric</span>
+        Score explorer<span>Illustration · one repetition per criterion</span>
       </div>
       <div class="calculator-inputs">
         <For each={definitions}>
-          {(metric, index) => (
+          {(criterion, index) => (
             <div>
               <small>
-                {metric.eval === "sql" ? "SQL query" : "Issue summary"}
+                {criterion.eval === "sql" ? "SQL query" : "Issue summary"}
               </small>
-              <strong>{metric.name}</strong>
+              <strong>{criterion.name}</strong>
               <Button
                 size="small"
                 variant="outline"
                 class={`verdict-button verdict-${values()[index()] === null ? "unknown" : values()[index()] ? "pass" : "fail"}`}
-                aria-label={`${metric.name}: ${label(values()[index()])}. Change decision.`}
+                aria-label={`${criterion.name}: ${label(values()[index()])}. Change decision.`}
                 onClick={() => toggle(index())}
               >
                 {label(values()[index()])}
@@ -542,7 +542,7 @@ export function Workbench() {
             <span>{pass() ? "2 / 2" : "1 / 2"} passed</span>
           </div>
           <button
-            class="metric-decision"
+            class="criterion-decision"
             classList={{ selected: citation() === "asked_dialect" }}
             onClick={() => setCitation("asked_dialect")}
           >
@@ -553,7 +553,7 @@ export function Workbench() {
             </span>
           </button>
           <button
-            class="metric-decision"
+            class="criterion-decision"
             classList={{ selected: citation() === "safe_parameters" }}
             onClick={() => setCitation("safe_parameters")}
           >
@@ -565,7 +565,7 @@ export function Workbench() {
           </button>
           <p class="citation-help">
             <Icon name="link" />
-            Select a metric to locate its response evidence.
+            Select a criterion to locate its response evidence.
           </p>
         </div>
       </div>
@@ -574,7 +574,7 @@ export function Workbench() {
           <i class="status-dot" />
           Illustrative recording
         </span>
-        <span>1 eval · 2 independent metrics</span>
+        <span>1 eval · 2 independent criteria</span>
         <a href="/docs/quickstart/">
           Make this your first eval <Icon name="arrow-right" />
         </a>

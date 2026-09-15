@@ -1,5 +1,6 @@
 import {
   benchmark,
+  legacyCriterionNote,
   preparation,
   prompt,
   rubric,
@@ -59,9 +60,10 @@ export const docs: Doc[] = [
           ),
           code("evals/ask-dialect/prompt.md", prompt, "markdown"),
           code("evals/ask-dialect/judge.md", rubric, "markdown"),
+          note("Released syntax", legacyCriterionNote),
           note(
             "One recording, two checks",
-            "The answer is graded separately for asking about the SQL dialect and using bound parameters. A question-only answer passes the first metric and fails the second.",
+            "The answer is graded separately for asking about the SQL dialect and using bound parameters. A question-only answer passes the first criterion and fails the second.",
           ),
         ],
       },
@@ -118,6 +120,110 @@ export const docs: Doc[] = [
                 "Resumes the same aggregate and reuses unchanged work",
               ],
             ],
+          ),
+        ],
+      },
+    ],
+  },
+  {
+    slug: "terminology",
+    title: "Concepts & terminology",
+    group: "Start",
+    description:
+      "A metric measures what happened. A criterion defines what earns credit. A score is the credit awarded.",
+    sections: [
+      {
+        id: "terms",
+        title: "One vocabulary",
+        blocks: [
+          text(
+            "A benchmark contains evals. Each eval defines a task and a rubric. Judges produce scores for the rubric's criteria. Runs also record metrics such as cost, tokens, and tool reliability.",
+          ),
+          table(
+            ["Term", "Meaning", "Example"],
+            [
+              ["Benchmark", "A collection of evals and their run configuration.", "A set of agent tasks evaluated across models."],
+              ["Eval", "A task, its input and environment, and its grading specification.", "Produce a parameterized SQL query."],
+              ["Criterion", "A named requirement being graded. Plural: criteria.", "safe_parameters"],
+              ["Score", "Credit awarded to a criterion, normalized from 0 to 1, or an aggregate of that credit.", "1 for full credit; 0 for no credit."],
+              ["Metric", "An observed or calculated measurement. It contributes to grading only when a criterion uses it.", "Cost in USD, token count, or tool error rate."],
+              ["Rubric", "The criteria and rules for awarding scores.", "The conditions for accepting a parameterized query."],
+              ["Judge", "An evaluator that applies grading rules using code, an LLM, or both.", "An LLM applying a written rubric."],
+              ["Judgment", "A judge's output, including any named criterion scores and supporting data.", "A safe_parameters score with evidence."],
+              ["BenchmarkRun", "A recorded benchmark collection with its inputs and selected results.", "One retained comparison across models."],
+              ["EvalRun", "One candidate execution of an eval.", "A model's second repetition of the SQL task."],
+              ["JudgeRun", "A grading execution against recorded evidence.", "A new judgment of a retained EvalRun."],
+            ],
+          ),
+        ],
+      },
+      {
+        id: "measurements-and-credit",
+        title: "Measurements become credit through a rule",
+        blocks: [
+          table(
+            ["Role", "Example", "Meaning"],
+            [
+              ["Metric", "cost_usd = 0.84", "An observed or calculated cost in USD."],
+              ["Criterion", "within_budget", "Award full credit when cost_usd is at most 1.00."],
+              ["Criterion score", "within_budget = 1", "Credit awarded by applying that rule."],
+            ],
+          ),
+          text(
+            "A tool error rate of 0.2 is a measurement even though it falls between 0 and 1. Recording a metric does not automatically award or deduct credit. The author decides whether a criterion uses it.",
+          ),
+          text(
+            "Criterion IDs are author-defined. A name such as correct_answer has no built-in grading rule. A rubric explains how evidence becomes a score; a judgment records the result of applying it.",
+          ),
+          note(
+            "Aggregation",
+            "Average repetitions per criterion, average criteria within each eval, then average evals equally and multiply by 100. Required unresolved scores keep the final percentage unresolved. Category-specific views and unequal weights are future design work.",
+          ),
+        ],
+      },
+      {
+        id: "recordings",
+        title: "Definitions, executions, and evidence",
+        blocks: [
+          text(
+            "An Eval is a reusable task definition; an EvalRun is one candidate execution. A JudgeRun applies grading rules to recorded evidence. A completed rejudge updates the active selection while retaining earlier judgments.",
+          ),
+          table(
+            ["Term", "Use it for"],
+            [
+              ["Recording", "Retained messages, events, native session archives, and workspace artifacts, subject to recorded capture coverage."],
+              ["Trace", "An ordered view of recorded model and tool activity."],
+              ["Evidence", "Recorded material that supports a judgment; citations identify the relevant parts."],
+            ],
+          ),
+        ],
+      },
+      {
+        id: "compatibility",
+        title: "Canonical terms and released syntax",
+        blocks: [
+          note("Published SDK: 0.2.2", legacyCriterionNote),
+          table(
+            ["Legacy 0.2.2 spelling", "Canonical meaning"],
+            [
+              ["## Metric: id — Label", "A criterion declaration in judge.md."],
+              ["MetricDefinition / rubricMetrics", "Criterion definitions and their Markdown parser."],
+              ["MetricJudgment / judgment.metrics", "Criterion scores in the released API and stored records."],
+            ],
+          ),
+          code(
+            "planned 0.3.0 syntax · not supported by 0.2.2",
+            "## Criterion: safe_parameters — Uses bound parameters",
+            "markdown",
+          ),
+          text(
+            "Judge is the common name for code-based, LLM-based, and hybrid evaluators. The published SDK currently provides LLM judging through judge.md. JudgeContext, additive judge.md / judge.ts execution, boolean score normalization, and fractional criterion scores are planned for 0.3.0.",
+          ),
+          text(
+            "SDK 0.2.2 accepts 0, 1, or null for each criterion. null means unresolved, not partial credit. In the planned code contract, entries in scores contribute criterion scores; other returned data can be metadata. Outputs without scores are unscored.",
+          ),
+          text(
+            "Preserve literal API identifiers, historical quotations, and external source titles. Use canonical terms when explaining them. Terminology migrations preserve recorded evidence and finalized judgments.",
           ),
         ],
       },
@@ -193,7 +299,7 @@ export const docs: Doc[] = [
               ],
               [
                 "What happens if it only asks a question?",
-                "Make that outcome explicit in each metric.",
+                "Make that outcome explicit in each criterion.",
               ],
               [
                 "Is the task reproducible?",
@@ -213,18 +319,19 @@ export const docs: Doc[] = [
     sections: [
       {
         id: "metrics",
-        title: "Declare each metric",
+        title: "Declare each criterion",
         blocks: [
           code("judge.md", rubric, "markdown"),
+          note("Released syntax", legacyCriterionNote),
           table(
             ["Part", "Contract"],
             [
               [
                 "## Metric: id — Label",
-                "Declares a stable metric ID and a display label",
+                "Legacy 0.2.2 syntax for a stable criterion ID and display label",
               ],
               [
-                "Pass and fail criteria",
+                "Scoring rules",
                 "State the observable behavior, including omissions",
               ],
               [
@@ -232,8 +339,8 @@ export const docs: Doc[] = [
                 "Supply version-correct facts and relevant sources",
               ],
               [
-                "Multiple metrics",
-                "All declared metrics are graded from the same recording",
+                "Multiple criteria",
+                "All declared criteria are graded from the same recording",
               ],
             ],
           ),
@@ -262,7 +369,7 @@ export const docs: Doc[] = [
           ),
           note(
             "Missing advice and missing evidence are different",
-            "An observed omission can fail a metric. If the necessary recording is unavailable, the judge can return null. An unresolved metric keeps the final benchmark percentage unresolved.",
+            "An observed omission can fail a criterion. If the necessary recording is unavailable, the judge can return null. An unresolved criterion score keeps the final benchmark percentage unresolved.",
           ),
         ],
       },
@@ -276,7 +383,7 @@ export const docs: Doc[] = [
               "Read the rubric",
               "Inspect the recording",
               "Cite evidence",
-              "Submit every metric",
+              "Submit every criterion score",
             ],
           },
           text(
@@ -287,7 +394,7 @@ export const docs: Doc[] = [
             [
               [
                 "Define intended behavior",
-                "Validate metric IDs and 0 / 1 / null values",
+                "Validate criterion IDs and 0 / 1 / null scores",
               ],
               [
                 "Accept equivalent correct approaches",
@@ -299,7 +406,7 @@ export const docs: Doc[] = [
               ],
               [
                 "Calibrate your criteria",
-                "Aggregate metric values consistently",
+                "Aggregate criterion scores consistently",
               ],
             ],
           ),
@@ -455,7 +562,7 @@ export const docs: Doc[] = [
             "typescript",
           ),
           text(
-            "Early stopping requires every metric decision to be irreversible and non-null. Monitoring cannot steer the candidate. If monitoring pauses or exhausts its budget, final grading still follows execution.",
+            "Early stopping requires every criterion score to be irreversible and non-null. Monitoring cannot steer the candidate. If monitoring pauses or exhausts its budget, final grading still follows execution.",
           ),
         ],
       },
@@ -475,18 +582,18 @@ export const docs: Doc[] = [
           {
             type: "flow",
             steps: [
-              "Repetitions → metric",
-              "Metrics → eval",
+              "Repetitions → criterion",
+              "Criteria → eval",
               "Evals → benchmark %",
             ],
           },
           code(
             "aggregation",
-            `metric = mean(repetitions)\neval = mean(metrics in this eval)\nbenchmark = 100 × mean(evals)`,
+            `criterion score = mean(repetition scores)\neval score = mean(criterion scores in this eval)\nbenchmark score = 100 × mean(eval scores)`,
             "text",
           ),
           text(
-            "An eval with more metrics does not get more benchmark weight. Each eval contributes equally to the final percentage.",
+            "An eval with more criteria does not get more benchmark weight. Each eval contributes equally to the final percentage.",
           ),
         ],
       },
@@ -510,13 +617,13 @@ export const docs: Doc[] = [
             [
               [
                 "Final percentage",
-                "All required metric checks have known values",
+                "All required criterion scores have known values",
               ],
               [
                 "Checks scored",
-                "Metric decisions across evals and repetitions",
+                "Criterion scores across evals and repetitions",
               ],
-              ["Eval drilldown", "Individual metrics for one selected eval"],
+              ["Eval drilldown", "Individual criterion scores for one selected eval"],
               [
                 "Runtime",
                 "Union of active execution intervals; overlapping work counts once",
@@ -587,7 +694,7 @@ export const docs: Doc[] = [
             "shell",
           ),
           text(
-            "Finalized eval runs and judge runs are immutable. A completed rejudge updates the active selection; the original recording and earlier judgments remain available.",
+            "Finalized EvalRuns and JudgeRuns are immutable. A completed rejudge updates the active selection; the original recording and earlier judgments remain available.",
           ),
         ],
       },
@@ -647,7 +754,7 @@ export const docs: Doc[] = [
               [
                 "evals/<id>/judge.md",
                 "Yes · eval",
-                "Declared metrics and grading criteria",
+                "A rubric with named criteria and scoring rules",
               ],
               [
                 "evals/<id>/eval.ts",
