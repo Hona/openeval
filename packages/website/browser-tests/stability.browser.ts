@@ -158,7 +158,7 @@ test("selecting models updates their metrics within the same results card", asyn
   ]);
   await page.getByRole("tab", { name: "exact-answer", exact: true }).click();
   await expect(page.locator(".criterion-legend li")).toHaveText([
-    "Correct answer",
+    "correct answer",
   ]);
 });
 

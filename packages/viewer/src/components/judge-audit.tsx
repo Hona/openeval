@@ -11,6 +11,7 @@ import { Select } from "@opencode/ui/select";
 import type { JudgeAudit } from "../types";
 import { duration, stateLabel, formatPercent } from "../model";
 import { topSecret } from "../privacy";
+import { viewerSource } from "../data-source";
 
 type Query = {
   action: string;
@@ -21,9 +22,7 @@ type Query = {
   metric?: string;
 };
 async function get<T>(url: string): Promise<T> {
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(await response.text());
-  return response.json();
+  return viewerSource.get<T>(url);
 }
 
 /** A numbered decision ledger linked to the exact, immutable evidence each turn read. */

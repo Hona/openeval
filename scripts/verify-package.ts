@@ -67,7 +67,7 @@ try {
   await Bun.write(
     resolve(directory, "verify.ts"),
     `
-import { serveResults, loadBenchmark, removeModels, recordEvidence, judgeEvidence, readRecording } from "@hona/openeval";
+import { serveResults, loadBenchmark, removeModels, recordEvidence, judgeEvidence, readRecording, exportViewer, verifyViewerExport } from "@hona/openeval";
 import type { JudgeContext, JudgeFunction } from "@hona/openeval";
 import type { Benchmark } from "@hona/openeval/types";
 import { ResultReader } from "@hona/openeval/results";
@@ -75,7 +75,7 @@ import { modelScore } from "@hona/openeval/view";
 import { emptyStage } from "@hona/openeval/session";
 import { fileURLToPath } from "node:url";
 const definition = { models: ["example/team/candidate#high"], judge: { model: "example/team/judge#low" } } satisfies Benchmark;
-if (typeof loadBenchmark !== "function" || typeof removeModels !== "function" || typeof readRecording !== "function" || typeof ResultReader !== "function" || typeof modelScore !== "function" || typeof emptyStage !== "function") throw new Error("Invalid public exports");
+if (typeof loadBenchmark !== "function" || typeof removeModels !== "function" || typeof readRecording !== "function" || typeof ResultReader !== "function" || typeof modelScore !== "function" || typeof emptyStage !== "function" || typeof exportViewer !== "function" || typeof verifyViewerExport !== "function") throw new Error("Invalid public exports");
 const judge: JudgeFunction = (context: JudgeContext) => ({scores:{answer:context.response.text === "READY"}});
 await Bun.write("./fixture/benchmark.ts", "export default " + JSON.stringify(definition));
 await Bun.write("./fixture/evals/answer/prompt.md", "Answer the question.");
@@ -96,7 +96,7 @@ try {
   const html = await (await fetch(server.url)).text();
   const asset = /src="([^"]+\\.js)"/.exec(html)?.[1];
   if (!asset) throw new Error("Built viewer entry is missing");
-  const response = await fetch(server.url + asset);
+  const response = await fetch(new URL(asset, server.url + "/"));
   if (!response.ok || (await response.text()).length < 100) throw new Error("Viewer asset is unavailable");
 } finally { await server.close(); }
 console.log("Installed SDK exports and built viewer verified");

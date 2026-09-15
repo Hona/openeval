@@ -30,6 +30,7 @@ test("landing has readable text, aligned actions, and 44px touch targets", async
       main: box(".lp-hero"),
       primary: box(".agent-prompt button"),
       humanQuickStart: box(".lp-actions .action-link"),
+      demo: box(".demo-link"),
       guide: box(".guide"),
       targets: [
         ".mobile-toggle",
@@ -37,6 +38,7 @@ test("landing has readable text, aligned actions, and 44px touch targets", async
         ".github-link",
         ".agent-prompt button",
         ".lp-actions .action-link",
+        ".demo-link",
         ".guide-judge [role=tab]",
         ".guide-judge .copy-control button",
         ".results-card [role=tab]",
@@ -51,6 +53,7 @@ test("landing has readable text, aligned actions, and 44px touch targets", async
   for (const region of [
     geometry.primary,
     geometry.humanQuickStart,
+    geometry.demo,
     geometry.guide,
   ]) {
     expect(Math.abs(region.left - geometry.main.left)).toBeLessThanOrEqual(0.5);

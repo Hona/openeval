@@ -4,14 +4,81 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { strFromU8, unzipSync } from "fflate";
-import { loadBenchmark } from "@hona/openeval";
+import { loadBenchmark, verifyViewerExport } from "@hona/openeval";
+import {
+  mergeRuntime,
+  runtimeMs,
+  sumCosts,
+  type EvalRunSummary,
+} from "@hona/openeval/view";
 import { docs, docHref } from "./src/content";
 import { prompt, SITE, VERSION } from "./src/examples";
 import { screenshotDimensions } from "./src/media";
 import { markdownPages, readSkillFiles } from "./agent-files";
+import comparison from "./demo/benchmark";
+import { recorded } from "./demo/results";
 
 const directory = fileURLToPath(new URL("./", import.meta.url));
 const dist = resolve(directory, "dist");
+const publication = await verifyViewerExport(resolve(dist, "demo/data"));
+deepStrictEqual(
+  recorded.summary.overview.scores.map((score) => score.model),
+  [...comparison.models],
+  "Demo model declarations must match the selected recording",
+);
+if (
+  recorded.repetitions !== comparison.repetitions ||
+  recorded.summary.overview.status !== "completed"
+)
+  throw new Error("Demo must use the completed, declared repetition count");
+const recordedRuns: EvalRunSummary[] = [];
+for (const [id, result] of Object.entries(publication.manifest.results)) {
+  const summary = await Bun.file(
+    resolve(dist, "demo/data", result.summary.path),
+  ).json();
+  deepStrictEqual(
+    summary,
+    id === publication.manifest.source.benchmarkId
+      ? recorded.summary
+      : recorded.evals[decodeURIComponent(id.split("~")[1])],
+    "Homepage and full viewer summaries must agree",
+  );
+  if (result.runs)
+    recordedRuns.push(
+      ...(await Bun.file(resolve(dist, "demo/data", result.runs.path)).json())
+        .runs,
+    );
+}
+for (const metric of recorded.metrics) {
+  const [model, variant = "default"] = metric.model.split("#");
+  const runs = recordedRuns.filter(
+    (run) => run.model === model && run.reasoning === variant,
+  );
+  if (runs.length !== 2 * recorded.repetitions)
+    throw new Error(`Missing model repetitions in the demo: ${metric.model}`);
+  deepStrictEqual(
+    metric.cost,
+    sumCosts(runs.map((run) => run.cost)),
+    "Homepage model costs must match the viewer's per-run costs",
+  );
+  deepStrictEqual(
+    metric.durationMs,
+    runtimeMs(
+      mergeRuntime(
+        runs.flatMap((run) => [...run.eval.runtime, ...run.judge.runtime]),
+      ),
+      Date.now(),
+    ),
+    "Homepage model duration must match the viewer's execution intervals",
+  );
+}
+const demo = await Bun.file(resolve(dist, "demo/index.html")).text();
+if (
+  !demo.includes("OpenEval | Demo") ||
+  !demo.includes('id="openeval-source"') ||
+  !demo.includes("./data/manifest.json")
+)
+  throw new Error("Demo must configure the real viewer with the public export");
 const glossary = await Bun.file(
   resolve(directory, "../../TERMINOLOGY.md"),
 ).text();
@@ -220,6 +287,7 @@ console.log({
   links: "verified",
   agentDocs: `${markdownFiles.length} index, guide, documentation, and skill files verified`,
   skill: "catalog and project ZIP match public sources",
+  demo: `${publication.files} verified public data files; ${Object.keys(publication.manifest.sessions).length} native recordings`,
   starter: "loads through the public SDK",
   liveModelCalls: 0,
 });

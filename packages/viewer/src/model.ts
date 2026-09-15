@@ -1,3 +1,5 @@
+import type { Cost } from "@hona/openeval/types";
+
 export const modelName = (ref: string) => {
   const id = ref.slice(ref.indexOf("/") + 1).split("#")[0];
   return id
@@ -85,6 +87,12 @@ export const formatCost = (value: number | null | undefined) =>
         minimumFractionDigits: 2,
         maximumFractionDigits: 4,
       }).format(value);
+export const formatRecordedCost = (cost: Cost | undefined) =>
+  !cost
+    ? "—"
+    : cost.complete
+      ? formatCost(cost.usd)
+      : `≥ ${formatCost(cost.reportedUSD)}`;
 export const formatDate = (value: string) =>
   new Date(value).toLocaleString(undefined, {
     month: "short",

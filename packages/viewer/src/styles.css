@@ -1877,3 +1877,21 @@ pre {
     scroll-behavior: auto !important;
   }
 }
+.recording-home {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  color: var(--text-weak);
+  font-size: 12px;
+  text-decoration: none;
+  min-height: 36px;
+}
+.recording-home:hover {
+  background: var(--surface-raised-base);
+  color: var(--text-base);
+}
+@media (max-width: 760px) {
+  .recording-home { min-height: 44px; }
+}

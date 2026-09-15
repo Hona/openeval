@@ -146,6 +146,9 @@ function Start() {
       <a class="action-link" href={guideActions.human.href}>
         {guideActions.human.label} <Icon name="arrow-right" />
       </a>
+      <a class="action-link demo-link" href={guideActions.demo.href}>
+        {guideActions.demo.label} <Icon name="arrow-right" />
+      </a>
     </div>
   );
 }

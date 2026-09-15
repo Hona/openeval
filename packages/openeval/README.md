@@ -236,6 +236,29 @@ an OpenEval-specific reference, and a broad public-research guide.
 
 ## Develop
 
+### Recorded viewer exports
+
+The viewer can read a reviewed static export, including native sessions, code
+judgments, and citation evidence. The [recorded demo](https://openev.al/demo/)
+uses the same viewer and data as the homepage results card.
+
+From a checkout with the export feature:
+
+```sh
+bun run release:pack
+bun run start export ./results/RUN --output ./public-run
+```
+
+The output contains the viewer, a manifest, and allowlisted JSON objects. Known
+connection credentials and credential patterns are filtered; provider state,
+host paths, and redundant stream fragments are omitted. Workspace artifacts are
+opt-in with repeated `--allow-artifact <path>` flags. The export records filtering
+counts and checksums and leaves the source evidence unchanged.
+
+Serve the output as static files. The saved-data viewer loads recordings as
+needed, verifies their hashes, and makes no provider requests. See the
+[demo sources and collection notes](https://github.com/Hona/openeval/blob/main/packages/website/demo/README.md).
+
 | Command | Purpose |
 | --- | --- |
 | `bun run site:dev` | Landing page and docs with hot reload on port 4176 |
