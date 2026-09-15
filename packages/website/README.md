@@ -15,13 +15,16 @@ from `packages/website`.
 
 ## Content
 
-- `src/content.ts`: documentation pages, code samples, tables, and navigation.
-- `src/examples.ts`: the SQL example, package version, and downloadable starter.
-- `src/app.tsx`: landing page and documentation shell.
-- `src/components.tsx`: code blocks, workbench, screenshots, and score explorer.
+- `src/content.ts`: overview copy, documentation pages, code samples, tables, and navigation.
+- `src/examples.ts`: agent setup prompt, example evals, package version, and downloadable starter.
+- `src/app.tsx`: documentation shell and page navigation.
+- `src/landing.tsx`: numbered Task, Judge, Run, Inspect, and Compare overview with the shared viewer chart.
+- `demo/benchmark.ts`: typed model configuration used by the overview and displayed verbatim in Compare.
+- `src/components.tsx`: copy controls, code blocks, documentation screenshots, and score explorer.
 - `src/styles.css`: compact layouts using OC-2 theme tokens.
 - `prepare.ts`: copy public screenshots and produce the starter ZIP.
 - `build.ts`: prerender all routes, metadata, sitemap, and the 404 page.
+- `github-stars.ts`: fetch the star count at build time; the header needs no browser API request.
 
 Use [the canonical vocabulary](../../TERMINOLOGY.md) in every label, example,
 caption, and authoring guide. Criteria are graded requirements; scores are
@@ -35,7 +38,7 @@ search, copy controls, and illustrative interactions; it never calls a live mode
 ## Visual stability
 
 - Tab panels share a grid cell, so the longest variant reserves the space. Inactive panels are hidden and inert.
-- The gallery uses one image frame. Screenshot dimensions are checked against the PNG files during verification.
+- The overview renders the interactive viewer chart. Documentation screenshot dimensions are checked against the PNG files during verification.
 - Search keeps its outer bounds while only the result list changes. Score text has a reserved column.
 - Theme fonts are preloaded and selected before first paint. A slow download keeps the fallback consistent across docs navigation; an explicit reload can use the warmed font cache.
 - Browser checks compare protected element bounds on every animation frame. This catches click-triggered shifts that the CLS metric excludes.

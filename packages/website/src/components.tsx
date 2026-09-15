@@ -2,10 +2,8 @@ import { createMemo, createSignal, For, Show, type JSX } from "solid-js";
 import { Button } from "@opencode/ui/button";
 import { Icon } from "@opencode/ui/icon";
 import { IconButton } from "@opencode/ui/icon-button";
-import { Badge } from "@opencode/ui/badge";
 import { Tabs } from "@opencode/ui/tabs";
 import { modelScore } from "@hona/openeval/view";
-import { benchmark, install, prompt, query, rubric } from "./examples";
 import type { Block } from "./content";
 import { screenshotDimensions, type ScreenshotName } from "./media";
 
@@ -57,6 +55,7 @@ function Highlight(props: { line: string; language?: string }) {
 export function CopyButton(props: {
   text: string;
   label: string;
+  caption?: string;
   compact?: boolean;
 }) {
   const [status, setStatus] = createSignal<"idle" | "copied" | "failed">(
@@ -67,23 +66,65 @@ export function CopyButton(props: {
       await navigator.clipboard.writeText(props.text);
       setStatus("copied");
     } catch {
-      setStatus("failed");
+      // Embedded browsers can deny the async API while allowing a copy command.
+      const focused = document.activeElement as HTMLElement | null;
+      const input = document.createElement("textarea");
+      input.value = props.text;
+      input.readOnly = true;
+      input.tabIndex = -1;
+      input.style.cssText =
+        "position:fixed;top:0;left:0;opacity:0;pointer-events:none";
+      document.body.append(input);
+      try {
+        input.focus({ preventScroll: true });
+        input.select();
+        setStatus(document.execCommand("copy") ? "copied" : "failed");
+      } catch {
+        setStatus("failed");
+      } finally {
+        input.remove();
+        focused?.focus({ preventScroll: true });
+      }
     }
   };
   return (
     <div class="copy-control">
-      <IconButton
-        size="small"
-        variant="ghost-muted"
-        aria-label={status() === "copied" ? "Copied" : props.label}
-        title={
-          status() === "failed"
-            ? "Select and copy the code manually"
-            : props.label
+      <Show
+        when={props.caption}
+        fallback={
+          <IconButton
+            size="small"
+            variant="ghost-muted"
+            aria-label={status() === "copied" ? "Copied" : props.label}
+            title={
+              status() === "failed"
+                ? "Select and copy the code manually"
+                : props.label
+            }
+            onClick={copy}
+            icon={<Icon name={status() === "copied" ? "check" : "copy"} />}
+          />
         }
-        onClick={copy}
-        icon={<Icon name={status() === "copied" ? "check" : "copy"} />}
-      />
+      >
+        <Button
+          size="small"
+          variant="outline"
+          aria-label={status() === "copied" ? "Copied" : props.label}
+          title={
+            status() === "failed" ? "Could not copy. Try again." : props.label
+          }
+          onClick={copy}
+        >
+          <span>
+            {status() === "copied"
+              ? "Copied"
+              : status() === "failed"
+                ? "Try again"
+                : props.caption}
+          </span>
+          <Icon name={status() === "copied" ? "check" : "copy"} />
+        </Button>
+      </Show>
       <span
         class={props.compact ? "sr-only" : "copy-feedback"}
         aria-live="polite"
@@ -91,7 +132,9 @@ export function CopyButton(props: {
         {status() === "copied"
           ? "Copied"
           : status() === "failed"
-            ? "Select text to copy"
+            ? props.caption
+              ? "Could not copy. Try again."
+              : "Select text to copy"
             : ""}
       </span>
     </div>
@@ -112,15 +155,17 @@ export function CodeBlock(props: {
         "code-prose": props.language === "markdown",
       }}
     >
-      <div class="code-heading">
-        <span>
-          <Icon name={props.language === "shell" ? "console" : "code"} />
-          <span class="code-filename" title={props.file}>
-            {props.file}
+      <Show when={!props.bare}>
+        <div class="code-heading">
+          <span>
+            <Icon name={props.language === "shell" ? "console" : "code"} />
+            <span class="code-filename" title={props.file}>
+              {props.file}
+            </span>
           </span>
-        </span>
-        <CopyButton text={props.code} label={`Copy ${props.file}`} compact />
-      </div>
+          <CopyButton text={props.code} label={`Copy ${props.file}`} compact />
+        </div>
+      </Show>
       <pre aria-label={props.file} tabIndex={0}>
         <code>
           <For each={props.code.split("\n")}>
@@ -138,18 +183,6 @@ export function CodeBlock(props: {
           </For>
         </code>
       </pre>
-    </div>
-  );
-}
-
-export function InstallCommand() {
-  return (
-    <div class="install-command">
-      <span class="terminal-prompt" aria-hidden="true">
-        $
-      </span>
-      <code>{install}</code>
-      <CopyButton text={install} label="Copy install command" compact />
     </div>
   );
 }
@@ -361,224 +394,5 @@ export function RenderBlock(props: { block: Block }) {
         <p>{block.text}</p>
       </div>
     </aside>
-  );
-}
-
-export function Workbench() {
-  const [file, setFile] = createSignal("judge.md");
-  const [response, setResponse] = createSignal("asks");
-  const [citation, setCitation] = createSignal("asked_dialect");
-  const files = {
-    "prompt.md": prompt,
-    "judge.md": rubric,
-    "benchmark.ts": benchmark,
-  };
-  const responses = [
-    {
-      id: "asks",
-      quote:
-        "“Which database are you using—PostgreSQL, MySQL, SQLite, or SQL Server?”",
-      context: "If PostgreSQL, here is a parameterized draft:",
-    },
-    {
-      id: "assumes",
-      quote: "“Here is the PostgreSQL query for your orders.”",
-      context: "The answer continues with a bound parameter:",
-    },
-  ];
-  const pass = () => response() === "asks";
-  return (
-    <section class="workbench" aria-label="Interactive eval example">
-      <div class="workbench-title">
-        <span>
-          <Icon name="flask" />
-          ask-dialect
-        </span>
-        <Badge>
-          <span class="desktop-label">interactive </span>example
-        </Badge>
-        <span class="quiet">No model calls</span>
-      </div>
-      <div class="workbench-grid">
-        <aside class="file-explorer" aria-label="Example files">
-          <div class="panel-label">EXPLORER</div>
-          <span class="tree-folder">
-            <Icon name="chevron-down" />
-            <Icon name="folder" />
-            my-benchmark
-          </span>
-          <button
-            classList={{ selected: file() === "benchmark.ts" }}
-            onClick={() => setFile("benchmark.ts")}
-          >
-            <span class="file-type ts">TS</span>benchmark.ts
-          </button>
-          <span class="tree-folder indent">
-            <Icon name="chevron-down" />
-            <Icon name="folder" />
-            evals
-          </span>
-          <span class="tree-folder indent-2">
-            <Icon name="chevron-down" />
-            ask-dialect
-          </span>
-          <For each={["prompt.md", "judge.md"]}>
-            {(name) => (
-              <button
-                class="indent-2"
-                classList={{ selected: file() === name }}
-                onClick={() => setFile(name)}
-              >
-                <span class="file-type md">M↓</span>
-                {name}
-              </button>
-            )}
-          </For>
-          <div class="explorer-hint">
-            <Icon name="shield" />
-            <span>Only the prompt reaches the candidate.</span>
-          </div>
-        </aside>
-        <div class="workbench-editor">
-          <Tabs value={file()} onChange={setFile} variant="line">
-            <Tabs.List aria-label="Example source files">
-              <For each={Object.keys(files)}>
-                {(name) => <Tabs.Trigger value={name}>{name}</Tabs.Trigger>}
-              </For>
-            </Tabs.List>
-            <div class="stable-tabs-panels">
-              <For each={Object.entries(files)}>
-                {([name, value]) => (
-                  <StableTabPanel value={name} selected={file()}>
-                    <CodeBlock
-                      file={name}
-                      code={value}
-                      language={name.endsWith("ts") ? "typescript" : "markdown"}
-                      bare
-                    />
-                  </StableTabPanel>
-                )}
-              </For>
-            </div>
-          </Tabs>
-          <div class="editor-hint">
-            <Icon name="arrow-right" />
-            <a href="/docs/rubrics/">
-              Write criteria that accept equivalent valid answers
-            </a>
-          </div>
-        </div>
-        <div class="workbench-evidence">
-          <div class="panel-label">
-            <Icon name="code" />
-            CANDIDATE RESPONSE
-          </div>
-          <div class="response-switch">
-            <Button
-              size="small"
-              variant="ghost-muted"
-              aria-pressed={pass()}
-              onClick={() => setResponse("asks")}
-            >
-              Asks first
-            </Button>
-            <Button
-              size="small"
-              variant="ghost-muted"
-              aria-pressed={!pass()}
-              onClick={() => setResponse("assumes")}
-            >
-              Assumes dialect
-            </Button>
-          </div>
-          <div
-            class="response-quote stable-copy"
-            classList={{ cited: citation() === "asked_dialect" }}
-          >
-            <For each={responses}>
-              {(item) => (
-                <p
-                  aria-hidden={response() !== item.id}
-                  inert={response() !== item.id}
-                >
-                  {item.quote}
-                </p>
-              )}
-            </For>
-          </div>
-          <span class="response-context stable-copy">
-            <For each={responses}>
-              {(item) => (
-                <span
-                  aria-hidden={response() !== item.id}
-                  inert={response() !== item.id}
-                >
-                  {item.context}
-                </span>
-              )}
-            </For>
-          </span>
-          <pre
-            class="response-code"
-            classList={{ cited: citation() === "safe_parameters" }}
-          >
-            <code>
-              <For each={query.split("\n")}>
-                {(line) => (
-                  <>
-                    <Highlight line={line} language="sql" />
-                    {"\n"}
-                  </>
-                )}
-              </For>
-            </code>
-          </pre>
-          <p class="response-footnote">
-            Bind <code>$1</code> to the customer ID with your database driver.
-          </p>
-          <div class="judgment-heading">
-            <Icon name="shield" />
-            <strong>Judge decisions</strong>
-            <span>{pass() ? "2 / 2" : "1 / 2"} passed</span>
-          </div>
-          <button
-            class="criterion-decision"
-            classList={{ selected: citation() === "asked_dialect" }}
-            onClick={() => setCitation("asked_dialect")}
-          >
-            <span>Asks for SQL dialect</span>
-            <span class={pass() ? "pass" : "fail"}>
-              <Icon name={pass() ? "check" : "close"} />
-              {pass() ? "Pass" : "Fail"}
-            </span>
-          </button>
-          <button
-            class="criterion-decision"
-            classList={{ selected: citation() === "safe_parameters" }}
-            onClick={() => setCitation("safe_parameters")}
-          >
-            <span>Uses bound parameters</span>
-            <span class="pass">
-              <Icon name="check" />
-              Pass
-            </span>
-          </button>
-          <p class="citation-help">
-            <Icon name="link" />
-            Select a criterion to locate its response evidence.
-          </p>
-        </div>
-      </div>
-      <div class="workbench-status">
-        <span>
-          <i class="status-dot" />
-          Illustrative recording
-        </span>
-        <span>1 eval · 2 independent criteria</span>
-        <a href="/docs/quickstart/">
-          Make this your first eval <Icon name="arrow-right" />
-        </a>
-      </div>
-    </section>
   );
 }

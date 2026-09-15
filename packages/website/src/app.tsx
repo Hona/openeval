@@ -1,4 +1,5 @@
 import {
+  createEffect,
   createMemo,
   createSignal,
   For,
@@ -12,19 +13,17 @@ import { Badge } from "@opencode/ui/badge";
 import { Icon } from "@opencode/ui/icon";
 import { IconButton } from "@opencode/ui/icon-button";
 import { TextInput } from "@opencode/ui/text-input";
-import { Tabs } from "@opencode/ui/tabs";
-import { docs, docHref, findDoc, searchDocs, type Doc } from "./content";
-import { GITHUB, VERSION } from "./examples";
 import {
-  CodeBlock,
-  DataTable,
-  Flow,
-  InstallCommand,
-  RenderBlock,
-  Screenshot,
-  StableTabPanel,
-  Workbench,
-} from "./components";
+  docs,
+  docHref,
+  findDoc,
+  overview,
+  searchDocs,
+  type Doc,
+} from "./content";
+import { GITHUB, VERSION } from "./examples";
+import { RenderBlock } from "./components";
+import { Landing } from "./landing";
 
 const groups = ["Start", "Author", "Run & inspect", "Reference"];
 
@@ -34,7 +33,6 @@ function App(props: { path: string }) {
   const home = () => props.path === "/";
   const [menu, setMenu] = createSignal(false);
   const [search, setSearch] = createSignal("");
-  const [gallery, setGallery] = createSignal("results");
   const matches = createMemo(() => searchDocs(search()));
   let searchDialog!: HTMLDialogElement;
   const closeMenu = () => {
@@ -58,12 +56,16 @@ function App(props: { path: string }) {
     searchDialog.showModal();
     searchDialog.querySelector("input")?.focus();
   };
-  onMount(() => {
+  createEffect(() => {
     document.title = doc()
-      ? `${doc()!.title} — OpenEval`
+      ? `OpenEval | ${doc()!.title}`
       : home()
-        ? "OpenEval — Write the task. Judge the evidence."
-        : "Page not found — OpenEval";
+        ? `OpenEval | ${overview.title}`
+        : "OpenEval | Page not found";
+    setMenu(false);
+    if (searchDialog.open) searchDialog.close();
+  });
+  onMount(() => {
     theme.setTheme("oc-2");
     theme.setColorScheme("dark");
     const keyboard = (event: KeyboardEvent) => {
@@ -139,6 +141,7 @@ function App(props: { path: string }) {
             <Icon name="flask" />
             <strong>OpenEval</strong>
           </a>
+          <Badge>v{VERSION}</Badge>
           <span class="titlebar-divider" />
           <span class="titlebar-section">
             {home() ? "Eval workbench" : "Documentation"}
@@ -156,9 +159,19 @@ function App(props: { path: string }) {
             <span>Find a page…</span>
             <kbd>⌘ K</kbd>
           </Button>
-          <a href={GITHUB} class="github-link" target="_blank" rel="noreferrer">
+          <a
+            href={GITHUB}
+            class="github-link"
+            target="_blank"
+            rel="noreferrer"
+            aria-label={`GitHub, ${__GITHUB_STARS__} stars`}
+          >
             <Icon name="branch" />
-            <span>GitHub</span>
+            <span class="github-label">GitHub</span>
+            <Badge aria-label={`${__GITHUB_STARS__} GitHub stars`}>
+              <span aria-hidden="true">★</span>
+              {__GITHUB_STARS__.toLocaleString("en-US")}
+            </Badge>
             <Icon name="arrow-up-right" />
           </a>
         </div>
@@ -168,24 +181,7 @@ function App(props: { path: string }) {
         class="site-sidebar"
         classList={{ "is-open": menu() }}
       >
-        <div class="workspace-label">
-          <span class="status-dot" />
-          <strong>openev.al</strong>
-          <Badge>v{VERSION}</Badge>
-        </div>
         <nav aria-label="Documentation">{nav()}</nav>
-        <div class="sidebar-bottom">
-          <a href="/starter.zip" download="openeval-starter.zip">
-            <Icon name="download" />
-            Download SQL starter
-          </a>
-          <a href={`${GITHUB}/issues`} target="_blank" rel="noreferrer">
-            <Icon name="help" />
-            Questions & feedback
-            <Icon name="arrow-up-right" />
-          </a>
-          <span>Open source · MIT</span>
-        </div>
       </aside>
       <Show when={menu()}>
         <button
@@ -218,178 +214,7 @@ function App(props: { path: string }) {
             </Show>
           }
         >
-          <div class="landing">
-            <div class="breadcrumb">
-              <Icon name="folder" />
-              <span>workspace</span>
-              <Icon name="chevron-right" />
-              <span>overview</span>
-            </div>
-            <section class="landing-intro">
-              <div>
-                <span class="eyebrow">FOR PEOPLE WHO WRITE EVALS</span>
-                <h1>
-                  Write the task.
-                  <br />
-                  <span>Judge the evidence.</span>
-                </h1>
-                <p>
-                  A prompt, code or an LLM judge, and a real agent run.
-                  <br class="desktop-break" /> Measure the behavior you care
-                  about. See why it passed.
-                </p>
-                <div class="intro-actions">
-                  <a class="action-link primary" href="/docs/quickstart/">
-                    Write your first eval <Icon name="arrow-right" />
-                  </a>
-                  <a
-                    class="action-link"
-                    href="/starter.zip"
-                    download="openeval-starter.zip"
-                  >
-                    <Icon name="download" />
-                    SQL starter
-                  </a>
-                </div>
-              </div>
-              <div class="intro-reference">
-                <InstallCommand />
-                <div class="intro-contract">
-                  <span>
-                    <Icon name="code" />
-                    <code>prompt.md</code> task
-                  </span>
-                  <span>
-                    <Icon name="shield" />
-                    <code>judge.md</code> criteria
-                  </span>
-                  <span>
-                    <Icon name="code" />
-                    <code>judge.ts</code> function
-                  </span>
-                  <span>
-                    <Icon name="check" />
-                    <code>0–1 | null</code> scores
-                  </span>
-                </div>
-                <a href="/docs/reference/">
-                  Bun + Docker + your OpenCode models{" "}
-                  <Icon name="arrow-up-right" />
-                </a>
-              </div>
-            </section>
-            <Workbench />
-            <div class="landing-grid">
-              <section>
-                <h2>
-                  <Icon name="folder" />
-                  Your evals are files
-                </h2>
-                <DataTable
-                  columns={["File", "What you write"]}
-                  rows={[
-                    ["prompt.md", "A natural, focused task"],
-                    ["judge.md", "Named criteria and scoring rules"],
-                    ["judge.ts", "A plain function over recorded data"],
-                    ["eval.ts", "Optional workspace and early stop"],
-                  ]}
-                />
-                <a class="text-link" href="/docs/prompts/">
-                  The authoring contract <Icon name="arrow-right" />
-                </a>
-                <a class="text-link" href="/docs/code-judges/">
-                  Write a code judge <Icon name="arrow-right" />
-                </a>
-              </section>
-              <section>
-                <h2>
-                  <Icon name="branch" />
-                  Every score has a trail
-                </h2>
-                <Flow steps={["Task", "Recording", "Judgment", "Score"]} />
-                <ul class="compact-list">
-                  <li>
-                    <Icon name="check" />
-                    Inspect tool calls and workspace artifacts
-                  </li>
-                  <li>
-                    <Icon name="check" />
-                    Follow each decision to its evidence
-                  </li>
-                  <li>
-                    <Icon name="check" />
-                    Rejudge without rerunning the candidate
-                  </li>
-                </ul>
-                <a class="text-link" href="/docs/evidence/">
-                  Read a judgment <Icon name="arrow-right" />
-                </a>
-              </section>
-            </div>
-            <section class="viewer-section">
-              <div class="section-title">
-                <div>
-                  <span class="eyebrow">THE RESULTS WORKSPACE</span>
-                  <h2>Compare. Drill down. Inspect.</h2>
-                </div>
-                <a class="text-link" href="/docs/scoring/">
-                  How scores work <Icon name="arrow-right" />
-                </a>
-              </div>
-              <Tabs variant="pill" value={gallery()} onChange={setGallery}>
-                <Tabs.List aria-label="Viewer screenshots">
-                  <Tabs.Trigger value="results">Model scores</Tabs.Trigger>
-                  <Tabs.Trigger value="judgment">
-                    Judgment & evidence
-                  </Tabs.Trigger>
-                  <Tabs.Trigger value="queue">Live queue</Tabs.Trigger>
-                </Tabs.List>
-                <div class="stable-tabs-panels screenshot-panels">
-                  <StableTabPanel value="results" selected={gallery()}>
-                    <Screenshot
-                      image="results.png"
-                      eager
-                      alt="OpenEval results viewer with per-model scores and run costs"
-                      caption="One score per model, with criterion scores available in the eval drilldown. Illustrative data."
-                    />
-                  </StableTabPanel>
-                  <StableTabPanel value="judgment" selected={gallery()}>
-                    <Screenshot
-                      image="judgment.png"
-                      eager
-                      alt="Judge inspector showing criterion scores and evidence citations"
-                      caption="Read the candidate and judge sessions side by side with criterion scores. Illustrative data."
-                    />
-                  </StableTabPanel>
-                  <StableTabPanel value="queue" selected={gallery()}>
-                    <Screenshot
-                      image="queue.png"
-                      eager
-                      alt="Live queue with separate candidate and judge stages"
-                      caption="Follow execution, judging, worker use, and estimated completion. Illustrative data."
-                    />
-                  </StableTabPanel>
-                </div>
-              </Tabs>
-            </section>
-            <section class="quick-reference">
-              <div>
-                <h2>Run a small batch first.</h2>
-                <p>
-                  Keep the full aggregate. Execute only the evals, models, and
-                  repetitions you select.
-                </p>
-                <a class="text-link" href="/docs/running/">
-                  Plan and resume work <Icon name="arrow-right" />
-                </a>
-              </div>
-              <CodeBlock
-                file="terminal"
-                language="shell"
-                code={`bunx --bun @hona/openeval plan --only-eval ask-dialect\nbunx --bun @hona/openeval run --only-repetition 1\nbunx --bun @hona/openeval view`}
-              />
-            </section>
-          </div>
+          <Landing />
         </Show>
       </main>
       <dialog

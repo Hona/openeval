@@ -101,50 +101,32 @@ async function stableClick(page: Page, control: Locator, selectors: string[]) {
   unchanged(before, await layout(page, selectors));
 }
 
-test("source tabs and response choices keep the workbench and following sections anchored", async ({
+test("judge tabs switch the matching task without moving the numbered steps", async ({
   page,
 }) => {
   await ready(page);
   const selectors = [
-    ".workbench",
-    ".workbench-editor",
-    ".workbench-evidence",
-    ".response-quote",
-    ".response-code",
-    ".judgment-heading",
-    ".landing-grid",
-    ".viewer-section",
+    ".guide",
+    ".guide-task-code",
+    ".guide-judge",
+    "#guide-run",
+    ".results-card",
   ];
-  for (const name of [
-    "prompt.md",
-    "benchmark.ts",
-    "judge.md",
-    "prompt.md",
-    "judge.md",
-  ]) {
+  for (const name of ["judge.ts", "judge.md", "judge.ts", "judge.md"]) {
     await stableClick(
       page,
       page.getByRole("tab", { name, exact: true }),
       selectors,
     );
     await expect(
-      page.getByRole("tabpanel").filter({ has: page.locator(".code-block") }),
+      page.locator(".guide-judge").getByRole("tabpanel"),
     ).toHaveCount(1);
-  }
-  for (const name of [
-    "Assumes dialect",
-    "Asks first",
-    "Assumes dialect",
-    "Asks first",
-  ])
-    await stableClick(
-      page,
-      page.getByRole("button", { name, exact: true }),
-      selectors,
+    await expect(
+      page.locator('.guide-task-code > [aria-hidden="false"] pre'),
+    ).toContainText(
+      name === "judge.ts" ? "Reply with exactly APPLE." : "Write a SQL query",
     );
-  await expect(page.locator(".judgment-heading")).toContainText("2 / 2 passed");
-  for (const criterion of await page.locator(".criterion-decision").all())
-    await stableClick(page, criterion, selectors);
+  }
   const inactive = page.locator('.stable-tab-panel[aria-hidden="true"]');
   expect(await inactive.count()).toBeGreaterThan(0);
   expect(
@@ -158,45 +140,97 @@ test("source tabs and response choices keep the workbench and following sections
   ).toBe(true);
 });
 
-test("gallery tabs retain one image frame and caption boundary", async ({
+test("selecting models updates their metrics within the same results card", async ({
   page,
 }) => {
   await ready(page);
-  const selectors = [
-    ".viewer-section",
-    ".screenshot-panels",
-    ".quick-reference",
-  ];
-  for (const name of [
-    "Judgment & evidence",
-    "Live queue",
-    "Model scores",
-    "Live queue",
-    "Model scores",
-  ])
-    await stableClick(
-      page,
-      page.getByRole("tab", { name, exact: true }),
-      selectors,
-    );
-  const captions = await page
-    .locator(".screenshot-panels figcaption")
-    .evaluateAll((elements) =>
-      elements.map((element) => element.getBoundingClientRect().y),
-    );
-  expect(Math.max(...captions) - Math.min(...captions)).toBeLessThanOrEqual(
-    0.5,
+  const selectors = [".results-card", ".score-chart", ".results-card-foot"];
+  for (const index of [1, 5, 0]) {
+    const row = page.locator(".chart-model").nth(index);
+    const name = await row.locator(".model-identity strong").textContent();
+    await stableClick(page, row.locator(".chart-row"), selectors);
+    await expect(page.locator(".results-card-model")).toHaveText(name!);
+  }
+  await page.getByRole("tab", { name: "ask-dialect", exact: true }).click();
+  await expect(page.locator(".criterion-legend li")).toHaveText([
+    "Asks for the SQL dialect",
+    "Uses bound parameters",
+  ]);
+  await page.getByRole("tab", { name: "exact-answer", exact: true }).click();
+  await expect(page.locator(".criterion-legend li")).toHaveText([
+    "Correct answer",
+  ]);
+});
+
+test("agent prompt copies setup instructions without moving the hero", async ({
+  page,
+}) => {
+  await ready(page);
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: async (text: string) => {
+          (window as any).__copiedPrompt = text;
+        },
+      },
+    });
+  });
+  const button = page.getByRole("button", {
+    name: "Copy agent prompt",
+    exact: true,
+  });
+  await stableClick(page, button, [".lp-hero", ".agent-prompt", ".guide"]);
+  await expect(page.locator(".agent-prompt button")).toHaveText("Copied");
+  const copied = await page.evaluate(
+    () => (window as any).__copiedPrompt as string,
   );
-  await expect(
-    page.getByRole("link", { name: /Open full-size image:/ }),
-  ).toHaveCount(1);
+  expect(copied).toContain("https://openev.al/docs/quickstart/");
+  expect(copied).toContain("prompt.md");
+  expect(copied).toContain("judge.ts");
+  expect(copied).toContain("openeval run");
+  expect(copied).toContain("openeval view");
+
+  // Embedded browsers can block the async clipboard API.
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: async () => {
+          (window as any).__focusBeforeFallback = document.activeElement;
+          throw new Error("Clipboard denied");
+        },
+      },
+    });
+    document.execCommand = (command) => {
+      (window as any).__fallbackPrompt = (
+        document.activeElement as HTMLTextAreaElement
+      ).value;
+      return command === "copy";
+    };
+  });
+  await stableClick(page, page.locator(".agent-prompt button"), [
+    ".lp-hero",
+    ".agent-prompt",
+    ".guide",
+  ]);
+  expect(await page.evaluate(() => (window as any).__fallbackPrompt)).toBe(
+    copied,
+  );
+  await expect(page.locator(".agent-prompt button")).toHaveText("Copied");
+  expect(
+    await page.evaluate(
+      () => document.activeElement === (window as any).__focusBeforeFallback,
+    ),
+  ).toBe(true);
+  await expect(page.locator("textarea")).toHaveCount(0);
 });
 
 test("search keeps its position and size for many, one, and zero matches", async ({
   page,
 }) => {
   await ready(page);
-  const chrome = [".site-titlebar", ".landing-intro"];
+  const chrome = [".site-titlebar", ".lp-hero"];
   const pageBefore = await layout(page, chrome);
   await page.locator(".search-trigger").click();
   const dialog = page.getByRole("dialog");

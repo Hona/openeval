@@ -1,12 +1,14 @@
 import { mkdir, readdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { docs, docHref } from "./src/content";
+import { docs, docHref, overview } from "./src/content";
 import { SITE } from "./src/examples";
 import { selectFontsBeforePaint } from "./src/fonts";
+import { githubStarCount } from "./github-stars";
 import "./prepare";
 
 const directory = fileURLToPath(new URL("./", import.meta.url));
+const stars = await githubStarCount();
 for (const args of [
   ["build"],
   [
@@ -20,6 +22,7 @@ for (const args of [
 ]) {
   const child = Bun.spawn(["bun", "x", "--no-install", "vite", ...args], {
     cwd: directory,
+    env: { ...process.env, OPENEVAL_GITHUB_STARS: String(stars) },
     stdout: "inherit",
     stderr: "inherit",
   });
@@ -45,18 +48,17 @@ const fontPreloads = fonts
 const pages = [
   {
     path: "/",
-    title: "OpenEval — Write the task. Judge the evidence.",
-    description:
-      "Write agent evaluations as a prompt and a rubric. Run isolated agents, inspect recorded evidence, and compare model scores with OpenEval.",
+    title: `OpenEval | ${overview.title}`,
+    description: overview.description,
   },
   ...docs.map((doc) => ({
     path: docHref(doc.slug),
-    title: `${doc.title} — OpenEval`,
+    title: `OpenEval | ${doc.title}`,
     description: doc.description,
   })),
   {
     path: "/404.html",
-    title: "Page not found — OpenEval",
+    title: "OpenEval | Page not found",
     description: "OpenEval documentation for eval authors.",
   },
 ];

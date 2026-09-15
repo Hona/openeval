@@ -25,24 +25,22 @@ test("landing has readable text, aligned actions, and 44px touch targets", async
     return {
       body: parseFloat(getComputedStyle(document.body).fontSize),
       prose: parseFloat(
-        getComputedStyle(document.querySelector(".landing-intro p")!).fontSize,
+        getComputedStyle(document.querySelector(".lp-hero p")!).fontSize,
       ),
-      main: box(".landing-intro"),
-      primary: box(".intro-actions .primary"),
-      secondary: box(".intro-actions a:last-child"),
-      install: box(".install-command"),
-      workbench: box(".workbench"),
+      main: box(".lp-hero"),
+      primary: box(".agent-prompt button"),
+      humanQuickStart: box(".lp-actions .action-link"),
+      guide: box(".guide"),
       targets: [
         ".mobile-toggle",
         ".search-trigger",
         ".github-link",
-        ".install-command button",
-        ".intro-actions .primary",
-        ".workbench-editor [role=tab]",
-        ".response-switch button",
-        ".criterion-decision",
-        ".viewer-section [role=tab]",
-        ".screenshot-open",
+        ".agent-prompt button",
+        ".lp-actions .action-link",
+        ".guide-judge [role=tab]",
+        ".guide-judge .copy-control button",
+        ".results-card [role=tab]",
+        ".results-card .chart-row",
       ].map(box),
       width: document.documentElement.scrollWidth,
       viewport: innerWidth,
@@ -50,29 +48,15 @@ test("landing has readable text, aligned actions, and 44px touch targets", async
   });
   expect(geometry.body).toBeGreaterThanOrEqual(16);
   expect(geometry.prose).toBeGreaterThanOrEqual(16);
-  for (const region of geometry.viewport <= 760
-    ? [
-        geometry.primary,
-        geometry.secondary,
-        geometry.install,
-        geometry.workbench,
-      ]
-    : [geometry.workbench]) {
+  for (const region of [
+    geometry.primary,
+    geometry.humanQuickStart,
+    geometry.guide,
+  ]) {
     expect(Math.abs(region.left - geometry.main.left)).toBeLessThanOrEqual(0.5);
     expect(Math.abs(region.right - geometry.main.right)).toBeLessThanOrEqual(
       0.5,
     );
-  }
-  if (geometry.viewport > 760) {
-    expect(
-      Math.abs(geometry.primary.left - geometry.main.left),
-    ).toBeLessThanOrEqual(0.5);
-    expect(
-      Math.abs(geometry.secondary.left - geometry.primary.left),
-    ).toBeLessThanOrEqual(0.5);
-    expect(
-      Math.abs(geometry.install.right - geometry.main.right),
-    ).toBeLessThanOrEqual(0.5);
   }
   for (const target of geometry.targets) {
     expect(target.height).toBeGreaterThanOrEqual(43.5);

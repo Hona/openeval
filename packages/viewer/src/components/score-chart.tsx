@@ -1,4 +1,4 @@
-import { For, Show } from "solid-js";
+import { createMemo, For, Show } from "solid-js";
 import { ProviderIcon } from "@opencode/ui/provider-icon";
 import { Icon } from "@opencode/ui/icon";
 import { modelScore, scoreBounds, type ModelScore } from "@hona/openeval/view";
@@ -17,6 +17,9 @@ export function ScoreChart(props: {
   criteria?: boolean;
   onSelect?: (model: string) => void;
 }) {
+  const criteria = createMemo(() =>
+    props.criteria ? (props.scores[0]?.components ?? []) : [],
+  );
   const sorted = () =>
     [...props.scores].sort(
       (a, b) => scoreBounds(b).lower - scoreBounds(a).lower,
@@ -52,6 +55,18 @@ export function ScoreChart(props: {
       role="group"
       aria-label="Model scores from zero to one hundred percent"
     >
+      <Show when={criteria().length}>
+        <div class="criterion-legend">
+          <span>
+            {criteria().length > 1 ? "Criteria · top to bottom" : "Criterion"}
+          </span>
+          <ol aria-label="Criteria in bar order">
+            <For each={criteria()}>
+              {(part) => <li>{part.name ?? part.criterion}</li>}
+            </For>
+          </ol>
+        </div>
+      </Show>
       <div class="chart-scale">
         <span>Model</span>
         <div>
@@ -122,18 +137,18 @@ export function ScoreChart(props: {
             </button>
             <Show when={props.criteria && score.components.length > 1}>
               <For each={score.components}>
-                {(part) => {
+                {(part, index) => {
                   const criterion = () => modelScore(score.model, [part]);
+                  const description = () =>
+                    `${index() + 1}. ${part.name ?? part.criterion}: ${label(criterion())}${!props.public ? `, ${outcomes(criterion())}` : ""}`;
                   return (
                     <button
                       class="chart-row criterion-row"
                       disabled={!props.onSelect}
                       onClick={() => props.onSelect?.(score.model)}
-                      aria-label={`${modelName(score.model)}, ${part.name ?? part.criterion}, ${label(criterion())}`}
+                      aria-label={`${modelName(score.model)}, ${description()}`}
+                      title={description()}
                     >
-                      <span class="criterion-name">
-                        {part.name ?? part.criterion}
-                      </span>
                       <div class="chart-track" aria-hidden="true">
                         <div
                           class="chart-bar"
@@ -141,11 +156,20 @@ export function ScoreChart(props: {
                             width: `${scoreBounds(criterion()).lower}%`,
                           }}
                         />
-                        <span class="chart-points">
-                          {part.scored === part.expected
-                            ? `${part.passed}/${part.expected} passed`
-                            : `${part.scored}/${part.expected} scored`}
-                        </span>
+                        <Show
+                          when={
+                            scoreBounds(criterion()).upper >
+                            scoreBounds(criterion()).lower + 0.000001
+                          }
+                        >
+                          <div
+                            class="chart-range"
+                            style={{
+                              left: `${scoreBounds(criterion()).lower}%`,
+                              width: `${scoreBounds(criterion()).upper - scoreBounds(criterion()).lower}%`,
+                            }}
+                          />
+                        </Show>
                       </div>
                       <span class="criterion-score">{label(criterion())}</span>
                     </button>

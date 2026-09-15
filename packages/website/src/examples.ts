@@ -1,7 +1,22 @@
 export const VERSION = "0.3.2";
 export const GITHUB = "https://github.com/Hona/openeval";
 export const SITE = "https://openev.al";
-export const install = "bun add --exact @hona/openeval";
+export const agentPrompt = `Set up OpenEval in this project and get my first eval running. Make the file changes and run the commands yourself.
+
+Read these docs first:
+${SITE}/docs/quickstart/
+${SITE}/docs/code-judges/
+${SITE}/docs/running/
+
+1. Inspect the project and any existing evals. Use our conversation to identify the task I want to evaluate. If it is unclear, ask me what the agent should do and what a successful result looks like.
+2. Check Bun, Docker, and access to models through OpenCode. Set up the dependencies you can. Tell me if a login or other action needs my input.
+3. Install @hona/openeval@${VERSION} with an exact version pin. Use its published CLI and public SDK types.
+4. Create a benchmark.ts and an eval folder containing prompt.md plus judge.md for an LLM judge or judge.ts for a code judge. Keep my task wording intact. Make the criteria check the requested outcome. Use the documented plain-function API for code judges.
+5. Use models available through my OpenCode connections. Start with one candidate model and one repetition. Configure a judge model only when the eval uses judge.md.
+6. Build the runtime image with openeval image, check the execution plan with openeval plan, and collect the first run with openeval run. Fix setup errors and finish the run.
+7. Start openeval view and open its URL. Show me the eval files, the score, and the recorded cost. Link me to the results so I can inspect the session and judgment.
+
+Complete the setup and first run rather than giving me a checklist to carry out.`;
 export const prompt =
   "Write a SQL query for the ten most recent orders for a customer.";
 export const rubric = `# Requests the SQL dialect

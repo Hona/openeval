@@ -2,11 +2,15 @@ export const modelName = (ref: string) => {
   const id = ref.slice(ref.indexOf("/") + 1).split("#")[0];
   return id
     .replace(/^omen-alpha$/i, "Omen Alpha")
+    .replace(/^big-pickle$/i, "Big Pickle")
     .replace(/^gpt-/i, "GPT-")
     .replace(/^gemini-/, "Gemini ")
     .replace(/^grok-/, "Grok ")
     .replace(/^deepseek-v(\d+)-pro-(\d+)$/, "DeepSeek V$1 Pro $2")
-    .replace(/^deepseek-v4\.1-flash-expires-on-0910$/, "DeepSeek V4.1 Flash")
+    .replace(
+      /^deepseek-v(\d+(?:\.\d+)?)-flash(?:-expires-on-\d+)?$/,
+      "DeepSeek V$1 Flash",
+    )
     .replace(/^glm-/, "GLM-")
     .replace(/^muse-spark-/, "Muse Spark ")
     .replace(/^claude-fable-(\d+)-(\d+)$/, "Claude Fable $1.$2")
@@ -38,6 +42,7 @@ export const modelGroup = (ref: string) => {
     .split("#")[0]
     .toLowerCase();
   const groups: Array<[RegExp, string, string]> = [
+    [/^big-pickle$/, "OpenCode Zen", "Big Pickle"],
     [/^omen-/, "OpenCode Go", "Omen"],
     [/^gemini-/, "Google", "Gemini"],
     [/^gpt-/, "OpenAI", "GPT"],

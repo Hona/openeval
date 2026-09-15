@@ -11,6 +11,12 @@ import {
 } from "./examples";
 import type { ScreenshotName } from "./media";
 
+export const overview = {
+  title: "Write your own eval in 30 seconds.",
+  description:
+    "Built on OpenCode. Out of the box support for all models, and consistent data from every run.",
+};
+
 export type Block =
   | { type: "text"; text: string }
   | { type: "code"; file: string; code: string; language?: string }

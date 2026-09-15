@@ -41,11 +41,15 @@ for (const [name, size] of Object.entries(screenshotDimensions)) {
       `Image dimensions changed; update its reserved space: ${name}`,
     );
 }
-const paths = ["/", ...docs.map((doc) => docHref(doc.slug))];
+const paths = ["/", ...docs.map((doc) => docHref(doc.slug)), "/404.html"];
 for (const path of paths) {
   const html = await Bun.file(
-    resolve(dist, path.slice(1), "index.html"),
+    path === "/404.html"
+      ? resolve(dist, "404.html")
+      : resolve(dist, path.slice(1), "index.html"),
   ).text();
+  if (!/<title>OpenEval \| [^<]+<\/title>/.test(html))
+    throw new Error(`Unexpected page title: ${path}`);
   if (
     [
       ...html.matchAll(
