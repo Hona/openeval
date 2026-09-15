@@ -64,3 +64,5 @@ export {
 export { snapshotBenchmarkRun } from "./app/snapshot-run";
 export { buildImage } from "./infra/containers/oci";
 export { serveResults } from "./app/serve-results";
+export { exportViewer, type ExportViewerOptions } from "./app/export-viewer";
+export { verifyViewerExport } from "./app/verify-viewer-export";

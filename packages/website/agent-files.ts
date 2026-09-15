@@ -6,11 +6,17 @@ import { strToU8, zipSync } from "fflate";
 import { docs, docHref, docMarkdownHref, overview } from "./src/content";
 import { GITHUB, SITE, VERSION } from "./src/examples";
 import { renderDocument } from "./markdown";
-import { guideActions, overviewSections } from "./src/overview-content";
+import {
+  guideActions,
+  overviewSections,
+  resultsBlocks,
+} from "./src/overview-content";
+import { recorded, resultsDescription } from "./demo/results";
 
 const directory = fileURLToPath(new URL("./", import.meta.url));
 export const markdownPages: Record<string, string> = {
   "/": "/index.md",
+  "/demo/": "/demo/index.md",
   ...Object.fromEntries(
     docs.map((doc) => [docHref(doc.slug), docMarkdownHref(doc.slug)]),
   ),
@@ -72,6 +78,7 @@ export async function agentFiles(): Promise<
       "",
       `- [Agent setup guide](${SITE}/agent-start.md): Interactive setup, prerequisites, local skill installation, one eval, model choices, and an optional first run.`,
       `- [Overview](${SITE}/index.md): Task, judge, run, inspect, and compare examples.`,
+      `- [Recorded demo](${SITE}/demo/index.md): Real benchmark results, native sessions, judgments, and the public recording manifest.`,
       ...["Start", "Author", "Run & inspect", "Reference"].flatMap(
         (group, index) => [
           ...(index ? ["", `## ${group}`, ""] : []),
@@ -104,6 +111,25 @@ export async function agentFiles(): Promise<
     "/index.md": renderDocument(
       { ...overview, sections: overviewSections(comparison) },
       [{ type: "links", items: Object.values(guideActions) }],
+    ),
+    "/demo/index.md": renderDocument(
+      {
+        title: recorded.summary.overview.name,
+        description: resultsDescription,
+        sections: [
+          { id: "results", title: "Results", blocks: resultsBlocks() },
+        ],
+      },
+      [
+        {
+          type: "links",
+          items: [
+            { label: "Interactive viewer", href: guideActions.demo.href },
+            { label: "Recording manifest", href: "/demo/data/manifest.json" },
+            { label: "Result overview", href: "/demo/data/overview.json" },
+          ],
+        },
+      ],
     ),
     ...Object.fromEntries(
       docs.map((doc) => [docMarkdownHref(doc.slug), renderDocument(doc)]),

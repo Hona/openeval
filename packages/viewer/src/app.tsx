@@ -27,24 +27,20 @@ import { downloadResultsImage } from "./results-image";
 import { EvalName, SecretToggle, topSecret, SECRET_MODE_KEY } from "./privacy";
 import {
   duration,
-  formatCost,
+  formatRecordedCost,
   formatDate,
   formatNumber,
   matchesModelFilters,
 } from "./model";
-import type {
-  ActivityRun,
-  ResultSummary,
-  EvalRunIndex,
-  ResultEntry,
-  ResultIndex,
-} from "./types";
+import type { ResultEntry } from "./types";
 import {
   scoreBounds,
   modelScore,
   runtimeMs,
   runtimeClock,
 } from "@hona/openeval/view";
+import { useViewer } from "./data/context";
+import { createResultCache } from "./data/results";
 
 type Route = {
   id: string;
@@ -75,43 +71,6 @@ const readRoute = (): Route => {
     models: q.get("models") ?? "",
   };
 };
-const get = async <T,>(path: string): Promise<T> => {
-  const response = await fetch(path);
-  if (!response.ok)
-    throw new Error(
-      (await response.json().catch(() => ({}))).error ??
-        `Request failed (${response.status})`,
-    );
-  return response.json();
-};
-// Reuse the same document across page and drawer resources. A newer index stamp
-// invalidates it; concurrent consumers share one request.
-const results = new Map<string, ResultSummary | EvalRunIndex>();
-const pendingResults = new Map<string, Promise<ResultSummary | EvalRunIndex>>();
-const getResult = <T extends ResultSummary | EvalRunIndex>(
-  id: string,
-  format: "summary" | "runs",
-  updatedAt = 0,
-): T | Promise<T> => {
-  const key = `${id}:${format}`;
-  const cached = results.get(key) as T | undefined;
-  if (cached && cached.entry.updatedAt >= updatedAt) return cached;
-  const pending = pendingResults.get(key) as Promise<T> | undefined;
-  if (pending) return pending;
-  const request = get<T>(
-    `/api/result?id=${encodeURIComponent(id)}&format=${format}`,
-  )
-    .then((value) => {
-      results.delete(key);
-      results.set(key, value);
-      if (results.size > 8) results.delete(results.keys().next().value!);
-      return value;
-    })
-    .finally(() => pendingResults.delete(key));
-  pendingResults.set(key, request);
-  return request;
-};
-
 function ResultTabs(props: {
   value: string;
   onChange: (value: string) => void;
@@ -146,6 +105,8 @@ function ResultTabs(props: {
 }
 
 export function App() {
+  const { source, config } = useViewer();
+  const results = createResultCache(source);
   const theme = useTheme();
   const [route, setRoute] = createSignal(readRoute());
   const [filter, setFilter] = createSignal("");
@@ -153,41 +114,40 @@ export function App() {
   const [notice, setNotice] = createSignal("");
   const [busy, setBusy] = createSignal(false);
   const [now, setNow] = createSignal(Date.now());
-  onMount(() => {
+  const [exportingImage, setExportingImage] = createSignal(false);
+  const [index, indexActions] = createResource(() => source.index());
+  const capabilities = () =>
+    index()?.capabilities ?? { details: false, activity: false, live: false };
+  createEffect(() => {
+    if (!capabilities().live) return;
     const clock = setInterval(() => setNow(Date.now()), 1000);
     onCleanup(() => clearInterval(clock));
   });
-  const [exportingImage, setExportingImage] = createSignal(false);
-  const [index, indexActions] = createResource(() =>
-    get<ResultIndex>("/api/results"),
-  );
-  const isPublic = () => index()?.public ?? false;
   const [activity, activityActions] = createResource(
-    () => index() && !index()!.public,
-    () => get<ActivityRun[]>("/api/activity"),
+    () => index() && capabilities().activity,
+    () => source.activity(),
   );
   const resultVersion = (id: string) =>
     index()?.entries.find((entry) => entry.id === id.split("~")[0])?.updatedAt;
-  const loadRuns = (id: string) =>
-    getResult<EvalRunIndex>(id, "runs", resultVersion(id));
+  const loadRuns = (id: string) => results.runs(id, resultVersion(id));
   const traceOpen = () =>
     route().view !== "activity" &&
     !!route().run &&
     !!route().evalRun &&
-    !isPublic() &&
+    capabilities().details &&
     !topSecret();
   // Track the index revision in each resource source. Reading a failed resource
   // in a shared refresh effect can stop updates for the other resource too.
   const [document] = createResource(
     () =>
       !!route().id && { id: route().id, version: resultVersion(route().id) },
-    ({ id, version }) => getResult<ResultSummary>(id, "summary", version),
+    ({ id, version }) => results.summary(id, version),
   );
   const [traceDocument] = createResource(
     () =>
       traceOpen() &&
       !!route().run && { id: route().run, version: resultVersion(route().run) },
-    ({ id, version }) => getResult<EvalRunIndex>(id, "runs", version),
+    ({ id, version }) => results.runs(id, version),
   );
   const data = createMemo(() => document()?.overview);
   const traceRun = () =>
@@ -234,6 +194,7 @@ export function App() {
     });
   createEffect(() => {
     const entries = index()?.entries;
+    if (!entries) return;
     if (
       entries?.length &&
       !entries.some((entry) => entry.id === route().id.split("~")[0])
@@ -242,10 +203,13 @@ export function App() {
         entries.find((entry) => entry.kind === "benchmark") ?? entries[0];
       navigate({ id: first.id, run: "", evalRun: "" }, true);
     }
-    if (isPublic() && route().view !== "results")
+    if (!capabilities().details && route().view !== "results")
       navigate({ view: "results", eval: "", run: "", evalRun: "" }, true);
+    if (!capabilities().activity && route().view === "activity")
+      navigate({ view: "results" }, true);
   });
   onMount(() => {
+    if (config.title) globalThis.document.title = config.title;
     theme.setTheme("oc-2");
     theme.setColorScheme("dark");
     const pop = () => {
@@ -254,19 +218,13 @@ export function App() {
       else setRoute(value);
     };
     window.addEventListener("popstate", pop);
+    onCleanup(() => window.removeEventListener("popstate", pop));
     const refresh = () => {
       if (!index.loading) void indexActions.refetch();
-      if (index() && !index()!.public && !activity.loading)
+      if (capabilities().activity && !activity.loading)
         void activityActions.refetch();
     };
-    const events = new EventSource("/api/events");
-    events.addEventListener("change", refresh);
-    const interval = setInterval(refresh, 5000);
-    onCleanup(() => {
-      events.close();
-      clearInterval(interval);
-      window.removeEventListener("popstate", pop);
-    });
+    onCleanup(source.watchChanges(refresh));
   });
   const filtered = (kind: ResultEntry["kind"]) =>
     index()?.entries.filter(
@@ -315,10 +273,7 @@ export function App() {
       route().view === "evals"
         ? data()?.evalCosts?.[selectedEval()]
         : data()?.cost;
-    return (
-      value?.usd ??
-      (data()?.status === "running" ? value?.reportedUSD : undefined)
-    );
+    return value;
   };
   const evalScores = createMemo(
     () =>
@@ -337,7 +292,7 @@ export function App() {
   const inspect = async (model: string) => {
     const origin = route();
     const current = document();
-    if (!current || isPublic() || topSecret()) return;
+    if (!current || !capabilities().details || topSecret()) return;
     setBusy(true);
     try {
       const runId =
@@ -469,11 +424,16 @@ export function App() {
           <span class="titlebar-divider" /> <span>Results</span>
         </div>
         <div class="titlebar-actions">
+          <Show when={config.home}>
+            <a class="recording-home" href={config.home}>
+              <Icon name="arrow-left" /> Overview
+            </a>
+          </Show>
           <SecretToggle />
         </div>
       </header>
       <aside class="sidebar" classList={{ visible: sidebar() }}>
-        <Show when={index() && !isPublic()}>
+        <Show when={index() && capabilities().activity}>
           <button
             class="activity-link"
             classList={{ active: route().view === "activity" }}
@@ -525,7 +485,21 @@ export function App() {
         </div>
         <div class="sidebar-footer">
           <Icon name="folder" />
-          <span>{isPublic() ? "Totals only" : "Local results"}</span>
+          <span>
+            {!capabilities().details
+              ? "Totals only"
+              : capabilities().live
+                ? "Local results"
+                : "Recorded results"}
+          </span>
+          <Show when={config.manifest}>
+            <a
+              href={config.manifest}
+              title="Publication metadata, filtering counts, and data hashes"
+            >
+              Manifest
+            </a>
+          </Show>
         </div>
       </aside>
       <main class="main-panel">
@@ -544,7 +518,7 @@ export function App() {
           </div>
         </Show>
         <Show
-          when={route().view === "activity" && !isPublic()}
+          when={route().view === "activity" && capabilities().activity}
           fallback={
             <Show
               when={data()}
@@ -645,7 +619,11 @@ export function App() {
                   </div>
                 </div>
                 <div class="results-toolbar">
-                  <Show when={!isPublic() && data()!.kind === "benchmark"}>
+                  <Show
+                    when={
+                      capabilities().details && data()!.kind === "benchmark"
+                    }
+                  >
                     <ResultTabs
                       value={route().view}
                       onChange={(view) =>
@@ -664,7 +642,7 @@ export function App() {
                     }
                   />
                 </div>
-                <Show when={route().view === "evals" && !isPublic()}>
+                <Show when={route().view === "evals" && capabilities().details}>
                   <div class="eval-selector">
                     <span id="eval-label">Evaluation</span>
                     <Select
@@ -699,7 +677,7 @@ export function App() {
                           route().view === "evals" || data()!.kind === "eval"
                         }
                       >
-                        {route().view === "evals" && !isPublic()
+                        {route().view === "evals" && capabilities().details
                           ? (data()?.evalNames?.[selectedEval()] ??
                             selectedEval())
                           : data()!.name}
@@ -723,14 +701,14 @@ export function App() {
                   >
                     <ScoreChart
                       scores={displayedScores()}
-                      public={isPublic()}
+                      public={!capabilities().details}
                       incomplete={data()!.status !== "running"}
                       criteria={
                         (route().view === "evals" || data()!.kind === "eval") &&
                         !topSecret()
                       }
                       onSelect={
-                        !isPublic() &&
+                        capabilities().details &&
                         !topSecret() &&
                         (route().view === "evals" || data()!.kind === "eval")
                           ? inspect
@@ -739,7 +717,7 @@ export function App() {
                     />
                   </Show>
                 </section>
-                <Show when={!isPublic()}>
+                <Show when={capabilities().details}>
                   <div class="run-facts">
                     <div>
                       <span>Models</span>
@@ -765,7 +743,7 @@ export function App() {
                     </div>
                     <div>
                       <span>{modelFilters().length ? "Run cost" : "Cost"}</span>
-                      <strong>{formatCost(scopedCost())}</strong>
+                      <strong>{formatRecordedCost(scopedCost())}</strong>
                     </div>
                   </div>
                 </Show>

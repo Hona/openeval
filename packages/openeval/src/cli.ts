@@ -12,6 +12,7 @@ import {
   serveResults,
   mergeBenchmarkRuns,
   snapshotBenchmarkRun,
+  exportViewer,
 } from "./index";
 import type { ModelRef } from "./index";
 
@@ -25,9 +26,7 @@ const models = (flag = "--model") =>
   args.flatMap((arg, index) =>
     arg === flag ? [args[index + 1] as ModelRef] : [],
   );
-const benchmark = resolve(
-  option("--benchmark") ?? process.cwd(),
-);
+const benchmark = resolve(option("--benchmark") ?? process.cwd());
 try {
   if (command === "--help" || command === "help" || args.includes("--help")) {
     console.log(`Usage: openeval <command> [options]
@@ -37,6 +36,7 @@ Commands:
   plan                  Show missing or changed work without executing it
   run                   Execute missing or changed work in the current result
   view                  Serve the results viewer
+  export <run>          Export a sanitized, static viewer with recordings
   snapshot <run> <name>  Export a score snapshot
   merge-runs <to> <from> Merge results into one aggregate
   add-models <run>       Add models with repeated --model flags
@@ -55,10 +55,39 @@ Options:
   --max-cost <usd>       Scheduling budget for this invocation
   --final-only          Judge only after candidates finish
   --port <port>         Viewer port (default: 4173)
+  --output <dir>        New public viewer directory (export)
+  --allow-artifact <path> Allow a reviewed UTF-8 workspace artifact (repeatable)
 
 Requires Bun 1.4.2+, Docker, and an authenticated OpenCode installation.`);
   } else if (command === "--version") {
-    console.log((await Bun.file(new URL("../package.json", import.meta.url)).json()).version);
+    console.log(
+      (await Bun.file(new URL("../package.json", import.meta.url)).json())
+        .version,
+    );
+  } else if (command === "export") {
+    if (!args[1] || !option("--output"))
+      throw new Error(
+        "export requires a run directory and --output <new-directory>",
+      );
+    const manifest = await exportViewer({
+      directory: resolve(args[1]),
+      output: resolve(option("--output")!),
+      assetsPath: fileURLToPath(new URL("../viewer/", import.meta.url)),
+      artifacts: args.flatMap((arg, index) =>
+        arg === "--allow-artifact" ? [args[index + 1]] : [],
+      ),
+    });
+    console.log(
+      JSON.stringify(
+        {
+          output: resolve(option("--output")!),
+          benchmark: manifest.source.benchmarkId,
+          redactions: manifest.redactions,
+        },
+        null,
+        2,
+      ),
+    );
   } else if (command === "image") {
     await buildImage((await loadBenchmark(benchmark)).container);
     console.log("Candidate image ready");
@@ -131,12 +160,18 @@ Requires Bun 1.4.2+, Docker, and an authenticated OpenCode installation.`);
     if (!args[1])
       throw new Error("remove-models requires a benchmark run directory");
     const result = await removeModels(resolve(args[1]), models());
-    console.log(JSON.stringify({
-      directory: result.directory,
-      removed: result.removed,
-      retiredSlots: result.retiredSlots,
-      status: result.benchmark.state,
-    }, null, 2));
+    console.log(
+      JSON.stringify(
+        {
+          directory: result.directory,
+          removed: result.removed,
+          retiredSlots: result.retiredSlots,
+          status: result.benchmark.state,
+        },
+        null,
+        2,
+      ),
+    );
   } else if (command === "retry" || command === "rejudge") {
     if (!args[1] || !args[2])
       throw new Error(

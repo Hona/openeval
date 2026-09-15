@@ -17,6 +17,14 @@ import type { RunMetrics } from "./judge-context";
 import { runtimeMs, type RuntimeInterval } from "./runtime";
 export { mergeRuntime, runtimeMs, runtimeClock } from "./runtime";
 export type { RuntimeInterval } from "./runtime";
+export { queryEvidenceDocument } from "./evidence-query";
+export type { EvidenceDocument } from "./evidence-query";
+export type {
+  ViewerExport,
+  ViewerAsset,
+  ViewerModelMetrics,
+  ViewerOverview,
+} from "./viewer-export";
 
 export type ScoreBounds = { lower: number; upper: number; coverage: number };
 export type ModelScore = {

@@ -4,6 +4,7 @@ import tailwind from "@tailwindcss/vite";
 import { fileURLToPath } from "node:url";
 
 export default defineConfig({
+  base: "./",
   root: fileURLToPath(new URL("./src/", import.meta.url)),
   plugins: [tailwind(), solid({ include: [/\.[jt]sx$/], exclude: [] })],
   resolve: { dedupe: ["solid-js", "@solidjs/meta"] },

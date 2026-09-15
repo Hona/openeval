@@ -6,7 +6,7 @@ same `@opencode/ui` components, OC-2 theme, and fonts as the results viewer.
 | Command, from the repository root | Purpose |
 | --- | --- |
 | `bun run site:dev` | Hot reload at http://127.0.0.1:4176 |
-| `bun run site:build` | Client build, SSR build, and static page generation |
+| `bun run site:build` | Client/SSR builds, static pages, and the real demo viewer |
 | `bun run site:verify` | Verify pages, links, assets, and the downloadable starter |
 | `bun run site:test` | Desktop, phone, tablet, and iPhone/WebKit reading and geometry checks |
 
@@ -25,7 +25,10 @@ TypeScript SDK scoring functions as the browser components.
 - `src/landing.tsx`: numbered Task, Judge, Run, Inspect, and Compare overview with the shared viewer chart.
 - `src/overview-content.ts`: shared overview actions, steps, file examples, and text projections for Markdown.
 - `demo/benchmark.ts`: typed model configuration used by the overview and displayed verbatim in Compare.
-- `demo/results.ts` and `demo/calculator.ts`: shared example data, labels, and SDK scoring used by both interactive components and Markdown.
+- `demo/evals/`: canonical runnable prompt and judge files, imported as raw source by the docs.
+- `demo/recording/`: reviewed, immutable public data for the recorded demo.
+- `demo/results.ts`: projects the real public recording into the homepage and Markdown.
+- `demo/calculator.ts`: shared data and SDK scoring for the interactive scoring explanation.
 - `src/components.tsx`: copy controls, code blocks, documentation screenshots, and score explorer.
 - `src/styles.css`: compact layouts using OC-2 theme tokens.
 - `prepare.ts`: copy public screenshots and produce the starter ZIP.
@@ -34,6 +37,7 @@ TypeScript SDK scoring functions as the browser components.
 - `markdown.ts` and `agent-files.ts`: generate the documentation index, Markdown pages, and public skill downloads from their existing sources.
 - `negotiation.ts` and `worker.ts`: select prebuilt Markdown through the HTTP Accept header.
 - `agent-plugin.ts`: matching Markdown responses in development and static preview.
+- `build-demo.ts`: build the existing viewer at `/demo/`; development uses that viewer's source through the same hot-reloading server.
 
 Use [the canonical vocabulary](../../TERMINOLOGY.md) in every label, example,
 caption, and authoring guide. Criteria are graded requirements; scores are
@@ -56,7 +60,8 @@ Markdown output. Generated `.md` pages live only in the build output.
 
 Start at **https://openev.al/llms.txt**. It links to `/agent-start.md`, all ten
 documentation pages at `/docs/<slug>/index.md`, the overview at `/index.md`, and
-the public Eval Writing skill. Code samples are preserved verbatim.
+the public Eval Writing skill. `/demo/index.md` links to the recorded results and
+public trace manifest. Code samples are preserved verbatim.
 
 Existing HTML URLs return the same Markdown when `Accept` prefers `text/markdown`
 or `text/x-markdown`. HTML and Markdown keep separate asset cache validators;
@@ -110,6 +115,29 @@ All pages and Markdown are generated at build time. A small Pages advanced-mode
 Worker handles content negotiation for the overview and documentation URLs;
 it only selects static assets. Direct Markdown, skills, images, and scripts bypass
 the Worker through `_routes.json`. Same-document browser navigation remains local.
+
+The demo is the real viewer with a saved-data adapter. Its compiled assets and
+reviewed JSON live under `/demo/`; it makes no provider requests or live SSE
+connections. Trace data is loaded as needed and checked against the manifest's
+SHA-256 hashes. The homepage and Markdown use the same exported overview.
+
+### Viewer module boundaries
+
+| Layer | Responsibility |
+| --- | --- |
+| `viewer/src/data/types.ts` | Typed reads, subscriptions, and UI capabilities |
+| `viewer/src/data/context.tsx` | Inject the selected source into components |
+| `viewer/src/data/server.ts` | Local HTTP endpoints and SSE lifecycle |
+| `viewer/src/data/saved.ts` | Export manifests, lazy files, and integrity checks |
+| `openeval/src/evidence-query.ts` | Viewer-independent evidence documents and queries |
+| `openeval/src/infra/publication-recordings.ts` | Select artifacts and project recordings for publication |
+| `openeval/src/infra/publishing.ts` | Credential filtering and publication policy |
+
+Paths in this table are relative to `packages/`. `main.tsx` selects the source;
+the UI calls methods such as `summary`, `judge`, and `watchSession`. Only the
+server adapter constructs API URLs or event streams. Components use declared
+capabilities for details, activity, and live updates. The evidence layer has no
+dependency on the viewer export format.
 
 ```mermaid
 flowchart LR
