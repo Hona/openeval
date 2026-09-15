@@ -5,6 +5,7 @@ import { docs, docHref, overview } from "./src/content";
 import { SITE } from "./src/examples";
 import { selectFontsBeforePaint } from "./src/fonts";
 import { githubStarCount } from "./github-stars";
+import { agentFiles, markdownPages } from "./agent-files";
 import "./prepare";
 
 const directory = fileURLToPath(new URL("./", import.meta.url));
@@ -69,7 +70,8 @@ const escape = (value: string) =>
     .replaceAll("<", "&lt;");
 for (const page of pages) {
   const rendered = renderPage(page.path);
-  const head = `<link rel="canonical" href="${SITE}${page.path}"><meta property="og:type" content="website"><meta property="og:title" content="${escape(page.title)}"><meta property="og:description" content="${escape(page.description)}"><meta property="og:url" content="${SITE}${page.path}"><meta property="og:image" content="${SITE}/images/results.png"><meta name="twitter:card" content="summary_large_image">`;
+  const alternate = markdownPages[page.path];
+  const head = `${alternate ? `<link rel="alternate" type="text/markdown" href="${alternate}">` : ""}<link rel="canonical" href="${SITE}${page.path}"><meta property="og:type" content="website"><meta property="og:title" content="${escape(page.title)}"><meta property="og:description" content="${escape(page.description)}"><meta property="og:url" content="${SITE}${page.path}"><meta property="og:image" content="${SITE}/images/results.png"><meta name="twitter:card" content="summary_large_image">`;
   const html = template
     .replace(/<title>.*?<\/title>/, `<title>${page.title}</title>`)
     .replace(
@@ -103,6 +105,33 @@ await writeFile(
 );
 await writeFile(
   resolve(directory, "dist/_headers"),
-  "/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n",
+  '/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n/*.md\n  Content-Type: text/markdown; charset=utf-8\n  Link: </llms.txt>; rel="describedby"\n/llms.txt\n  Content-Type: text/plain; charset=utf-8\n/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n',
+);
+for (const [path, content] of Object.entries(await agentFiles())) {
+  const file = resolve(directory, "dist", path.slice(1));
+  await mkdir(resolve(file, ".."), { recursive: true });
+  await writeFile(file, content);
+}
+const worker = await Bun.build({
+  entrypoints: [resolve(directory, "worker.ts")],
+  outdir: resolve(directory, "dist"),
+  naming: "_worker.js",
+  target: "browser",
+  minify: true,
+  define: { __MARKDOWN_PAGES__: JSON.stringify(markdownPages) },
+});
+if (!worker.success)
+  throw new AggregateError(worker.logs, "Documentation worker build failed");
+await writeFile(
+  resolve(directory, "dist/_routes.json"),
+  JSON.stringify(
+    {
+      version: 1,
+      include: ["/", "/index.html", "/docs/*"],
+      exclude: ["/docs/*.md"],
+    },
+    null,
+    2,
+  ),
 );
 console.log(`Prerendered ${pages.length} pages for ${SITE}`);

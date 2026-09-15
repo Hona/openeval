@@ -185,11 +185,15 @@ test("agent prompt copies setup instructions without moving the hero", async ({
   const copied = await page.evaluate(
     () => (window as any).__copiedPrompt as string,
   );
-  expect(copied).toContain("https://openev.al/docs/quickstart/");
+  expect(copied).toContain("https://openev.al/llms.txt");
+  expect(copied).toContain(".opencode/skills/eval-writing/");
   expect(copied).toContain("prompt.md");
   expect(copied).toContain("judge.ts");
   expect(copied).toContain("openeval run");
   expect(copied).toContain("openeval view");
+  const guide = await page.request.get("/agent-start.md");
+  expect(guide.headers()["content-type"]).toContain("text/markdown");
+  expect(copied).toBe(await guide.text());
 
   // Embedded browsers can block the async clipboard API.
   await page.evaluate(() => {

@@ -7,7 +7,8 @@ import {
   preparation,
   prompt,
   rubric,
-  runCommands,
+  GITHUB,
+  VERSION,
 } from "./examples";
 import type { ScreenshotName } from "./media";
 
@@ -24,6 +25,7 @@ export type Block =
   | { type: "note"; title: string; text: string }
   | { type: "flow"; steps: string[] }
   | { type: "image"; image: ScreenshotName; alt: string; caption: string }
+  | { type: "links"; items: { label: string; href: string }[] }
   | { type: "calculator" };
 export type Section = { id: string; title: string; blocks: Block[] };
 export type Doc = {
@@ -50,18 +52,100 @@ const note = (title: string, text: string): Block => ({
   title,
   text,
 });
+const links = (...items: [label: string, href: string][]): Block => ({
+  type: "links",
+  items: items.map(([label, href]) => ({ label, href })),
+});
 
 export const docs: Doc[] = [
   {
     slug: "quickstart",
     title: "Your first eval",
     group: "Start",
-    description: "From a task and a judge to a recorded, scored agent run.",
+    description:
+      "One SQL task. Two criteria. Choose a model, run it, and inspect the work.",
     sections: [
       {
-        id: "files",
-        title: "Start with two files",
+        id: "setup",
+        title: "1. Check the tools",
         blocks: [
+          code(
+            "terminal",
+            "bun --version\ndocker info\nopencode --version",
+            "shell",
+          ),
+          table(
+            ["Tool", "Ready when"],
+            [
+              ["Bun", "Version 1.4.2 or later"],
+              ["Docker", "The daemon is running with Linux containers"],
+              ["OpenCode", "Version 2; the SDK runtime is pinned to 2.0.3"],
+            ],
+          ),
+          links(
+            ["Install Bun", "https://bun.com/docs/installation"],
+            [
+              "Install Docker",
+              "https://docs.docker.com/get-started/get-docker/",
+            ],
+            ["Install OpenCode V2", "https://opencode.ai/v2/docs/"],
+          ),
+          text(
+            "If your V2 executable is named opencode2, use that name for the OpenCode commands below.",
+          ),
+        ],
+      },
+      {
+        id: "directory",
+        title: "2. Pick a directory",
+        blocks: [
+          text(
+            "Use an existing benchmark package or an empty project. For a new one:",
+          ),
+          code(
+            "terminal",
+            `mkdir my-benchmark\ncd my-benchmark\nbun init -y\nbun add --exact @hona/openeval@${VERSION}\nbunx --bun @hona/openeval --version`,
+            "shell",
+          ),
+          text(
+            "Keep the following commands in this directory. In an existing package, keep its manifest and add the dependency with its package manager.",
+          ),
+          code(
+            ".gitignore · add these entries",
+            "node_modules/\nresults/",
+            "text",
+          ),
+        ],
+      },
+      {
+        id: "skill",
+        title: "3. Add the writing skill",
+        blocks: [
+          links(["Download eval-writing.zip", "/eval-writing.zip"]),
+          text(
+            "Extract it into your project root. Keep an existing customized skill if you already have one.",
+          ),
+          code(
+            "project files",
+            ".opencode/skills/eval-writing/\n  SKILL.md\n  README.md\n  references/\n    openeval.md\n    examples.md\n    research.md",
+            "text",
+          ),
+          text(
+            "Open this project in OpenCode. Use /eval-writing when you want help with your own task or rubric.",
+          ),
+          code("terminal", "opencode .", "shell"),
+        ],
+      },
+      {
+        id: "files",
+        title: "4. Write one eval",
+        blocks: [
+          text(
+            "An eval is a task plus its grading rules. The candidate does the task; the judge grades its recording. Each criterion is one scored requirement.",
+          ),
+          text(
+            "Try this SQL demo: does the candidate ask which database you use, and handle the customer ID safely? Create these files:",
+          ),
           code(
             "my-benchmark/",
             `benchmark.ts\nevals/\n  ask-dialect/\n    prompt.md    # the task\n    judge.md     # the criteria`,
@@ -69,69 +153,113 @@ export const docs: Doc[] = [
           ),
           code("evals/ask-dialect/prompt.md", prompt, "markdown"),
           code("evals/ask-dialect/judge.md", rubric, "markdown"),
-          note(
-            "Code works too",
-            "A judge.ts function can replace judge.md or contribute additional criteria alongside it. Code-only benchmarks need no judge model. See Code & hybrid judges for the plain-function API.",
+          table(
+            ["Example response", "Asks for dialect", "Bound parameters"],
+            [
+              ["Asks which DB; gives a bound-parameter draft", "1", "1"],
+              ["Assumes PostgreSQL; gives a bound-parameter draft", "0", "1"],
+              ["Only asks which database", "1", "0"],
+            ],
           ),
           note(
-            "One recording, two checks",
-            "The answer is graded separately for asking about the SQL dialect and using bound parameters. A question-only answer passes the first criterion and fails the second.",
+            "Use your own task?",
+            "Start with one real request, one acceptable result, and one failure. Write criteria that distinguish them. Keep grading rules out of prompt.md. For an exact check, use a judge.ts function instead.",
+          ),
+          links(
+            ["Task prompts", "/docs/prompts/"],
+            ["Rubrics", "/docs/rubrics/"],
+            ["Code judges", "/docs/code-judges/"],
+            ["Workspace files", "/docs/workspaces/"],
           ),
         ],
       },
       {
-        id: "setup",
-        title: "Choose your models",
+        id: "models",
+        title: "5. Choose models and variants",
         blocks: [
-          table(
-            ["You need", "Why"],
-            [
-              ["Bun 1.4.2+", "Runs TypeScript declarations and the SDK"],
-              ["Docker", "Provides isolated candidate workspaces"],
-              [
-                "OpenCode connections",
-                "Supplies access to your candidate and judge models",
-              ],
-            ],
+          text(
+            "In OpenCode, connect your provider and pick a candidate and a judge:",
           ),
-          code(
-            "terminal · inside my-benchmark",
-            "bun add --exact @hona/openeval",
-            "shell",
+          code("inside OpenCode", "/connect\n/models", "text"),
+          text(
+            "Replace both placeholders below with connected model IDs. A benchmark groups your evals and model choices.",
           ),
           code("benchmark.ts", benchmark, "typescript"),
           text(
-            "Replace both provider/model placeholders with models connected in your OpenCode installation. Choose a candidate to evaluate and a judge to read its recorded work.",
+            "Use provider/model#variant for a listed variant, such as #high. Omit the suffix for the default. Start with one candidate and one repetition. This demo needs no web search.",
+          ),
+          text(
+            "Using only judge.ts files? Omit judge.model; you only need the candidate model.",
+          ),
+          links(
+            ["Models & variants", "https://opencode.ai/v2/docs/models/"],
+            [
+              "Benchmark type",
+              `${GITHUB}/blob/v${VERSION}/packages/openeval/src/types.ts`,
+            ],
           ),
         ],
       },
       {
         id: "run",
-        title: "Build. Plan. Run. Inspect.",
+        title: "6. Plan, then run",
         blocks: [
-          code("terminal", runCommands, "shell"),
+          code(
+            "terminal",
+            "bunx --bun @hona/openeval image\nbunx --bun @hona/openeval plan --only-eval ask-dialect --only-repetition 1",
+            "shell",
+          ),
+          text(
+            "Check the plan: ask-dialect, your candidate model, repetition 1. Planning previews work and its cost estimate. When you are ready to call the models:",
+          ),
+          code(
+            "terminal",
+            "bunx --bun @hona/openeval run --only-eval ask-dialect --only-repetition 1",
+            "shell",
+          ),
+          text(
+            "Running later? Keep the files and use the same command when ready.",
+          ),
+          links(
+            ["Run scopes & budgets", "/docs/running/"],
+            ["CLI reference", "/docs/reference/"],
+          ),
+        ],
+      },
+      {
+        id: "inspect",
+        title: "7. Watch and inspect",
+        blocks: [
+          text(
+            "To watch live, open a second terminal in the same directory. You can also open the viewer after the run.",
+          ),
+          code("second terminal", "bunx --bun @hona/openeval view", "shell"),
+          links(["Open the results viewer", "http://127.0.0.1:4173"]),
           {
             type: "flow",
             steps: [
-              "Build the image",
-              "Inspect the plan",
-              "Record the run",
-              "Read the judgment",
+              "Select ask-dialect",
+              "Select your model",
+              "Read Session / Judge",
+              "Follow the evidence",
             ],
           },
           table(
-            ["Output", "Where to find it"],
+            ["Result", "Read it as"],
             [
-              ["Local viewer", "http://127.0.0.1:4173"],
-              [
-                "Run and evidence store",
-                "results/ in your benchmark directory",
-              ],
-              [
-                "Next invocation",
-                "Resumes the same aggregate and reuses unchanged work",
-              ],
+              ["Criterion score", "1 = pass, 0 = fail, null = unresolved"],
+              ["Benchmark score", "Mean credit; this demo's [1, 0] gives 50%"],
+              ["Cost and tokens", "Recorded metrics, separate from the score"],
+              ["results/", "Retained runs, judgments, and evidence"],
             ],
+          ),
+          text(
+            "Next: add your other model IDs or increase repetitions in benchmark.ts, then plan and run again. OpenEval resumes the same result and keeps completed work.",
+          ),
+          links(
+            ["Read the evidence", "/docs/evidence/"],
+            ["Scoring", "/docs/scoring/"],
+            ["Definitions", "/docs/terminology/"],
           ),
         ],
       },
@@ -1170,6 +1298,7 @@ export const docs: Doc[] = [
 ];
 
 export const docHref = (slug: string) => `/docs/${slug}/`;
+export const docMarkdownHref = (slug: string) => `${docHref(slug)}index.md`;
 export const findDoc = (path: string) =>
   docs.find((d) => docHref(d.slug) === path.replace(/\/?$/, "/"));
 export const searchDocs = (query: string) => {

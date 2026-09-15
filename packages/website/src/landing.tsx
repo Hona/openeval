@@ -11,7 +11,8 @@ import {
   provider,
 } from "../../viewer/src/model";
 import { CodeBlock, CopyButton, StableTabPanel } from "./components";
-import { agentPrompt, codeJudge, codePrompt, prompt, rubric } from "./examples";
+import { codeJudge, codePrompt, prompt, rubric } from "./examples";
+import agentPrompt from "../../../agent-start.md?raw";
 import { overview } from "./content";
 import comparison from "../demo/benchmark";
 import comparisonSource from "../demo/benchmark.ts?raw";

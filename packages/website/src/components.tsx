@@ -386,6 +386,21 @@ export function RenderBlock(props: { block: Block }) {
   if (block.type === "flow") return <Flow steps={block.steps} />;
   if (block.type === "image") return <Screenshot {...block} />;
   if (block.type === "calculator") return <ScoreCalculator />;
+  if (block.type === "links")
+    return (
+      <p class="doc-links">
+        <For each={block.items}>
+          {(item) => (
+            <a
+              href={item.href}
+              download={item.href.endsWith(".zip") ? "" : undefined}
+            >
+              {item.label}
+            </a>
+          )}
+        </For>
+      </p>
+    );
   return (
     <aside class="note">
       <Icon name="info" />

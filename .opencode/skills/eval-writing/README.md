@@ -11,6 +11,8 @@ automatically.
 
 To use it in another project, copy this **entire directory**, including
 `references/`, into that project's `.opencode/skills/eval-writing/` directory.
+The [project skill ZIP](https://openev.al/eval-writing.zip) contains that exact
+layout. Extract it into your project root.
 For all your projects, put it in
 `~/.config/opencode/skills/eval-writing/` instead. The repository's
 [Download ZIP](https://github.com/Hona/openeval/archive/refs/heads/main.zip)
@@ -29,6 +31,11 @@ eval-writing/
 OpenCode V2 uses the directory name as the skill ID. See the
 [official skill documentation](https://opencode.ai/v2/docs/skills) for discovery
 and project/global precedence.
+
+The site also publishes a native [OpenCode V2 HTTP catalog](https://openev.al/skills/index.json)
+at `https://openev.al/skills/`. Its named `eval-writing.md` entry retains the skill
+ID in V2; its version changes when the public skill files change. The project
+ZIP uses the usual `eval-writing/SKILL.md` layout for source-controlled installs.
 
 ## Use
 

@@ -211,13 +211,21 @@ await runBenchmark("./my-benchmark", {
 
 ## Write evals with an agent
 
+Copy the **Agent prompt** at [openev.al](https://openev.al), or use
+[agent-start.md](https://github.com/Hona/openeval/blob/main/agent-start.md). It walks through project selection,
+prerequisites, the writing skill, one eval, models, and an optional first run.
+The prompt starts from [llms.txt](https://openev.al/llms.txt); documentation pages
+also support Markdown fetches and direct `index.md` URLs.
+
 Use the public [Eval Writing skill](https://github.com/Hona/openeval/tree/main/.opencode/skills/eval-writing)
 to turn a real failure into an eval, review a rubric, or investigate misleading
 scores. It guides an agent through concrete false-pass/false-failure examples,
 accepted alternatives, evidence requirements, and human-reviewed calibration.
 
 Copy the whole `.opencode/skills/eval-writing/` directory, including `references/`,
-into the same path in your project. For global use, copy it to
+into the same path in your project, or extract the
+[project skill ZIP](https://openev.al/eval-writing.zip) into your project root.
+For global use, copy it to
 `~/.config/opencode/skills/eval-writing/`. Then run **`/eval-writing`** in OpenCode.
 
 > Use eval-writing to review this task and rubric. Show me the strongest false

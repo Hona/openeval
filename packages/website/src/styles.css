@@ -615,6 +615,18 @@ tr:last-child td {
   line-height: 1.8;
   max-width: 80ch;
 }
+.doc-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+}
+.doc-links a {
+  display: inline-flex;
+  align-items: center;
+  color: var(--site-success);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 .doc-outline {
   position: sticky;
   top: 76px;
@@ -1240,6 +1252,9 @@ tr:last-child td {
     margin-bottom: 16px;
   }
   .doc-section h2 a {
+    min-height: 44px;
+  }
+  .doc-links a {
     min-height: 44px;
   }
   .doc-section h2 a > span {

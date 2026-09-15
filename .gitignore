@@ -10,3 +10,4 @@ packages/website/public/images/
 packages/website/public/starter.zip
 packages/website/test-results/
 packages/website/playwright-report/
+packages/website/.wrangler/

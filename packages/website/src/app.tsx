@@ -16,6 +16,7 @@ import { TextInput } from "@opencode/ui/text-input";
 import {
   docs,
   docHref,
+  docMarkdownHref,
   findDoc,
   overview,
   searchDocs,
@@ -62,6 +63,21 @@ function App(props: { path: string }) {
       : home()
         ? `OpenEval | ${overview.title}`
         : "OpenEval | Page not found";
+    const markdown = doc()
+      ? docMarkdownHref(doc()!.slug)
+      : home()
+        ? "/index.md"
+        : undefined;
+    const alternate = document.querySelector<HTMLLinkElement>(
+      'link[rel="alternate"][type="text/markdown"]',
+    );
+    if (markdown) {
+      const link = alternate ?? document.createElement("link");
+      link.rel = "alternate";
+      link.type = "text/markdown";
+      link.href = markdown;
+      if (!alternate) document.head.append(link);
+    } else alternate?.remove();
     setMenu(false);
     if (searchDialog.open) searchDialog.close();
   });
