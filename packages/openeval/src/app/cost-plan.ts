@@ -43,6 +43,9 @@ export function estimateWork(
     (item) => item.action === "candidate" || item.action === "judge",
   );
   const items = ready.map((item) => {
+    const hasLlm = !!definition.evals.find(
+      (evalDefinition) => evalDefinition.id === item.slot.evalId,
+    )!.judge;
     const candidate =
       cost(
         evals.filter(
@@ -53,22 +56,23 @@ export function estimateWork(
       ) ??
       cost(evals.filter((run) => run.input.model === item.slot.model)) ??
       cost(evals);
-    const judge =
-      cost(
-        judges.filter(
-          (run) =>
-            run.input.model === definition.judge.model &&
-            evals.some(
-              (e) =>
-                e.id === run.input.evalRunId &&
-                e.input.evalId === item.slot.evalId,
-            ),
-        ),
-      ) ??
-      cost(
-        judges.filter((run) => run.input.model === definition.judge.model),
-      ) ??
-      cost(judges);
+    const judge = !hasLlm
+      ? 0
+      : (cost(
+          judges.filter(
+            (run) =>
+              run.input.model === definition.judge.model &&
+              evals.some(
+                (e) =>
+                  e.id === run.input.evalRunId &&
+                  e.input.evalId === item.slot.evalId,
+              ),
+          ),
+        ) ??
+        cost(
+          judges.filter((run) => run.input.model === definition.judge.model),
+        ) ??
+        cost(judges));
     return {
       slotId: item.slot.id,
       estimatedUSD:

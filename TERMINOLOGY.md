@@ -35,7 +35,7 @@ might award 1 when cost_usd is at most 1.00. The resulting within_budget value
 is a criterion score. Recording cost alone does not award or deduct credit.
 
 Criterion IDs are chosen by the author. A name such as correct_answer does not
-have a built-in grading rule. In the planned code-judging contract, entries in
+have a built-in grading rule. In the code-judging contract, entries in
 scores are criterion scores; other returned data can be descriptive metadata.
 An output without scores is unscored. Missing required scores must not silently
 change the benchmark denominator.
@@ -62,31 +62,29 @@ execution records.
 - Use criterion and criteria for graded requirements, IDs, decisions, and score
   breakdowns. Use metric and metrics for measurements.
 - Use judge for both code-based and model-based evaluators. Say LLM judge when
-  the model-based implementation matters. The planned injected context is
+  the model-based implementation matters. The injected context is
   JudgeContext; do not introduce a parallel ScorerContext or ScorerRun concept.
 - Use rubric for the grading specification and judgment for its application to
   recorded work. prompt.md contains the task, not its grading specification.
 - Use criterion score, eval score, and benchmark score when the aggregation
   level matters. A partial-credit percentage is not automatically a task-success
   rate or a general measure of intelligence.
-- Preserve literal compatibility identifiers, historical quotations, and titles
+- Preserve historical quotations and titles
   of external sources. Explain their meaning using this vocabulary.
 
-## Release compatibility
+## Scoring contract
 
-The published SDK is 0.2.2. Its runnable examples use the legacy spelling
-`## Metric: id — Label` to declare a criterion in judge.md. Its API and stored
-records also use names such as `MetricDefinition`, `MetricJudgment`,
-`rubricMetrics`, and `judgment.metrics`. These are compatibility identifiers for
-criteria and criterion scores, not names for usage measurements.
+OpenEval 0.3.0 uses `## Criterion: id — Label` in judge.md and JudgeContext for
+plain judge.ts functions. Both files can contribute distinct criteria to the
+same eval. The author returns an optional scores map with boolean, numeric, or
+null values. Booleans normalize to 0 or 1; numbers must be finite and between
+0 and 1. null is unresolved, not zero or partial credit.
 
-Canonical authoring uses `## Criterion: id — Label`. Support for that spelling,
-JudgeContext, and additive judge.md / judge.ts execution belongs to the planned
-0.3.0 release. They are not available from 0.2.2. Current per-criterion values
-are 0, 1, or null; boolean normalization and fractional criterion scores are also
-part of that planned release. null is unresolved, not zero or partial credit.
+CriterionDefinition describes a named requirement. CriterionScore records its
+normalized value, reason, evidence, and source. A Judgment contains those records
+in its scores map and their aggregate value. The original code output is also
+retained, including custom JSON that does not participate in scoring.
 
-Document released capabilities as released capabilities. Label unreleased API
-examples and use the installed version's literal names when writing runnable
-examples. Keep historical recordings and finalized judgments immutable during
-terminology migrations.
+The API and results schema use these canonical names directly. Results schema 5
+is the current format. Keep original recordings and finalized judgments intact
+when carrying out an author-approved, separate migration of older stores.

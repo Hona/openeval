@@ -8,6 +8,7 @@ export function trackTool(
   if (!("data" in event)) return;
   const data = event.data as {
     id?: string;
+    sessionID?: string;
     name?: string;
     assistantMessageID?: string;
     input?: Record<string, unknown>;
@@ -17,8 +18,10 @@ export function trackTool(
     executed?: boolean;
   };
   if (!data.id) return;
-  const value = calls.get(data.id) ?? {
+  const key = `${data.sessionID ?? ""}:${data.assistantMessageID ?? ""}:${data.id}`;
+  const value = calls.get(key) ?? {
     id: data.id,
+    sessionID: data.sessionID,
     name: data.name ?? "unknown",
     assistantMessageId: data.assistantMessageID ?? "",
     status: "preparing" as const,
@@ -45,5 +48,5 @@ export function trackTool(
     if (value.startedAt !== undefined)
       value.durationMs = event.created - value.startedAt;
   }
-  calls.set(value.id, value);
+  calls.set(key, value);
 }

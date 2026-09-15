@@ -23,6 +23,11 @@ help/version, and checks the package asset boundary. No live models are called.
 
 ## Trusted publishing
 
+Version 0.3.0 uses the canonical criterion/score API and results schema 5.
+Breaking pre-1.0 changes do not carry compatibility aliases or built-in store
+migrations. Any author-approved migration of existing private runs is a separate
+one-off operation that retains the original database and recorded evidence.
+
 After the first publication, configure the npm package's trusted publisher:
 
 - GitHub owner: `Hona`

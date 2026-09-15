@@ -3,6 +3,8 @@ import type { Slot, EvalRun } from "../types";
 import type { ExecutionContext } from "./context";
 import { executeCandidate } from "../infra/containers/candidate";
 import type { EvidenceFeed } from "../evidence";
+import { CandidateEvidence } from "../infra/evidence";
+import { measureRecording } from "../infra/recording/metrics";
 
 /** The normal candidate use case: record its inputs, execute, finalize its evidence. */
 export async function runEval(
@@ -88,6 +90,17 @@ export async function runEval(
         }
       : undefined,
   };
+  if (completed.evidence) {
+    const evidence = await CandidateEvidence.open(
+      resolve(context.directory, completed.evidence.directory),
+      completed.evidence.hash,
+    );
+    completed.metrics = measureRecording(
+      evidence.rawEvents(),
+      evidence.toolCalls(),
+      completed.evidence,
+    );
+  }
   context.results.finishEval(completed);
   return completed;
 }

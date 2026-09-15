@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import type { EvidenceView } from "../../evidence";
-import type { JudgeCheck, MetricDefinition } from "../../types";
+import type { JudgeCheck, CriterionDefinition } from "../../types";
 import { errorMessage } from "../files";
-import { validateCitations, validateMetrics } from "./contract";
+import { validateCitations, validateCriteria } from "./contract";
 
 export type JudgePhase = "early" | "final";
 export type JudgeDecision = NonNullable<JudgeCheck["decision"]>;
@@ -29,7 +29,7 @@ export class JudgeRequest {
   constructor(
     readonly phase: JudgePhase,
     readonly evidence: EvidenceView,
-    readonly metrics: readonly MetricDefinition[],
+    readonly criteria: readonly CriterionDefinition[],
     private readonly audit: SubmissionAudit[],
     readonly checkId?: string,
     private readonly signal?: AbortSignal,
@@ -48,17 +48,17 @@ export class JudgeRequest {
     return {
       requestId: this.id,
       phase: this.phase,
-      metrics: this.metrics,
+      criteria: this.criteria,
       evidence: this.evidence.summary(),
     };
   }
 
-  submit(input: { requestId: string; metrics: unknown }) {
+  submit(input: { requestId: string; scores: unknown }) {
     return this.accept("submit_judgment", input, async () => {
-      const judgment = validateMetrics(input.metrics, this.metrics);
+      const judgment = validateCriteria(input.scores, this.criteria);
       if (this.phase === "early" && judgment.value === null)
         throw new Error(
-          "Early checks require every metric to be decided. Use continue_judging when evidence is insufficient",
+          "Early checks require every criterion to be decided. Use continue_judging when evidence is insufficient",
         );
       await validateCitations(judgment, this.evidence);
       return { kind: "decided", judgment };
@@ -69,7 +69,7 @@ export class JudgeRequest {
     return this.accept("continue_judging", input, async () => {
       if (this.phase !== "early")
         throw new Error(
-          "Final grading requires submit_judgment; unresolved metrics can be null",
+          "Final grading requires submit_judgment; unresolved criterion scores can be null",
         );
       if (typeof input.reason !== "string" || !input.reason.trim())
         throw new Error("Explain what evidence is still needed");

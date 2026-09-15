@@ -18,7 +18,7 @@ export const JUDGE_TOOLS = [
  */
 export const JUDGE_AGENT = {
   id: "openeval-judge",
-  description: "Grades immutable recorded work against eval metrics",
+  description: "Grades immutable recorded work against eval criteria",
   mode: "primary",
   system: readFileSync(new URL("./judge-agent.md", import.meta.url), "utf8"),
   permissions: [
@@ -35,6 +35,7 @@ export async function judgeConfiguration(
   input: Pick<JudgeRunInput, "agent" | "rubric" | "websearch">,
   directory: string,
 ) {
+  if (!input.agent) throw new Error("An LLM judge requires an agent profile");
   const { id, ...agent } = input.agent;
   const configuration = resolve(directory, "configuration");
   const config = {
@@ -45,7 +46,7 @@ export async function judgeConfiguration(
         ...agent,
         // Keep the rubric in the native system prompt so compaction cannot lose
         // it. Request context and result data move through registered tools.
-        system: `${agent.system.trim()}\n\n# Eval metrics\n\n${input.rubric.trim()}`,
+        system: `${agent.system.trim()}\n\n# Eval rubric\n\n${input.rubric.trim()}`,
       },
     },
     websearch: input.websearch ? { provider: input.websearch } : false,

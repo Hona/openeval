@@ -1,15 +1,15 @@
 # Apply the workflow with OpenEval
 
-This reference describes the public `@hona/openeval` 0.2.2 contracts, reviewed
+This reference describes the public `@hona/openeval` 0.3.0 contracts, reviewed
 2026-09-15. Check the installed version's documentation before using its APIs.
 Follow the benchmark author's own repository rules, inventory, and collection
 policy. Repository-specific commands and approvals are not universal SDK features.
 
 Use the [canonical vocabulary](https://openev.al/docs/terminology/): criteria are
 graded requirements, scores are awarded credit, and metrics are measurements.
-The released `## Metric:` heading and API identifiers such as `rubricMetrics`
-and `judgment.metrics` are legacy spellings for criteria and criterion scores.
-Canonical `## Criterion:` syntax and code judging are planned for 0.3.0.
+Use `## Criterion:` headings, CriterionDefinition, CriterionScore, and
+JudgeContext. Criterion scores are stored in judgment.scores; usage measurements
+are metrics. The API and results schema 5 use the canonical names directly.
 
 ## Files and responsibilities
 
@@ -20,12 +20,17 @@ my-benchmark/
     task-id/
       prompt.md
       judge.md
+      judge.ts       # code, Markdown, or both judge files
       eval.ts        # optional workspace preparation / early stopping
       workspace/     # optional candidate-visible starting files
 ```
 
 - `prompt.md` is sent verbatim. Include the task and genuine constraints.
 - `judge.md` defines task-specific criteria, accepted alternatives, and domain facts.
+- `judge.ts` default-exports a function receiving JudgeContext and returning JSON.
+  Its optional scores map contains booleans, finite numbers from 0 to 1, or null.
+  Both files contribute distinct criteria; duplicate IDs are errors. Code-only
+  benchmarks do not require a judge model. Code and hybrid evals use final grading.
 - `eval.ts` uses the public `Eval` declaration for preparation and early stopping.
 - `benchmark.ts` declares models, repetitions, the judge, and execution settings
   through the public `Benchmark` type.
@@ -36,13 +41,12 @@ answer keys, evaluator code, or evidence storage. Preparation is not candidate w
 
 ## Rubric format
 
-Every rubric declares one or more criteria with stable, unique IDs. This example
-uses the legacy heading syntax supported by 0.2.2:
+Every Markdown rubric declares one or more criteria with stable, unique IDs:
 
 ```md
 # Incident summary
 
-## Metric: supported_summary — Complete, source-supported summary
+## Criterion: supported_summary — Complete, source-supported summary
 
 Pass when the response identifies the incident, impact, and resolution described
 in the supplied report, and makes no material claim that contradicts that report.
@@ -60,42 +64,53 @@ The native `openeval-judge` agent owns common evidence access, citation, output,
 correction, and unknown-result instructions. Keep shared judging mechanics in
 the SDK and task-specific criterion rules in the rubric.
 
-Each declared criterion receives a score of `0 | 1 | null`:
+Each declared criterion receives normalized credit from 0 to 1, or null:
 
 | Value / state | Meaning |
 | --- | --- |
 | `1` | The evidence establishes the criterion's pass conditions |
 | `0` | The evidence establishes failure, including required omissions at natural completion |
+| A fraction | Partial credit under an explicit author-defined rule |
 | `null` | Necessary evidence or a decisive reference fact cannot resolve the criterion |
 | JudgeRun error | Submission or judging failed; this is not a candidate zero |
 
-A completed judgment contains the full criterion-score array in the legacy
-`metrics` field. The SDK validates IDs,
+A completed judgment contains the full criterion-score map in `scores`.
+The SDK normalizes booleans and validates IDs,
 values, recorded citations, and exact optional quotes; the judge interprets the
 criteria. Source URLs support domain facts but do not replace evidence of what
 the candidate actually did. A valid citation does not certify the interpretation.
 
 ## Evidence and calibration
 
-The judge is an observer. It can inspect recorded messages, tool results, events,
+The Markdown judge is an observer. It can inspect recorded messages, tool results, events,
 and initial/final artifacts; it cannot execute candidate commands or change the
 candidate's files to prove a missing result.
+
+Code judges have typed recording, tool, event, file, and measurement primitives.
+Native SDK/API, schema, and read-only SQL readers initialize lazily over verified
+archive copies. A disposable workspace can support author-owned verification;
+attribute new checks to the judge rather than claiming the candidate ran them.
+Keep task-specific rules in the benchmark's function. The SDK provides data and
+execution primitives, not built-in task-specific scorers or registration DSLs.
 
 Useful public exports:
 
 | Export | Purpose |
 | --- | --- |
 | `loadBenchmark` | Load and validate a benchmark declaration and its eval files |
-| `rubricMetrics` | Read criterion declarations from rubric text; legacy API name |
+| `rubricCriteria` | Read criterion declarations from rubric text |
 | `recordEvidence` | Create a recording from supplied text and tool records |
 | `judgeEvidence` | Judge evidence into a new standalone directory without selecting benchmark scores |
 | `judgeRuns` | Rejudge retained executions and update their active judgment selections |
+| `readRecording` | Open typed recorded data and lazy native readers; dispose after use |
 
 `recordEvidence` does not run supplied tools. Constructed controls test semantic
 boundaries, not real execution or environment feasibility. Keep their provenance
 clear. Match expected labels to all declared criteria and review disagreements.
-Use `judgeEvidence` for authorized calibration and independent audits. Both
-judging APIs call live models; local structure checks need neither.
+Use `judgeEvidence` for authorized calibration and independent audits. Pass a
+code path for deterministic grading, rubric text and a judge model for LLM grading,
+or both for hybrid grading. Code-only controls need no model calls unless their
+author's function explicitly makes one. LLM grading requires an authorized scope.
 
 For a simple non-model declaration check in the benchmark project:
 
@@ -156,7 +171,7 @@ not a guaranteed billing ceiling; active work can finish above the estimate.
 ## Public references
 
 - [OpenEval README](https://github.com/Hona/openeval#readme)
-- [0.2.2 judging contract](https://github.com/Hona/openeval/blob/v0.2.2/packages/openeval/JUDGING.md)
+- [0.3.0 judging contract](https://github.com/Hona/openeval/blob/v0.3.0/packages/openeval/JUDGING.md)
 - [Task prompts](https://openev.al/docs/prompts/)
 - [Judge rubrics](https://openev.al/docs/rubrics/)
 - [Workspace preparation](https://openev.al/docs/workspaces/)

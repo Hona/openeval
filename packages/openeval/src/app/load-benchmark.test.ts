@@ -23,7 +23,7 @@ test("loads namespaced model IDs and preserves them for OpenCode", async () => {
     );
     await Bun.write(
       resolve(root, "evals/answer/judge.md"),
-      "## Metric: correct — Correct answer\nPass when the answer is correct.",
+      "## Criterion: correct — Correct answer\nPass when the answer is correct.",
     );
 
     const benchmark = await loadBenchmark(root);
@@ -32,7 +32,7 @@ test("loads namespaced model IDs and preserves them for OpenCode", async () => {
       id: "team/checkpoint",
       variant: "high",
     });
-    expect(parseModel(benchmark.judge.model)).toEqual({
+    expect(parseModel(benchmark.judge.model!)).toEqual({
       providerID: "reviewer",
       id: "org/family/checkpoint",
       variant: "low",

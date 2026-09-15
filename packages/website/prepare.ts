@@ -6,7 +6,12 @@ import { starterFiles } from "./src/examples";
 
 const directory = fileURLToPath(new URL("./", import.meta.url));
 await mkdir(resolve(directory, "public/images"), { recursive: true });
-for (const image of ["results.png", "judgment.png", "queue.png"])
+for (const image of [
+  "results.png",
+  "judgment.png",
+  "code-judgment.png",
+  "queue.png",
+])
   await cp(
     resolve(directory, "../../docs/images", image),
     resolve(directory, "public/images", image),

@@ -45,23 +45,37 @@ export const judgeFingerprint = (
 ) =>
   fingerprint({
     rubric: definition.evals.find((item) => item.id === evalId)!.judge,
-    agent: JUDGE_AGENT,
-    judge: definition.judge,
+    code: definition.evals.find((item) => item.id === evalId)!.code?.hash,
+    agent: definition.evals.find((item) => item.id === evalId)!.judge
+      ? JUDGE_AGENT
+      : undefined,
+    judge: definition.evals.find((item) => item.id === evalId)!.judge
+      ? definition.judge
+      : { timeoutMs: definition.judge.timeoutMs },
     protocol: JUDGE_PROTOCOL,
   });
 export const savedJudgeFingerprint = (
   input: Pick<
     JudgeRunInput,
-    "rubric" | "agent" | "protocol" | "model" | "timeoutMs" | "websearch"
+    | "rubric"
+    | "agent"
+    | "protocol"
+    | "model"
+    | "timeoutMs"
+    | "websearch"
+    | "code"
   >,
 ) =>
   fingerprint({
     rubric: input.rubric,
+    code: input.code?.hash,
     agent: input.agent,
     protocol: input.protocol,
-    judge: {
-      model: input.model,
-      timeoutMs: input.timeoutMs,
-      websearch: input.websearch,
-    },
+    judge: input.rubric
+      ? {
+          model: input.model,
+          timeoutMs: input.timeoutMs,
+          websearch: input.websearch,
+        }
+      : { timeoutMs: input.timeoutMs },
   });

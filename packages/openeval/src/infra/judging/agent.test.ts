@@ -14,7 +14,7 @@ test("loads and selects an isolated native judge agent without modifying build",
     ),
   );
   const rubric =
-    "## Metric: answer — Answer\nPass if the recorded answer supplies the requested fact.";
+    "## Criterion: answer — Answer\nPass if the recorded answer supplies the requested fact.";
   try {
     const workspace = resolve(directory, "workspace");
     await writeJson(resolve(workspace, "opencode.json"), {

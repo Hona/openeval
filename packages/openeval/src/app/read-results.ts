@@ -26,6 +26,7 @@ import {
 } from "../runtime";
 import { canJudgeEval } from "./eval-state";
 import { CandidateEvidence, type EvidenceQuery } from "../infra/evidence";
+import { contained } from "../infra/files";
 
 const scheduled = (slot: Slot, benchmark: BenchmarkRun, now: number) =>
   benchmark.state === "running" &&
@@ -33,6 +34,8 @@ const scheduled = (slot: Slot, benchmark: BenchmarkRun, now: number) =>
   benchmark.scheduledSlotIds.includes(slot.id);
 
 const costOf = (run: EvalRun | JudgeRun, results?: Results): Cost => {
+  if ("evalRunId" in run.input && run.input.kind === "code")
+    return { usd: 0, reportedUSD: 0, complete: true };
   const usd = run.session?.accounting?.costUSD;
   return {
     usd: usd ?? null,
@@ -162,6 +165,21 @@ export class ResultReader {
     using results = await this.database(benchmarkId);
     const judge = results.judgeRun(judgeRunId);
     if (!judge) throw new Error("Unknown judge run");
+    const candidate = results.evalRun(judge.input.evalRunId);
+    const criteria = new Map(
+      judge.input.criteria.map((criterion) => [criterion.id, criterion]),
+    );
+    for (const id of Object.keys(judge.judgment?.scores ?? {}))
+      if (!criteria.has(id))
+        criteria.set(id, { id, name: id.replaceAll("_", " ") });
+    const log = async (path?: string) =>
+      path
+        ? (
+            await Bun.file(contained(dirname(results.path), path))
+              .text()
+              .catch(() => "")
+          ).slice(0, 40_000)
+        : undefined;
     return {
       judge: {
         id: judge.id,
@@ -172,8 +190,15 @@ export class ResultReader {
         monitorErrorAt: judge.monitorErrorAt,
         monitorLimit: judge.monitorLimit,
         judgment: judge.judgment,
+        code: judge.code,
+        error: judge.error,
       },
-      metrics: judge.input.metrics,
+      kind: judge.input.kind,
+      criteria: [...criteria.values()],
+      metrics: candidate?.metrics ?? judge.code?.metrics,
+      codeSource: judge.input.code?.source,
+      codeStdout: await log(judge.code?.stdout),
+      codeStderr: await log(judge.code?.stderr),
       stop: results.evalRun(judge.input.evalRunId)?.stop,
       checks: results.judgeChecks(judgeRunId).map((check) => {
         const start = timestampMs(check.executionStartedAt);
@@ -421,6 +446,7 @@ function stageState(
     runtime,
     cost: costOf(run, results),
     message: run.error,
+    ...("kind" in run.input ? { kind: run.input.kind } : {}),
   };
 }
 
@@ -470,6 +496,13 @@ function liveRun(
       evalStage.status,
     );
   const judgeStage: StageState = {
+    kind: benchmark.definition.evals.find((item) => item.id === slot.evalId)
+      ?.code
+      ? benchmark.definition.evals.find((item) => item.id === slot.evalId)
+          ?.judge
+        ? "hybrid"
+        : "code"
+      : "llm",
     ...stageState(
       judge,
       stale,
@@ -486,7 +519,7 @@ function liveRun(
     ...(judge?.state === "completed"
       ? {
           score: judge.judgment?.value ?? null,
-          metrics: judge.judgment?.metrics,
+          scores: judge.judgment?.scores,
         }
       : {}),
   };

@@ -507,52 +507,73 @@ h3 {
 .score-chart {
   padding: 0 26px 16px;
 }
-/* Shared-axis metric strips keep the whole-benchmark score singular.
+/* Shared-axis criterion strips keep the whole-benchmark score singular.
    Equal-task weighting: https://arxiv.org/html/2607.07946#S5.SS3 */
-.chart-row.metric-row {
+.chart-row.criterion-row {
   height: 42px;
 }
-.metric-row .chart-track {
+.criterion-row .chart-track {
   height: 42px;
 }
-.metric-row .chart-bar {
+.criterion-row .chart-bar {
   height: 8px;
   background: var(--app-muted);
   opacity: 0.55;
 }
-.metric-name {
+.criterion-name {
   padding-left: 42px;
   font-size: 11px;
   color: var(--app-muted);
 }
-.metric-score {
+.criterion-score {
   text-align: right;
   font-size: 14px;
   font-variant-numeric: tabular-nums;
 }
 @media (max-width: 580px) {
-  .metric-name {
+  .criterion-name {
     padding-left: 0;
     line-height: 1.25;
   }
 }
-.chart-model:has(.metric-row) {
+.chart-model:has(.criterion-row) {
   padding-bottom: 10px;
   border-bottom: 1px solid var(--app-border);
 }
-.judgment-metrics article {
+.judgment-criteria article {
   padding: 12px;
   border-bottom: 1px solid var(--app-border);
 }
-.judgment-metrics header {
+.judgment-criteria header {
   display: flex;
   gap: 12px;
   justify-content: space-between;
 }
-.judgment-metrics p {
+.judgment-criteria p {
   font-size: 12px;
   line-height: 1.6;
   margin: 8px 0;
+}
+.code-judgment,
+.recorded-metrics {
+  border-top: 1px solid var(--app-border);
+  padding: 16px;
+}
+.code-judgment > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.code-judgment > header span {
+  color: var(--app-faint);
+  font-size: 11px;
+}
+.code-judgment summary,
+.recorded-metrics summary {
+  cursor: pointer;
+  padding: 8px 0;
 }
 .judgment-source {
   display: block;
@@ -1601,6 +1622,14 @@ pre {
   border-radius: 6px;
   margin: 6px 0 12px;
   scrollbar-width: thin;
+}
+.session-inspector[data-code-only="true"] .judge-audit {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+}
+.code-judgment .checkpoint-content {
+  max-height: 360px;
 }
 .judge-audit > summary {
   display: flex;

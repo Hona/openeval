@@ -9,7 +9,8 @@ import type {
   ModelRef,
 } from "../types";
 import { CANDIDATE_TIMEOUT_MS } from "../types";
-import { rubricMetrics } from "../judgment";
+import { rubricCriteria } from "../judgment";
+import { compileCodeJudge } from "../infra/judging/code-source";
 import { monitorPolicy } from "./monitor-policy";
 import {
   fingerprint,
@@ -41,9 +42,14 @@ async function declaration<T>(path: string): Promise<T> {
 async function loadEval(directory: string): Promise<EvalDefinition> {
   const id = basename(directory),
     prompt = Bun.file(resolve(directory, "prompt.md")),
-    judge = Bun.file(resolve(directory, "judge.md"));
-  if (!(await prompt.exists()) || !(await judge.exists()))
-    throw new Error(`${id} requires prompt.md and judge.md`);
+    judge = Bun.file(resolve(directory, "judge.md")),
+    codeFile = resolve(directory, "judge.ts");
+  const hasMarkdown = await judge.exists(),
+    hasCode = await Bun.file(codeFile).exists();
+  if (!(await prompt.exists()) || (!hasMarkdown && !hasCode))
+    throw new Error(
+      `${id} requires prompt.md and at least one of judge.md or judge.ts`,
+    );
   const settings = (await Bun.file(resolve(directory, "eval.ts")).exists())
     ? await declaration<Eval>(resolve(directory, "eval.ts"))
     : {};
@@ -56,6 +62,10 @@ async function loadEval(directory: string): Promise<EvalDefinition> {
   )
     throw new Error(`${id}/eval.ts has unsupported settings`);
   monitorPolicy(settings.earlyStop);
+  if (hasCode && settings.earlyStop)
+    throw new Error(
+      `${id}: judge.ts grades finalized recordings; earlyStop requires a Markdown-only judge`,
+    );
   const source: unknown[] = [];
   if (settings.workspace) {
     const workspace = settings.workspace;
@@ -157,9 +167,10 @@ async function loadEval(directory: string): Promise<EvalDefinition> {
       throw new Error(`${id}: preparation requires argv`);
   }
   const promptText = await prompt.text(),
-    judgeText = await judge.text();
-  if (!promptText.trim() || !judgeText.trim())
+    judgeText = hasMarkdown ? await judge.text() : "";
+  if (!promptText.trim() || (hasMarkdown && !judgeText.trim()))
     throw new Error(`${id}: prompt and judge must not be empty`);
+  const code = hasCode ? await compileCodeJudge(codeFile) : undefined;
   return {
     id,
     directory,
@@ -170,8 +181,9 @@ async function loadEval(directory: string): Promise<EvalDefinition> {
       settings: { workspace: settings.workspace, prepare: settings.prepare },
       source,
     }),
-    judgeHash: hash(judgeText),
-    metrics: rubricMetrics(judgeText),
+    judgeHash: fingerprint({ rubric: judgeText, code: code?.hash }),
+    criteria: hasMarkdown ? rubricCriteria(judgeText) : [],
+    ...(code ? { code } : {}),
     name: /^# (.+)$/m.exec(judgeText)?.[1] ?? id,
   };
 }
@@ -187,10 +199,9 @@ export async function loadBenchmark(
   if (
     !definition ||
     !Array.isArray(definition.models) ||
-    !definition.models.length ||
-    !definition.judge
+    !definition.models.length
   )
-    throw new Error("benchmark.ts requires models and a judge");
+    throw new Error("benchmark.ts requires models");
   if (
     Object.keys(definition).some(
       (key) =>
@@ -207,6 +218,18 @@ export async function loadBenchmark(
   )
     throw new Error("benchmark.ts contains unsupported settings");
   const models = definition.models.map(modelRef);
+  if (
+    definition.judge !== undefined &&
+    (!definition.judge ||
+      typeof definition.judge !== "object" ||
+      Array.isArray(definition.judge) ||
+      Object.keys(definition.judge).some(
+        (key) => !["model", "timeoutMs", "websearch"].includes(key),
+      ))
+  )
+    throw new Error(
+      "judge must be an object with model, timeoutMs, or websearch settings",
+    );
   if (new Set(models).size !== models.length)
     throw new Error("Benchmark contains duplicate models");
   const timeoutMs = positive(
@@ -224,6 +247,8 @@ export async function loadBenchmark(
   const evals = await Promise.all(
     directories.map((entry) => loadEval(resolve(evalRoot, entry.name))),
   );
+  if (evals.some((item) => item.judge) && !definition.judge?.model)
+    throw new Error("A benchmark containing judge.md requires judge.model");
   const concurrency = positive(definition.concurrency, 10, "Concurrency");
   if (concurrency < 2 && evals.some((item) => item.settings.earlyStop))
     throw new Error(
@@ -234,7 +259,7 @@ export async function loadBenchmark(
     throw new Error("Container engine must be docker or podman");
   for (const search of [
     definition.candidate?.websearch,
-    definition.judge.websearch,
+    definition.judge?.websearch,
   ])
     if (search !== undefined && search !== false && search !== "exa")
       throw new Error("Websearch must be exa or false");
@@ -253,9 +278,15 @@ export async function loadBenchmark(
         : {}),
     },
     judge: {
-      model: modelRef(definition.judge.model),
-      timeoutMs: positive(definition.judge.timeoutMs, 600_000, "Judge timeout"),
-      websearch: definition.judge.websearch ?? "exa",
+      ...(definition.judge?.model
+        ? { model: modelRef(definition.judge.model) }
+        : {}),
+      timeoutMs: positive(
+        definition.judge?.timeoutMs,
+        600_000,
+        "Judge timeout",
+      ),
+      websearch: definition.judge?.websearch ?? "exa",
     },
     container: {
       engine,

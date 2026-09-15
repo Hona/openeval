@@ -251,9 +251,9 @@ export function Screenshot(props: {
 
 export function ScoreCalculator() {
   const definitions = [
-    { eval: "sql", metric: "asked_dialect", name: "Asks for dialect" },
-    { eval: "sql", metric: "safe_parameters", name: "Bound parameters" },
-    { eval: "summary", metric: "actionable", name: "Actionable summary" },
+    { eval: "sql", criterion: "asked_dialect", name: "Asks for dialect" },
+    { eval: "sql", criterion: "safe_parameters", name: "Bound parameters" },
+    { eval: "summary", criterion: "actionable", name: "Actionable summary" },
   ];
   const [values, setValues] = createSignal<Array<0 | 1 | null>>([1, 0, 1]);
   const score = createMemo(() =>
@@ -338,8 +338,8 @@ export function ScoreCalculator() {
         </span>
       </div>
       <p class="utility-note">
-        Select a decision to cycle through pass → fail → unknown. The calculation
-        uses OpenEval's score projection.
+        Select a decision to cycle through pass → fail → unknown. The
+        calculation uses OpenEval's score projection.
       </p>
     </div>
   );

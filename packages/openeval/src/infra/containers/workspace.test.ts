@@ -29,8 +29,8 @@ test("freezes same-size revision changes with matching source timestamps", async
       name: "Revision fixture",
       directory: root,
       prompt: "Use the target revision.",
-      judge: "## Metric: state — State\nInspect the state.",
-      metrics: [{ id: "state", name: "State" }],
+      judge: "## Criterion: state — State\nInspect the state.",
+      criteria: [{ id: "state", name: "State" }],
       sourceHash: "fixture",
       judgeHash: "fixture",
       settings: {

@@ -11,15 +11,28 @@ import { screenshotDimensions } from "./src/media";
 
 const directory = fileURLToPath(new URL("./", import.meta.url));
 const dist = resolve(directory, "dist");
-const glossary = await Bun.file(resolve(directory, "../../TERMINOLOGY.md")).text();
-const glossaryRows = glossary.split("\n")
-  .filter((line) => line.startsWith("| ")).slice(2)
-  .map((line) => line.split("|").slice(1, -1).map((cell) => cell.trim()));
-const glossaryTable = docs.find((doc) => doc.slug === "terminology")
+const glossary = await Bun.file(
+  resolve(directory, "../../TERMINOLOGY.md"),
+).text();
+const glossaryRows = glossary
+  .split("\n")
+  .filter((line) => line.startsWith("| "))
+  .slice(2)
+  .map((line) =>
+    line
+      .split("|")
+      .slice(1, -1)
+      .map((cell) => cell.trim()),
+  );
+const glossaryTable = docs
+  .find((doc) => doc.slug === "terminology")
   ?.sections.find((section) => section.id === "terms")
   ?.blocks.find((block) => block.type === "table");
-deepStrictEqual(glossaryTable?.rows, glossaryRows,
-  "Website definitions must match TERMINOLOGY.md");
+deepStrictEqual(
+  glossaryTable?.rows,
+  glossaryRows,
+  "Website definitions must match TERMINOLOGY.md",
+);
 for (const [name, size] of Object.entries(screenshotDimensions)) {
   const bytes = await Bun.file(resolve(dist, "images", name)).arrayBuffer();
   const png = new DataView(bytes);
@@ -33,7 +46,13 @@ for (const path of paths) {
   const html = await Bun.file(
     resolve(dist, path.slice(1), "index.html"),
   ).text();
-  if ([...html.matchAll(/<link\b(?=[^>]*\brel="preload")(?=[^>]*\bas="font")[^>]*>/g)].length !== 2)
+  if (
+    [
+      ...html.matchAll(
+        /<link\b(?=[^>]*\brel="preload")(?=[^>]*\bas="font")[^>]*>/g,
+      ),
+    ].length !== 2
+  )
     throw new Error(`Missing theme font preloads: ${path}`);
   if (html.includes("<!--app-html-->") || !html.includes('class="site-shell"'))
     throw new Error(`Page was not prerendered: ${path}`);
@@ -72,7 +91,7 @@ try {
     await writeFile(file, value);
   }
   const benchmark = await loadBenchmark(resolve(root, "my-benchmark"));
-  if (benchmark.evals.length !== 1 || benchmark.evals[0].metrics.length !== 2)
+  if (benchmark.evals.length !== 1 || benchmark.evals[0].criteria.length !== 2)
     throw new Error("Starter criterion declarations are invalid");
   if (benchmark.evals[0].prompt.trim() !== prompt)
     throw new Error("Starter prompt differs from the documentation");

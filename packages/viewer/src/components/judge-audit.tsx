@@ -9,7 +9,7 @@ import {
 import { Icon } from "@opencode/ui/icon";
 import { Select } from "@opencode/ui/select";
 import type { JudgeAudit } from "../types";
-import { duration, stateLabel } from "../model";
+import { duration, stateLabel, formatPercent } from "../model";
 import { topSecret } from "../privacy";
 
 type Query = {
@@ -18,6 +18,7 @@ type Query = {
   offset?: number;
   path?: string;
   revision?: "initial" | "final";
+  metric?: string;
 };
 async function get<T>(url: string): Promise<T> {
   const response = await fetch(url);
@@ -59,6 +60,7 @@ export function JudgeAuditPanel(props: {
         params.set("offset", String(input.offset));
       if (input.path) params.set("path", input.path);
       if (input.revision) params.set("revision", input.revision);
+      if (input.metric) params.set("metric", input.metric);
       return get<Record<string, unknown>>(`/api/check-evidence?${params}`);
     },
   );
@@ -105,7 +107,10 @@ export function JudgeAuditPanel(props: {
       when={
         !topSecret() &&
         (audit()?.checks.length ||
-          audit()?.judge.judgment?.metrics.length ||
+          Object.keys(audit()?.judge.judgment?.scores ?? {}).length ||
+          audit()?.judge.code ||
+          audit()?.judge.error ||
+          audit()?.metrics ||
           audit()?.judge.monitorError ||
           audit()?.judge.monitorLimit ||
           (audit()?.history.length ?? 0) > 1 ||
@@ -125,33 +130,46 @@ export function JudgeAuditPanel(props: {
         <Show when={audit.error}>
           <p class="error-banner">Could not load judging checkpoints.</p>
         </Show>
-        <div class="judgment-metrics">
-          <For each={audit()?.judge.judgment?.metrics}>
-            {(metric) => (
+        <Show when={audit()?.judge.error}>
+          <p class="error-banner">{audit()!.judge.error}</p>
+        </Show>
+        <div class="judgment-criteria">
+          <For each={Object.entries(audit()?.judge.judgment?.scores ?? {})}>
+            {([id, score]) => (
               <article>
                 <header>
                   <strong>
-                    {audit()?.metrics.find((item) => item.id === metric.id)
-                      ?.name ?? metric.id}
+                    {audit()?.criteria.find((item) => item.id === id)?.name ??
+                      id}
                   </strong>
                   <span>
-                    {metric.value === null
+                    {score.value === null
                       ? "Unknown"
-                      : metric.value
+                      : score.value === 1
                         ? "Pass"
-                        : "Fail"}
+                        : score.value === 0
+                          ? "Fail"
+                          : formatPercent(score.value * 100)}
                   </span>
                 </header>
-                <p>{metric.reason}</p>
+                <p>{score.reason}</p>
                 <div class="checkpoint-actions">
-                  <For each={metric.evidence}>
+                  <For each={score.evidence}>
                     {(citation) => (
                       <button
                         onClick={() => {
                           setSelected("judgment");
                           setBack([]);
                           setQuery({
-                            action: citation.kind,
+                            action:
+                              citation.kind === "recording"
+                                ? "summary"
+                                : citation.kind === "metric"
+                                  ? "metrics"
+                                  : citation.kind,
+                            ...(citation.kind === "metric"
+                              ? { metric: citation.id }
+                              : {}),
                             ...("id" in citation ? { id: citation.id } : {}),
                             ...("path" in citation
                               ? {
@@ -169,7 +187,7 @@ export function JudgeAuditPanel(props: {
                     )}
                   </For>
                 </div>
-                <For each={metric.sources}>
+                <For each={score.sources}>
                   {(url) => (
                     <a
                       class="judgment-source"
@@ -185,6 +203,52 @@ export function JudgeAuditPanel(props: {
             )}
           </For>
         </div>
+        <Show when={audit()?.judge.code}>
+          {(code) => (
+            <section class="code-judgment" aria-label="Code judgment">
+              <header>
+                <strong>judge.ts</strong>
+                <span>
+                  {stateLabel(code().state)} · {duration(code().elapsedMs)}
+                </span>
+              </header>
+              <Show when={code().output !== undefined}>
+                <details open>
+                  <summary>Returned JSON</summary>
+                  <pre class="checkpoint-content">
+                    {JSON.stringify(code().output, null, 2)}
+                  </pre>
+                </details>
+              </Show>
+              <details>
+                <summary>
+                  Frozen source · {code().sourceHash.slice(0, 12)}
+                </summary>
+                <pre class="checkpoint-content">{audit()?.codeSource}</pre>
+              </details>
+              <Show when={audit()?.codeStdout}>
+                <details>
+                  <summary>Standard output</summary>
+                  <pre class="checkpoint-content">{audit()?.codeStdout}</pre>
+                </details>
+              </Show>
+              <Show when={audit()?.codeStderr}>
+                <details>
+                  <summary>Standard error</summary>
+                  <pre class="checkpoint-content">{audit()?.codeStderr}</pre>
+                </details>
+              </Show>
+            </section>
+          )}
+        </Show>
+        <Show when={audit()?.metrics}>
+          <details class="recorded-metrics">
+            <summary>Recorded metrics · candidate only</summary>
+            <pre class="checkpoint-content">
+              {JSON.stringify(audit()?.metrics, null, 2)}
+            </pre>
+          </details>
+        </Show>
         <Show when={selected() === "judgment"}>
           <div class="judge-check-detail">
             <Show when={evidence.error}>

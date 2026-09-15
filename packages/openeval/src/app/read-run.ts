@@ -4,6 +4,8 @@ import { CandidateEvidence } from "../infra/evidence";
 import type { EvidenceRef, Judgment } from "../types";
 import type { EvidenceView } from "../evidence";
 import { validateCitations } from "../infra/judging/contract";
+import { openRecording } from "../infra/recording";
+import { tmpdir } from "node:os";
 
 /** Read-only records for maintenance clients. Finalized evidence remains authoritative. */
 export function readBenchmarkRun(directory: string) {
@@ -29,7 +31,26 @@ export async function readEvidence(
   return (await CandidateEvidence.open(ref.directory, ref.hash)).view(ref);
 }
 
-/** Reference integrity only; interpretation of task facts stays in judge.md. */
+/** Open all recorded data with lazy native readers; dispose after inspection. */
+export async function readRecording(directory: string, evalRunId: string) {
+  using results = new Results(resolve(directory, "runner.db"), true);
+  const run = results.evalRun(evalRunId);
+  if (!run?.evidence)
+    throw new Error("Select an EvalRun with finalized evidence");
+  return openRecording(
+    {
+      run,
+      runDirectory: resolve(directory),
+      evidence: {
+        ...run.evidence,
+        directory: resolve(directory, run.evidence.directory),
+      },
+    },
+    process.platform === "win32" ? "C:/tmp/opencode" : tmpdir(),
+  );
+}
+
+/** Reference integrity only; interpretation of task facts stays in the judges. */
 export async function verifyJudgmentEvidence(
   judgment: Judgment,
   reference: EvidenceRef,
@@ -38,6 +59,6 @@ export async function verifyJudgmentEvidence(
   await validateCitations(judgment, evidence);
   return {
     hash: evidence.checkpoint.hash,
-    metrics: judgment.metrics.length,
+    criteria: Object.keys(judgment.scores).length,
   };
 }

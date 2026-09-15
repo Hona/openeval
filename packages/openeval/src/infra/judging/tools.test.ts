@@ -71,7 +71,7 @@ test("Code Mode validates submissions and repairs mistakes within one native tur
         if (outputs.length > 1) seenErrors.push(outputs.at(-1)!);
         const value = outputs.length === 1 ? "pass" : 1;
         const quote = outputs.length === 2 ? "invented quote" : "Ready";
-        code = `return await tools.submit_judgment(${JSON.stringify({ requestId: token, metrics: { answer: { value, reason: "Recorded response", evidence: [{ kind: "response", quote }] } } })});`;
+        code = `return await tools.submit_judgment(${JSON.stringify({ requestId: token, scores: { answer: { value, reason: "Recorded response", evidence: [{ kind: "response", quote }] } } })});`;
       } else {
         if (!/"accepted"\s*:\s*true/.test(outputs.at(-1)!))
           failures.push("The accepted receipt was not delivered");
@@ -107,8 +107,8 @@ test("Code Mode validates submissions and repairs mistakes within one native tur
     const input = {
       agent: JUDGE_AGENT,
       rubric:
-        "## Metric: answer — Answer\nPass if the recorded response is ready.",
-      metrics: [{ id: "answer", name: "Answer" }],
+        "## Criterion: answer — Answer\nPass if the recorded response is ready.",
+      criteria: [{ id: "answer", name: "Answer" }],
       websearch: false as const,
     };
     const config = await judgeConfiguration(input, directory);
@@ -217,7 +217,7 @@ test("Code Mode validates submissions and repairs mistakes within one native tur
     expect(seenErrors[0]).toContain(
       'Invalid arguments for tool "submit_judgment"',
     );
-    expect(seenErrors[0]).toContain("metrics.answer.value");
+    expect(seenErrors[0]).toContain("scores.answer.value");
     expect(seenErrors[1]).toContain("quote was not found");
     expect(submissions).toHaveLength(3); // Native schema rejection happens before the handler.
     expect(submissions[1].error).toContain("quote was not found");

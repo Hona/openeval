@@ -27,6 +27,8 @@ export function SessionTabs(props: {
   const [tab, setTab] = createSignal<string>(props.initialTab ?? "session");
   const [judgeOverride, setJudgeOverride] = createSignal<string>();
   const judgeId = () => judgeOverride() ?? props.judgeId;
+  const codeOnly = () =>
+    tab() === "judge" && props.state?.judge.kind === "code";
   createEffect(
     on(
       () => props.initialTab,
@@ -38,7 +40,12 @@ export function SessionTabs(props: {
   );
   const stream = createSessionStream({
     benchmark: () => props.benchmarkId,
-    execution: () => (tab() === "judge" ? judgeId() : props.candidateId),
+    execution: () =>
+      codeOnly()
+        ? undefined
+        : tab() === "judge"
+          ? judgeId()
+          : props.candidateId,
     stage: () => (tab() === "judge" ? "judge" : "candidate"),
   });
   const [raw, setRaw] = createSignal(false);
@@ -76,6 +83,7 @@ export function SessionTabs(props: {
   return (
     <div
       class="session-inspector"
+      data-code-only={codeOnly() ? "true" : undefined}
       data-candidate-sessions={stream.stage("candidate").sessions.length}
       data-judge-sessions={stream.stage("judge").sessions.length}
     >
@@ -97,18 +105,20 @@ export function SessionTabs(props: {
             </Tabs.Trigger>
           </Tabs.List>
           <span class="session-connection" role="status">
-            {stream.connection()}
+            {codeOnly() ? "Code judgment" : stream.connection()}
           </span>
-          <Tooltip value={raw() ? "Show timeline" : "Show raw JSON"}>
-            <IconButton
-              size="small"
-              variant="ghost-muted"
-              icon={<Icon name="code" />}
-              aria-label={raw() ? "Show timeline" : "Show raw JSON"}
-              aria-pressed={raw()}
-              onClick={() => setRaw(!raw())}
-            />
-          </Tooltip>
+          <Show when={!codeOnly()}>
+            <Tooltip value={raw() ? "Show timeline" : "Show raw JSON"}>
+              <IconButton
+                size="small"
+                variant="ghost-muted"
+                icon={<Icon name="code" />}
+                aria-label={raw() ? "Show timeline" : "Show raw JSON"}
+                aria-pressed={raw()}
+                onClick={() => setRaw(!raw())}
+              />
+            </Tooltip>
+          </Show>
         </div>
         <Show when={tab() === "session" && props.state?.stop}>
           <div class="early-stop-note">
@@ -149,79 +159,81 @@ export function SessionTabs(props: {
             onSelectJudge={setJudgeOverride}
           />
         </Show>
-        <div
-          class="session-timeline-scroll"
-          ref={scroller}
-          onWheel={(event) => {
-            if (event.deltaY < 0) setFollow(false);
-          }}
-          onTouchStart={() => setFollow(false)}
-          onPointerDown={(event) => {
-            if (event.target === scroller) setFollow(false);
-          }}
-          onKeyDown={(event) => {
-            if (["ArrowUp", "PageUp", "Home"].includes(event.key))
-              setFollow(false);
-          }}
-          onScroll={() => {
-            if (
-              scroller &&
-              scroller.scrollHeight -
-                scroller.scrollTop -
-                scroller.clientHeight <
-                50
-            )
-              setFollow(true);
-          }}
-        >
-          <Show
-            when={!raw()}
-            fallback={
-              <pre class="raw-document">
-                {JSON.stringify(
-                  {
-                    stage: tab(),
-                    document: stream.stage(
-                      tab() === "judge" ? "judge" : "candidate",
-                    ),
-                  },
-                  null,
-                  2,
-                )}
-              </pre>
-            }
+        <Show when={!codeOnly()}>
+          <div
+            class="session-timeline-scroll"
+            ref={scroller}
+            onWheel={(event) => {
+              if (event.deltaY < 0) setFollow(false);
+            }}
+            onTouchStart={() => setFollow(false)}
+            onPointerDown={(event) => {
+              if (event.target === scroller) setFollow(false);
+            }}
+            onKeyDown={(event) => {
+              if (["ArrowUp", "PageUp", "Home"].includes(event.key))
+                setFollow(false);
+            }}
+            onScroll={() => {
+              if (
+                scroller &&
+                scroller.scrollHeight -
+                  scroller.scrollTop -
+                  scroller.clientHeight <
+                  50
+              )
+                setFollow(true);
+            }}
           >
-            <ErrorBoundary
+            <Show
+              when={!raw()}
               fallback={
-                <div class="error-banner" role="alert">
-                  Could not render this recorded timeline. The saved data is
-                  available from the code icon.
-                </div>
+                <pre class="raw-document">
+                  {JSON.stringify(
+                    {
+                      stage: tab(),
+                      document: stream.stage(
+                        tab() === "judge" ? "judge" : "candidate",
+                      ),
+                    },
+                    null,
+                    2,
+                  )}
+                </pre>
               }
             >
-              <Tabs.Content value="session">
-                <RecordedTimeline
-                  stage={stream.stage("candidate")}
-                  running={working("candidate")}
-                  pending={
-                    current()?.status === "queued" ||
-                    current()?.status === "in_progress"
-                  }
-                />
-              </Tabs.Content>
-              <Tabs.Content value="judge">
-                <RecordedTimeline
-                  stage={stream.stage("judge")}
-                  running={working("judge")}
-                  pending={
-                    current()?.status === "queued" ||
-                    current()?.status === "in_progress"
-                  }
-                />
-              </Tabs.Content>
-            </ErrorBoundary>
-          </Show>
-        </div>
+              <ErrorBoundary
+                fallback={
+                  <div class="error-banner" role="alert">
+                    Could not render this recorded timeline. The saved data is
+                    available from the code icon.
+                  </div>
+                }
+              >
+                <Tabs.Content value="session">
+                  <RecordedTimeline
+                    stage={stream.stage("candidate")}
+                    running={working("candidate")}
+                    pending={
+                      current()?.status === "queued" ||
+                      current()?.status === "in_progress"
+                    }
+                  />
+                </Tabs.Content>
+                <Tabs.Content value="judge">
+                  <RecordedTimeline
+                    stage={stream.stage("judge")}
+                    running={working("judge")}
+                    pending={
+                      current()?.status === "queued" ||
+                      current()?.status === "in_progress"
+                    }
+                  />
+                </Tabs.Content>
+              </ErrorBoundary>
+            </Show>
+          </div>
+        </Show>
       </Tabs>
       <Show when={!follow() && current()?.status === "in_progress"}>
         <Button

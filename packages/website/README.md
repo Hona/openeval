@@ -26,8 +26,8 @@ from `packages/website`.
 Use [the canonical vocabulary](../../TERMINOLOGY.md) in every label, example,
 caption, and authoring guide. Criteria are graded requirements; scores are
 awarded credit; metrics are measurements. The terminology page is checked against
-the root glossary during CI and `site:verify`. Runnable examples target 0.2.2
-and explicitly identify its legacy `## Metric:` syntax.
+the root glossary during CI and `site:verify`. Runnable examples target 0.3.0
+with `## Criterion:` headings and plain JudgeContext functions.
 
 Pages contain readable HTML before JavaScript loads. JavaScript adds file tabs,
 search, copy controls, and illustrative interactions; it never calls a live model.

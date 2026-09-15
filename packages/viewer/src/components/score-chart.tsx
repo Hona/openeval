@@ -14,7 +14,7 @@ export function ScoreChart(props: {
   scores: ModelScore[];
   public?: boolean;
   incomplete?: boolean;
-  metrics?: boolean;
+  criteria?: boolean;
   onSelect?: (model: string) => void;
 }) {
   const sorted = () =>
@@ -120,24 +120,26 @@ export function ScoreChart(props: {
                 </Show>
               </div>
             </button>
-            <Show when={props.metrics && score.components.length > 1}>
+            <Show when={props.criteria && score.components.length > 1}>
               <For each={score.components}>
                 {(part) => {
-                  const metric = () => modelScore(score.model, [part]);
+                  const criterion = () => modelScore(score.model, [part]);
                   return (
                     <button
-                      class="chart-row metric-row"
+                      class="chart-row criterion-row"
                       disabled={!props.onSelect}
                       onClick={() => props.onSelect?.(score.model)}
-                      aria-label={`${modelName(score.model)}, ${part.name ?? part.metric}, ${label(metric())}`}
+                      aria-label={`${modelName(score.model)}, ${part.name ?? part.criterion}, ${label(criterion())}`}
                     >
-                      <span class="metric-name">
-                        {part.name ?? part.metric}
+                      <span class="criterion-name">
+                        {part.name ?? part.criterion}
                       </span>
                       <div class="chart-track" aria-hidden="true">
                         <div
                           class="chart-bar"
-                          style={{ width: `${scoreBounds(metric()).lower}%` }}
+                          style={{
+                            width: `${scoreBounds(criterion()).lower}%`,
+                          }}
                         />
                         <span class="chart-points">
                           {part.scored === part.expected
@@ -145,7 +147,7 @@ export function ScoreChart(props: {
                             : `${part.scored}/${part.expected} scored`}
                         </span>
                       </div>
-                      <span class="metric-score">{label(metric())}</span>
+                      <span class="criterion-score">{label(criterion())}</span>
                     </button>
                   );
                 }}

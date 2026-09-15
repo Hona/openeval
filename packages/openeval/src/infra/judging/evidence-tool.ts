@@ -24,7 +24,7 @@ export function evidenceTool(
     name: "candidate_evidence",
     options: { codemode: true as const, pinned: true },
     description:
-      "Read immutable recorded agent work. Actions: summary; response; events (optional sessionID/type); event (sequence as id); messages; message (id); tools; tool (id); artifacts (path prefix, initial/final revision); artifact (relative path, revision); diff (relative path). Lists use item offsets, full content uses character offsets. Follow next until null. Read tool results and initial/final files to verify behavior. No commands can run and no files can change.",
+      "Read immutable recorded agent work. Actions: summary; response; events (optional sessionID/type); event (sequence as id); messages; message (id); tools; tool (id); artifacts (path prefix, initial/final revision); artifact (relative path, revision); diff (relative path); metrics (optional metric path such as cost.usd or tools.errorRate). Lists use item offsets, full content uses character offsets. Follow next until null. Read tool results and initial/final files to verify behavior. No commands can run and no files can change.",
     input: Schema.Struct({
       action: Schema.Literals([
         "summary",
@@ -38,11 +38,13 @@ export function evidenceTool(
         "artifacts",
         "artifact",
         "diff",
+        "metrics",
       ]),
       sessionID: Schema.optional(Schema.String),
       type: Schema.optional(Schema.String),
       id: Schema.optional(Schema.String),
       path: Schema.optional(Schema.String),
+      metric: Schema.optional(Schema.String),
       revision: Schema.optional(Schema.Literals(["initial", "final"])),
       offset: Schema.optional(
         Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),

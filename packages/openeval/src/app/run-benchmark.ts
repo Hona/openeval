@@ -20,6 +20,7 @@ import { judgeEvalRun } from "./judge-run";
 import type { ExecutionContext } from "./context";
 import { canJudgeEval } from "./eval-state";
 import { isScored } from "../judgment";
+import { benchmarkScores } from "./scores";
 import { CostBudget, estimateWork } from "./cost-plan";
 
 export type RunBenchmarkOptions = {
@@ -79,6 +80,9 @@ export function finishBenchmark(context: ExecutionContext) {
       judges.some(
         (run) => run.id === slot.judgeRunId && isScored(run.judgment?.value),
       ),
+    ) &&
+    benchmarkScores(context.definition, slots, judges).every(
+      (score) => score.percentage !== null,
     );
   const currentInputs = planBenchmark(
     context.definition,

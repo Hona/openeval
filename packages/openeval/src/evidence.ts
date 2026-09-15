@@ -11,7 +11,10 @@ export type EvidenceQuery = {
     | "tool"
     | "artifacts"
     | "artifact"
-    | "diff";
+    | "diff"
+    | "metrics";
+  /** A dot-separated measurement path for the metrics query. */
+  metric?: string;
   sessionID?: string;
   type?: string;
   id?: string;

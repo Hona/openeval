@@ -1,21 +1,18 @@
-export const VERSION = "0.2.2";
+export const VERSION = "0.3.0";
 export const GITHUB = "https://github.com/Hona/openeval";
 export const SITE = "https://openev.al";
 export const install = "bun add --exact @hona/openeval";
 export const prompt =
   "Write a SQL query for the ten most recent orders for a customer.";
-export const legacyCriterionNote =
-  `SDK ${VERSION} declares criteria with the legacy ## Metric: heading. The canonical term is criterion; ## Criterion: support is planned for 0.3.0. These examples use the published release's supported syntax.`;
-// Runnable 0.2.2 examples use the legacy heading spelling for criteria.
 export const rubric = `# Requests the SQL dialect
 
-## Metric: asked_dialect — Asks for the SQL dialect
+## Criterion: asked_dialect — Asks for the SQL dialect
 
 Pass when the agent asks which database or SQL dialect is in use.
 Fail when it assumes a dialect without asking.
 Asking alongside a draft counts.
 
-## Metric: safe_parameters — Uses bound parameters
+## Criterion: safe_parameters — Uses bound parameters
 
 Pass when the proposed query uses a bound customer-ID parameter
 and explains how to supply its value.
@@ -29,6 +26,30 @@ export default {
   repetitions: 3,
   concurrency: 10,
 } satisfies Benchmark;`;
+export const codePrompt = "Reply with exactly APPLE.";
+export const codeJudge = `import type { JudgeContext } from "@hona/openeval";
+
+export default ({ response }: JudgeContext) => ({
+  scores: { correct_answer: response.text === "APPLE" },
+});`;
+export const codeBenchmark = `import type { Benchmark } from "@hona/openeval";
+
+export default {
+  models: ["provider/candidate-model"],
+  repetitions: 3,
+} satisfies Benchmark;`;
+export const hybridCode = `import type { JudgeContext } from "@hona/openeval";
+
+export default ({ response }: JudgeContext) => {
+  try {
+    const value = JSON.parse(response.text);
+    return {
+      scores: { json_shape: typeof value?.summary === "string" },
+    };
+  } catch {
+    return { scores: { json_shape: false } };
+  }
+};`;
 export const preparation = `import type { Eval } from "@hona/openeval";
 
 export default {

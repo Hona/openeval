@@ -11,6 +11,7 @@ import type { EvidenceFeed, EvidenceView, EvidenceQuery } from "../../evidence";
 export type { EvidenceQuery } from "../../evidence";
 import { trackTool } from "./tool-calls";
 import { hash as sha256, writeJson } from "../files";
+import { measureRecording } from "../recording/metrics";
 type InferenceResponse = { text: string; textBlocks?: string[] };
 type ArtifactPolicy = { excludeDirectories: string[] };
 
@@ -25,7 +26,7 @@ export type EvidenceQueryAudit = {
   checkId?: string;
   checkpoint?: EvidenceCheckpoint;
 };
-type FileEntry = {
+export type FileEntry = {
   path: string;
   bytes: number;
   sha256?: string;
@@ -37,7 +38,7 @@ export type EvidenceEvent = {
   time: string;
   event: OpenCodeStreamEvent;
 };
-type EvidenceManifest = {
+export type EvidenceManifest = {
   version: 1;
   handle: "candidate";
   coverage: "recorded-session" | "recorded-prefix";
@@ -446,6 +447,28 @@ export class CandidateEvidence {
     readonly hash: string,
   ) {}
 
+  /** Native records for trusted code judges. LLM queries use the separate blinded view. */
+  rawEvents(): EvidenceEvent[] {
+    return structuredClone(this.records);
+  }
+
+  toolCalls(): ToolCall[] {
+    return structuredClone(this.manifest.tools);
+  }
+
+  files(revision: "initial" | "final" = "final"): FileEntry[] {
+    const snapshot = this.manifest[revision];
+    if (!snapshot)
+      throw new Error(`${revision} workspace snapshot is unavailable`);
+    return structuredClone(snapshot.files);
+  }
+
+  async readFile(path: string, revision: "initial" | "final" = "final") {
+    const entry = this.entry(path, revision);
+    if (!entry) throw new Error(`Artifact not found: ${path}`);
+    return this.bytes(entry);
+  }
+
   view(reference: EvidenceRef): EvidenceView {
     if (reference.hash !== this.hash)
       throw new Error("Evidence view reference does not match its archive");
@@ -629,6 +652,20 @@ export class CandidateEvidence {
 
   async query(input: EvidenceQuery): Promise<Record<string, unknown>> {
     if (input.action === "summary") return this.summary();
+    if (input.action === "metrics") {
+      const metrics = measureRecording(this.records, this.manifest.tools, {
+        directory: this.directory,
+        hash: this.hash,
+      });
+      if (!input.metric) return { ...metrics };
+      let value: unknown = metrics;
+      for (const key of input.metric.split(".")) {
+        if (!value || typeof value !== "object" || !Object.hasOwn(value, key))
+          throw new Error(`Unknown recorded metric: ${input.metric}`);
+        value = (value as Record<string, unknown>)[key];
+      }
+      return { metric: input.metric, value, evidence: metrics.evidence };
+    }
     if (input.action === "response")
       return textPage(this.manifest.response.text, input);
     if (input.action === "events")

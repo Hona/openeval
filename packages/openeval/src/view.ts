@@ -10,9 +10,10 @@ import type {
   EvalStop,
   JudgeCheck,
   JudgeRun,
-  MetricDefinition,
-  MetricJudgment,
+  CriterionDefinition,
+  Judgment,
 } from "./types";
+import type { RunMetrics } from "./judge-context";
 import { runtimeMs, type RuntimeInterval } from "./runtime";
 export { mergeRuntime, runtimeMs, runtimeClock } from "./runtime";
 export type { RuntimeInterval } from "./runtime";
@@ -24,9 +25,10 @@ export type ModelScore = {
   maximum: number;
   percentage: number | null;
   bounds: ScoreBounds;
+  unscoredEvals: string[];
   components: Array<{
     eval: string;
-    metric: string;
+    criterion: string;
     name: string;
     value: number | null;
     scored: number;
@@ -35,16 +37,26 @@ export type ModelScore = {
     scoredSum: number;
   }>;
 };
-/** Equal metric weights inside each eval, then equal eval weights.
+/** Equal criterion weights inside each eval, then equal eval weights.
  * https://arxiv.org/html/2607.07946#S5.SS3
  */
 export function modelScore(
   model: string,
   components: ModelScore["components"],
+  expectedEvals: readonly string[] = [
+    ...new Set(components.map((part) => part.eval)),
+  ],
+  pendingEvals: readonly string[] = [],
 ): ModelScore {
-  const evals = [...new Set(components.map((part) => part.eval))];
+  const evals = [...new Set(expectedEvals)];
+  const unscoredEvals = evals.filter(
+    (id) =>
+      pendingEvals.includes(id) || !components.some((part) => part.eval === id),
+  );
   const earned =
-    components.length && components.every((part) => part.value !== null)
+    components.length &&
+    !unscoredEvals.length &&
+    components.every((part) => part.value !== null)
       ? evals.reduce((sum, id) => {
           const parts = components.filter((part) => part.eval === id);
           return (
@@ -57,24 +69,30 @@ export function modelScore(
   return {
     model,
     components,
+    unscoredEvals,
     earned,
     maximum: evals.length,
     percentage,
     bounds:
       percentage === null
-        ? componentBounds(components)
+        ? componentBounds(components, evals, unscoredEvals)
         : { lower: percentage, upper: percentage, coverage: 100 },
   };
 }
 export const scoreBounds = (score: Pick<ModelScore, "bounds">): ScoreBounds =>
   score.bounds;
 
-function componentBounds(components: ModelScore["components"]): ScoreBounds {
-  if (!components.length) return { lower: 0, upper: 100, coverage: 0 };
+function componentBounds(
+  components: ModelScore["components"],
+  evals: string[],
+  unscored: string[],
+): ScoreBounds {
+  if (!evals.length) return { lower: 0, upper: 100, coverage: 0 };
   let lower = 0,
-    upper = 0,
+    upper = unscored.length,
     coverage = 0;
   for (const part of components) {
+    if (unscored.includes(part.eval)) continue;
     const weight =
       1 / components.filter((item) => item.eval === part.eval).length;
     if (!part.expected) {
@@ -86,7 +104,7 @@ function componentBounds(components: ModelScore["components"]): ScoreBounds {
       (weight * (part.scoredSum + part.expected - part.scored)) / part.expected;
     coverage += (weight * part.scored) / part.expected;
   }
-  const scale = 100 / new Set(components.map((part) => part.eval)).size;
+  const scale = 100 / evals.length;
   return {
     lower: lower * scale,
     upper: upper * scale,
@@ -163,9 +181,10 @@ export type StageState = {
   runtime: RuntimeInterval[];
   cost?: Cost;
   message?: string;
-  /** Judge only: 1 pass, 0 fail, null unknown. */
+  /** Judge only: normalized credit from 0 to 1, or null when unresolved. */
   score?: number | null;
-  metrics?: MetricJudgment[];
+  scores?: Judgment["scores"];
+  kind?: "llm" | "code" | "hybrid";
 };
 export type LiveEvalRun = {
   id: string;
@@ -206,8 +225,15 @@ export type JudgeAudit = {
     | "monitorErrorAt"
     | "judgment"
     | "monitorLimit"
+    | "code"
+    | "error"
   >;
-  metrics: MetricDefinition[];
+  kind: "llm" | "code" | "hybrid";
+  criteria: CriterionDefinition[];
+  metrics?: RunMetrics;
+  codeSource?: string;
+  codeStdout?: string;
+  codeStderr?: string;
   stop?: EvalStop;
   checks: Array<JudgeCheck & { runtimeMs: number }>;
   history: Array<

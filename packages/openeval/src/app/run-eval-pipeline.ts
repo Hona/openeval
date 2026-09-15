@@ -67,6 +67,7 @@ export async function runEvalPipeline(
       evalRunId: candidate!.id,
       evidence: saved,
       rubric: definition.judge,
+      kind: "llm",
       agent: JUDGE_AGENT,
       model: context.definition.judge.model,
       judgeHash: slot.judgeHash,
@@ -75,7 +76,7 @@ export async function runEvalPipeline(
       mode: "monitor",
       runtimeHash: context.runtime.judgeHash,
       protocol: JUDGE_PROTOCOL,
-      metrics: definition.metrics,
+      criteria: definition.criteria,
       monitor: policy,
     });
     return saved;

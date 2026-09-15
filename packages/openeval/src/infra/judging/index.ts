@@ -29,6 +29,16 @@ export const judgingFingerprint = async () =>
       fileURLToPath(new URL("../opencode/", import.meta.url)),
       { ignore: /\.test\.[jt]sx?$/ },
     ),
+    recording: await treeHash(
+      fileURLToPath(new URL("../recording/", import.meta.url)),
+      { ignore: /\.test\.[jt]sx?$/ },
+    ),
+    context: await Bun.file(
+      fileURLToPath(new URL("../../judge-context.ts", import.meta.url)),
+    ).text(),
+    composition: await Bun.file(
+      fileURLToPath(new URL("../../app/grade-recording.ts", import.meta.url)),
+    ).text(),
     useCase: await Bun.file(
       fileURLToPath(new URL("../../app/judge-run.ts", import.meta.url)),
     ).text(),
@@ -39,6 +49,10 @@ export async function executeJudge(
   directory: string,
   onEvent: (event: OpenCodeStreamEvent) => void,
 ) {
+  if (!input.model || !input.agent || !input.criteria.length)
+    throw new Error(
+      "An LLM judge requires a model, agent, and declared criteria",
+    );
   await mkdir(directory, { recursive: true });
   const evidence = await CandidateEvidence.open(
     input.evidence.directory,

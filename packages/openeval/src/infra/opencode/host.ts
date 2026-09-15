@@ -4,7 +4,7 @@ import { Effect } from "effect";
 import { dirname, resolve } from "node:path";
 import { databaseWithCredentials, type Credential } from "./auth";
 
-export const OPENCODE_VERSION = "0.0.0-beta-19296";
+export { OPENCODE_VERSION } from "./version";
 export const createHost = (
   database: string,
   credentials: Credential[],

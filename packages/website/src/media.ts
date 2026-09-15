@@ -2,6 +2,7 @@
 export const screenshotDimensions = {
   "results.png": { width: 1440, height: 720 },
   "judgment.png": { width: 1440, height: 940 },
+  "code-judgment.png": { width: 1440, height: 1100 },
   "queue.png": { width: 1440, height: 940 },
 } as const;
 

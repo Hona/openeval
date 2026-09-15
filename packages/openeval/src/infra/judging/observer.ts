@@ -22,7 +22,7 @@ import { judgeConfiguration, judgePrompt } from "./agent";
 export async function createJudgeSession(
   input: Pick<
     JudgeRunInput,
-    "model" | "rubric" | "timeoutMs" | "websearch" | "metrics" | "agent"
+    "model" | "rubric" | "timeoutMs" | "websearch" | "criteria" | "agent"
   >,
   directory: string,
   onEvent: (event: OpenCodeStreamEvent) => void,
@@ -32,12 +32,13 @@ export async function createJudgeSession(
     close(): Promise<SessionArchive | undefined>;
   }
 > {
+  if (!input.model || !input.agent)
+    throw new Error("Monitoring requires an LLM judge configuration");
+  const model = input.model,
+    agent = input.agent;
   await mkdir(directory, { recursive: true });
   const database = resolve(directory, "opencode.db");
-  await createSessionDatabase(
-    database,
-    credentialsFor(input.model, input.websearch),
-  );
+  await createSessionDatabase(database, credentialsFor(model, input.websearch));
   let host: Awaited<ReturnType<typeof OpenCode.create>>;
   try {
     host = await OpenCode.create({
@@ -85,8 +86,8 @@ export async function createJudgeSession(
       const result = await runSession(
         host,
         {
-          model: input.model,
-          agent: input.agent.id,
+          model,
+          agent: agent.id,
           directory,
           timeoutMs: input.timeoutMs,
           signal,

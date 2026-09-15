@@ -33,7 +33,7 @@ test("creates only the current schema and rejects a mismatched format", async ()
   try {
     new Results(path).close();
     using raw = new Database(path);
-    expect(raw.query("PRAGMA user_version").get()).toEqual({ user_version: 4 });
+    expect(raw.query("PRAGMA user_version").get()).toEqual({ user_version: 5 });
     expect(
       raw
         .query("PRAGMA table_info(events)")
@@ -41,8 +41,8 @@ test("creates only the current schema and rejects a mismatched format", async ()
         .map((row: any) => row.name),
     ).toEqual(["execution_id", "sequence", "value"]);
     raw.exec("PRAGMA user_version=0");
-    expect(() => new Results(path)).toThrow("requires results schema 4");
-    expect(() => new Results(path, true)).toThrow("requires results schema 4");
+    expect(() => new Results(path)).toThrow("requires results schema 5");
+    expect(() => new Results(path, true)).toThrow("requires results schema 5");
     expect(raw.query("PRAGMA user_version").get()).toEqual({ user_version: 0 });
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -121,7 +121,7 @@ test("keeps one per-execution event sequence across interleaving and merges", as
     await Bun.write(resolve(root, "evals/answer/prompt.md"), "Answer.");
     await Bun.write(
       resolve(root, "evals/answer/judge.md"),
-      "## Metric: answer — Answer\nPass when correct.",
+      "## Criterion: answer — Answer\nPass when correct.",
     );
     const definition = await loadBenchmark(root);
     using target = new Results(":memory:"),

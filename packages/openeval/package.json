@@ -1,7 +1,7 @@
 {
   "name": "@hona/openeval",
-  "version": "0.2.2",
-  "description": "Typed prompt-and-judge evaluations with isolated agents, recorded evidence, and a results viewer",
+  "version": "0.3.0",
+  "description": "Code and LLM evaluations with isolated agents, recorded OpenCode data, and a results viewer",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -25,6 +25,7 @@
     "@opencode/client": "0.0.0-beta-19296",
     "@opencode/core": "0.0.0-beta-19296",
     "@opencode/sdk": "0.0.0-beta-19296",
+    "@opencode/schema": "0.0.0-beta-19296",
     "@opencode/util": "0.0.0-beta-19296",
     "drizzle-orm": "0.45.2",
     "effect": "4.0.0-rc.112",

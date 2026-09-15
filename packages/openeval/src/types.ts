@@ -4,6 +4,11 @@ import type {
   ConfigEntry,
   AgentInfo,
 } from "@opencode/client";
+import type {
+  CodeJudgeDefinition,
+  CodeJudgeExecution,
+  RunMetrics,
+} from "./judge-context";
 export type OpenCodeStreamEvent = OpenCodeEvent | SessionLogItem;
 
 export const CANDIDATE_TIMEOUT_MS = 45 * 60 * 1000;
@@ -13,18 +18,22 @@ export type ProviderDefinitions = NonNullable<
   Extract<ConfigEntry, { type: "document" }>["info"]["providers"]
 >;
 export type SessionState =
-  "running" | "completed" | "stopped" | "failed" | "timed_out";
+  | "running"
+  | "completed"
+  | "stopped"
+  | "failed"
+  | "timed_out";
 export type Stage = "candidate" | "judge";
 
 export type Judge = {
-  model: ModelRef;
+  model?: ModelRef;
   timeoutMs?: number;
   websearch?: "exa" | false;
 };
 export type Benchmark = {
   name?: string;
   models: readonly ModelRef[];
-  judge: Judge;
+  judge?: Judge;
   repetitions?: number;
   concurrency?: number;
   candidate?: {
@@ -48,7 +57,8 @@ export type MonitorPolicy = {
 export type Eval = {
   /** Let the host judge stop execution once the criterion is conclusively decided. */
   earlyStop?:
-    boolean | (Partial<MonitorPolicy> & { onlyModels?: readonly ModelRef[] });
+    | boolean
+    | (Partial<MonitorPolicy> & { onlyModels?: readonly ModelRef[] });
   workspace?: {
     repository?: string;
     /** Readable file overlays committed in order to the named refs, on the host. */
@@ -69,15 +79,17 @@ export type EvalDefinition = {
   settings: Eval;
   sourceHash: string;
   judgeHash: string;
-  /** Declared by `## Metric: id — Label` headings in judge.md. */
-  metrics: MetricDefinition[];
+  /** Criteria declared in judge.md; code-defined IDs are discovered from results. */
+  criteria: CriterionDefinition[];
+  /** A frozen, bundled code judge; never sent to the candidate. */
+  code?: CodeJudgeDefinition;
   name: string;
 };
 export type BenchmarkDefinition = {
   name: string;
   directory: string;
   models: ModelRef[];
-  judge: Required<Judge>;
+  judge: { model?: ModelRef; timeoutMs: number; websearch: "exa" | false };
   repetitions: number;
   concurrency: number;
   candidate: {
@@ -113,6 +125,7 @@ export type SessionArchive = {
 };
 export type ToolCall = {
   id: string;
+  sessionID?: string;
   name: string;
   assistantMessageId: string;
   status: "preparing" | "called" | "succeeded" | "failed";
@@ -186,44 +199,49 @@ export type EvalRun = {
   elapsedMs?: number;
   evidence?: EvidenceRef;
   session?: SessionArchive;
+  /** Candidate-only observations, independent of rubric scores. */
+  metrics?: RunMetrics;
   error?: string;
   replaces?: string;
   stop?: EvalStop;
 };
-export type MetricDefinition = { id: string; name: string };
+export type CriterionDefinition = { id: string; name: string };
 export type EvidenceCitation = (
   | { kind: "response" }
-  | { kind: "tool" | "message" | "event"; id: string }
+  | { kind: "recording" }
+  | { kind: "tool" | "message" | "event" | "metric"; id: string }
   | { kind: "artifact"; path: string; revision: "initial" | "final" }
 ) & { quote?: string; offset?: number };
-export type MetricJudgment = {
-  id: string;
-  value: 0 | 1 | null;
+export type CriterionScore = {
+  value: number | null;
   reason: string;
   evidence: EvidenceCitation[];
   sources?: string[];
+  source: "judge.md" | "judge.ts";
 };
-/** value is the equal-weight metric mean, or null if any metric is unknown. */
+/** value is the equal-weight criterion mean, or null if any score is unknown. */
 export type Judgment = {
   value: number | null;
   reason: string;
-  metrics: MetricJudgment[];
+  scores: Record<string, CriterionScore>;
 };
 export type JudgeRunInput = {
   evalRunId: string;
   evidence: EvidenceRef;
   rubric: string;
   /** Shared native agent profile used for this judgment. */
-  agent: Pick<AgentInfo, "id" | "mode" | "description" | "permissions"> & {
+  agent?: Pick<AgentInfo, "id" | "mode" | "description" | "permissions"> & {
     system: string;
   };
-  model: ModelRef;
+  model?: ModelRef;
+  kind: "llm" | "code" | "hybrid";
+  code?: CodeJudgeDefinition;
   judgeHash: string;
   timeoutMs: number;
   websearch: "exa" | false;
   mode: "monitor" | "final";
   runtimeHash: string;
-  metrics: MetricDefinition[];
+  criteria: CriterionDefinition[];
   protocol: number;
   monitor?: MonitorPolicy;
 };
@@ -237,6 +255,7 @@ export type JudgeRun = {
   archiveStartedAt?: string;
   judgment?: Judgment;
   session?: SessionArchive;
+  code?: CodeJudgeExecution;
   error?: string;
   activity?: "watching" | "queued" | "checking" | "finalizing";
   decisionCheckId?: string;

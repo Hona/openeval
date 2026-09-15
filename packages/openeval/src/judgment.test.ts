@@ -1,20 +1,23 @@
 import { expect, test } from "bun:test";
-import { rubricMetrics } from "./judgment";
+import { rubricCriteria } from "./judgment";
 
-test("requires explicit, complete metric declarations", () => {
-  expect(() => rubricMetrics("Pass when the answer is correct.")).toThrow(
-    "Declare every metric",
+test("requires explicit, complete criterion declarations", () => {
+  expect(() => rubricCriteria("Pass when the answer is correct.")).toThrow(
+    "Declare every criterion",
   );
-  expect(() => rubricMetrics("## Metric: answer")).toThrow(
-    "Declare every metric",
+  expect(() => rubricCriteria("## Criterion: answer")).toThrow(
+    "Declare every criterion",
   );
   expect(() =>
-    rubricMetrics("## Metric: answer — Answer\n## Metric: incomplete"),
-  ).toThrow("Declare every metric");
-  expect(() => rubricMetrics("## Metric: answer —   ")).toThrow(
-    "Declare every metric",
+    rubricCriteria("## Criterion: answer — Answer\n## Criterion: incomplete"),
+  ).toThrow("Declare every criterion");
+  expect(() => rubricCriteria("## Criterion: answer —   ")).toThrow(
+    "Declare every criterion",
   );
   expect(
-    rubricMetrics("## Metric: answer — Answer\nPass when correct."),
+    rubricCriteria("## Criterion: answer — Answer\nPass when correct."),
   ).toEqual([{ id: "answer", name: "Answer" }]);
+  expect(() => rubricCriteria("## Metric: answer — Answer")).toThrow(
+    "Use ## Criterion",
+  );
 });

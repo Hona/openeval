@@ -11,13 +11,14 @@
     },
     "packages/openeval": {
       "name": "@hona/openeval",
-      "version": "0.2.2",
+      "version": "0.3.0",
       "bin": {
         "openeval": "src/cli.ts",
       },
       "dependencies": {
         "@opencode/client": "0.0.0-beta-19296",
         "@opencode/core": "0.0.0-beta-19296",
+        "@opencode/schema": "0.0.0-beta-19296",
         "@opencode/sdk": "0.0.0-beta-19296",
         "@opencode/util": "0.0.0-beta-19296",
         "@types/tar-stream": "3.1.4",

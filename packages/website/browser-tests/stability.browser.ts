@@ -316,7 +316,7 @@ test("slow fonts cannot cause a late text reflow", async ({ page }) => {
     const selectors = [
       ".site-titlebar",
       ".doc-heading",
-      "#metrics",
+      "#criteria",
       "#outcomes",
       ".doc-pagination",
     ];
@@ -324,26 +324,24 @@ test("slow fonts cannot cause a late text reflow", async ({ page }) => {
     release();
     await page.evaluate(() => document.fonts.ready);
     const after = await layout(page, selectors);
-    await test
-      .info()
-      .attach("font-layout.json", {
-        body: JSON.stringify(
-          {
-            before,
-            after,
-            fonts: await page.evaluate(() =>
-              [...document.fonts].map((f) => ({
-                family: f.family,
-                display: f.display,
-                status: f.status,
-              })),
-            ),
-          },
-          null,
-          2,
-        ),
-        contentType: "application/json",
-      });
+    await test.info().attach("font-layout.json", {
+      body: JSON.stringify(
+        {
+          before,
+          after,
+          fonts: await page.evaluate(() =>
+            [...document.fonts].map((f) => ({
+              family: f.family,
+              display: f.display,
+              status: f.status,
+            })),
+          ),
+        },
+        null,
+        2,
+      ),
+      contentType: "application/json",
+    });
     unchanged(before, after);
   } finally {
     release();

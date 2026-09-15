@@ -57,7 +57,8 @@ export async function judgeRuns(
             ...evalDefinition,
             judge: updated.judge,
             judgeHash: updated.judgeHash,
-            metrics: updated.metrics,
+            criteria: updated.criteria,
+            code: updated.code,
             name: updated.name,
           }
         : evalDefinition;

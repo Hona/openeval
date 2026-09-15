@@ -1,7 +1,7 @@
 <div align="center">
   <h1>OpenEval</h1>
   <p><strong>Write the task. Judge the evidence.</strong></p>
-  <p>Prompt-and-rubric evaluations for agents. Typed declarations, isolated runs, inspectable scores.</p>
+  <p>Code and LLM judges for agents. Plain functions, isolated runs, inspectable scores.</p>
   <p>
     <a href="https://openev.al">Website</a> ·
     <a href="https://openeval.pages.dev">Live preview</a> ·
@@ -20,13 +20,41 @@
 
 *Interactive documentation example. Viewer screenshots use illustrative data and fictional model labels.*
 
-## An eval is two files
+## A prompt and a judge
 
 | File | What you write | Who reads it |
 | --- | --- | --- |
 | `prompt.md` | A natural, focused task | Candidate agent |
 | `judge.md` | A rubric with named criteria and scoring rules | LLM judge |
+| `judge.ts` | A plain function returning scores and custom JSON | Host-side Bun process |
 | `eval.ts` *(optional)* | Workspace preparation and early stopping | Host |
+
+Use `judge.md`, `judge.ts`, or both. Both judge files contribute distinct criteria
+from the same recorded candidate execution.
+
+### Deterministic: an ordinary function
+
+For a task that asks the candidate to reply with exactly `APPLE`:
+
+```ts
+// evals/exact-answer/judge.ts
+import type { JudgeContext } from "@hona/openeval";
+
+export default ({ response }: JudgeContext) => ({
+  scores: { correct_answer: response.text === "APPLE" },
+});
+```
+
+Booleans become 0 or 1. Numeric scores can be any finite value from 0 to 1; null
+is unresolved. Other JSON is retained as author-defined data. Cost, tokens, tool
+reliability, timing, source identity, and recording links are supplied by the
+runner. Code-only benchmarks do not need a judge model.
+
+The context also exposes native events, complete message history, tool calls,
+workspace snapshots, and lazy access to the recorded OpenCode SDK, schema, and
+read-only database. See [code judges and data access](https://openev.al/docs/code-judges/).
+
+### Model-based: write a rubric
 
 **`evals/ask-dialect/prompt.md`**
 
@@ -36,19 +64,15 @@ Write a SQL query for the ten most recent orders for a customer.
 
 **`evals/ask-dialect/judge.md`**
 
-SDK 0.2.2 uses the legacy `## Metric:` spelling below to declare a **criterion**.
-The canonical `## Criterion:` spelling is planned for 0.3.0. See
-[release compatibility](https://openev.al/docs/terminology/#compatibility).
-
 ```md
 # Requests the SQL dialect
 
-## Metric: asked_dialect — Asks for the SQL dialect
+## Criterion: asked_dialect — Asks for the SQL dialect
 
 Pass when the agent asks which database or SQL dialect is in use.
 Fail when it assumes a dialect without asking. Asking alongside a draft counts.
 
-## Metric: safe_parameters — Uses bound parameters
+## Criterion: safe_parameters — Uses bound parameters
 
 Pass when the proposed query uses a bound customer-ID parameter and explains
 how to supply its value. Fail when it interpolates customer input into SQL
@@ -78,8 +102,7 @@ A **benchmark** contains **evals**. Each eval defines a task and a **rubric**.
   **JudgeRun** name recorded executions, rather than reusable definitions.
 
 See the [canonical terminology](https://openev.al/docs/terminology/) and the
-[website glossary](https://openev.al/docs/terminology/). The published SDK remains
-LLM-judged; the glossary identifies the planned 0.3.0 code-judging names separately.
+[website glossary](https://openev.al/docs/terminology/).
 
 ## Choose models. Run. Inspect.
 
@@ -100,6 +123,9 @@ export default {
   repetitions: 3,
 } satisfies Benchmark;
 ```
+
+The judge model is required when any eval contains judge.md. A code-only
+benchmark can omit the judge setting, or set only judge.timeoutMs.
 
 ```sh
 bunx --bun @hona/openeval image
@@ -127,20 +153,31 @@ Models still declared in `benchmark.ts` can be added back by a later `run`.
 flowchart LR
   P["prompt.md"] --> C["Isolated candidate"] --> E["Recording"]
   J["judge.md"] --> G["Judge + citations"]
-  E --> G --> S["Criterion scores"] --> V["Results viewer"]
+  T["judge.ts"] --> F["Code + recorded metrics"]
+  E --> G
+  E --> F
+  G --> S["Criterion scores"]
+  F --> S
+  S --> V["Results viewer"]
 ```
 
 ## See what earned the score
+
+![Code judgment with normalized criterion scores, original JSON, and frozen source](https://raw.githubusercontent.com/Hona/openeval/main/docs/images/code-judgment.png)
+
+*Illustrative label-reading task. The code judge ran on constructed responses.*
 
 ![Model scores, completed checks, runtime, and cost in the results viewer](https://raw.githubusercontent.com/Hona/openeval/main/docs/images/results.png)
 
 | Capability | What you get | Guide |
 | --- | --- | --- |
 | Multiple criteria | Independent scores from one recording | [Rubrics](https://openev.al/docs/rubrics/) |
+| Code and hybrid judges | Plain functions, booleans, fractional credit, custom JSON | [Code judges](https://openev.al/docs/code-judges/) |
 | Controlled workspaces | Readable files, pinned Git inputs, preparation | [Workspaces](https://openev.al/docs/workspaces/) |
 | Small batches | Eval, model, repetition, and cost controls | [Running](https://openev.al/docs/running/) |
 | Transparent scores | Equal eval weights; bounds for unresolved checks | [Scoring](https://openev.al/docs/scoring/) |
 | Evidence inspection | Sessions, tool results, artifacts, and citations | [Evidence](https://openev.al/docs/evidence/) |
+| Native data primitives | Full history, event traces, SDK, schema, and read-only SQL | [Recorded data](https://openev.al/docs/code-judges/#context) |
 | Rejudging | New judgments from retained, immutable recordings | [Evidence](https://openev.al/docs/evidence/#revise) |
 
 <details>

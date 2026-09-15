@@ -725,7 +725,7 @@ export function App() {
                       scores={displayedScores()}
                       public={isPublic()}
                       incomplete={data()!.status !== "running"}
-                      metrics={
+                      criteria={
                         (route().view === "evals" || data()!.kind === "eval") &&
                         !topSecret()
                       }

@@ -48,7 +48,7 @@ async function fixture() {
   );
   await Bun.write(
     resolve(root, "evals/answer/judge.md"),
-    "## Metric: correct — Correct answer\nPass when correct.",
+    "## Criterion: correct — Correct answer\nPass when correct.",
   );
   const definition = await loadBenchmark(root);
   const item = definition.evals[0];
@@ -105,6 +105,7 @@ async function fixture() {
       evalRunId: candidate.id,
       evidence,
       rubric: item.judge,
+      kind: "llm",
       agent: JUDGE_AGENT,
       model: definition.judge.model,
       judgeHash: slot.judgeHash,
@@ -112,7 +113,7 @@ async function fixture() {
       websearch: false,
       mode: "final",
       runtimeHash: runtime.judgeHash,
-      metrics: item.metrics,
+      criteria: item.criteria,
       protocol: JUDGE_PROTOCOL,
     });
     results.finishJudge({
@@ -123,14 +124,14 @@ async function fixture() {
       judgment: {
         value: 1,
         reason: "The answer is present.",
-        metrics: [
-          {
-            id: "correct",
+        scores: {
+          correct: {
             value: 1,
             reason: "The answer is present.",
             evidence: [{ kind: "response" }],
+            source: "judge.md",
           },
-        ],
+        },
       },
     });
   }

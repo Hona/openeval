@@ -30,11 +30,11 @@ const definition: BenchmarkDefinition = {
       directory: "/benchmark/evals/answer",
       prompt: "Supply the requested fact.",
       judge:
-        "## Metric: answer — Answer\nPass if the recorded answer supplies the fact.",
+        "## Criterion: answer — Answer\nPass if the recorded answer supplies the fact.",
       judgeHash: "rubric",
       sourceHash: "workspace",
       settings: {},
-      metrics: [{ id: "answer", name: "Answer" }],
+      criteria: [{ id: "answer", name: "Answer" }],
     },
   ],
 };
@@ -66,6 +66,7 @@ test.each([
       evalRunId: "pending",
       evidence: { directory: "evidence", hash: "recording" },
       rubric: item.judge,
+      kind: "llm",
       agent,
       model: definition.judge.model,
       timeoutMs: definition.judge.timeoutMs,
@@ -73,7 +74,7 @@ test.each([
       protocol: JUDGE_PROTOCOL,
       mode: "final",
       runtimeHash: runtime.judgeHash,
-      metrics: item.metrics,
+      criteria: item.criteria,
       judgeHash: "pending",
     };
     input.judgeHash = savedJudgeFingerprint(input);
@@ -116,14 +117,14 @@ test.each([
       judgment: {
         value: 1,
         reason: "The fact is present.",
-        metrics: [
-          {
-            id: "answer",
+        scores: {
+          answer: {
             value: 1,
             reason: "The fact is present.",
             evidence: [{ kind: "response" }],
+            source: "judge.md",
           },
-        ],
+        },
       },
     });
     const original = JSON.stringify([

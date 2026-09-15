@@ -5,7 +5,7 @@ import { mkdirSync, existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 import * as tables from "./schema";
-import { isScored, JUDGE_PROTOCOL, metricMean } from "../../judgment";
+import { isScored, JUDGE_PROTOCOL, criterionMean } from "../../judgment";
 import type {
   BenchmarkRun,
   EvalRun,
@@ -19,7 +19,7 @@ import type {
 } from "../../types";
 
 const APPLICATION_ID = 0x4f455632;
-const SCHEMA_VERSION = 4;
+const SCHEMA_VERSION = 5;
 const timestamp = () => new Date().toISOString();
 
 /** One owner for run selection and append-only finalized execution records. */
@@ -257,13 +257,16 @@ export class Results {
   }
   startJudge(input: JudgeRunInput) {
     if (
-      !input.agent ||
-      !input.metrics.length ||
+      (!input.code &&
+        (!input.agent || !input.model || !input.criteria.length)) ||
+      (!!input.rubric &&
+        (!input.agent || !input.model || !input.criteria.length)) ||
+      !["llm", "code", "hybrid"].includes(input.kind) ||
       !input.runtimeHash ||
       input.protocol !== JUDGE_PROTOCOL
     )
       throw new Error(
-        "Judge inputs must use the current agent, metrics, runtime, and protocol",
+        "Judge inputs must include their code or LLM configuration, criteria, runtime, and protocol",
       );
     const value: JudgeRun = {
       id: `judge_${randomUUID()}`,
@@ -301,21 +304,28 @@ export class Results {
     const saved = this.judgeRun(value.id);
     if (!saved || saved.state !== "running")
       throw new Error("Judge run is not running");
-    if (
-      value.state === "completed" &&
-      (!value.judgment ||
-        !Array.isArray(value.judgment.metrics) ||
-        value.judgment.metrics.length !== value.input.metrics.length ||
-        new Set(value.judgment.metrics.map((metric) => metric.id)).size !==
-          value.input.metrics.length ||
-        value.judgment.metrics.some(
-          (metric) =>
-            !value.input.metrics.some((declared) => declared.id === metric.id),
+    if (value.state === "completed") {
+      const expected = [
+        ...value.input.criteria.map((criterion) => criterion.id),
+        ...Object.keys(value.code?.scores ?? {}),
+      ];
+      const scores = value.judgment?.scores;
+      if (
+        !scores ||
+        Array.isArray(scores) ||
+        new Set(expected).size !== expected.length ||
+        Object.keys(scores).length !== expected.length ||
+        expected.some((id) => !Object.hasOwn(scores, id)) ||
+        Object.values(scores).some(
+          (score) => score.value !== null && !isScored(score.value),
         ) ||
-        value.judgment.value !== metricMean(value.judgment.metrics) ||
-        (value.judgment.value !== null && !isScored(value.judgment.value)))
-    )
-      throw new Error("A completed judge run requires a valid judgment");
+        value.judgment!.value !== criterionMean(scores) ||
+        (value.input.code && value.code?.state !== "completed")
+      )
+        throw new Error(
+          "A completed judge run requires a valid, complete judgment",
+        );
+    }
     if (
       value.state === "completed" &&
       this.evalRun(value.input.evalRunId)?.evidence?.hash !==

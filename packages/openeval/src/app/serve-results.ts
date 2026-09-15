@@ -66,6 +66,8 @@ export async function serveResults(options: {
             if (value !== null) query[key] = Number(value);
           }
           const revision = url.searchParams.get("revision");
+          if (url.searchParams.has("metric"))
+            query.metric = url.searchParams.get("metric")!;
           if (revision === "initial" || revision === "final")
             query.revision = revision;
           return Response.json(

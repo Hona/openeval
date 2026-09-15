@@ -5,7 +5,7 @@ import type { JudgeRunInput } from "../../types";
 import type { EvidenceQueryAudit } from "../evidence";
 import { JUDGE_TOOLS } from "./agent";
 import { evidenceTool, toolResult } from "./evidence-tool";
-import { metricsSchema, STRICT_OBJECT } from "./contract";
+import { criteriaSchema, STRICT_OBJECT } from "./contract";
 import {
   JudgeRequest,
   type JudgePhase,
@@ -18,12 +18,12 @@ import {
 export async function installJudgeTools(
   host: OpenCode.Interface,
   directory: string,
-  input: Pick<JudgeRunInput, "metrics" | "websearch">,
+  input: Pick<JudgeRunInput, "criteria" | "websearch">,
   queries: EvidenceQueryAudit[],
   submissions: SubmissionAudit[],
 ) {
-  const metrics = input.metrics;
-  if (!metrics.length) throw new Error("Declare at least one judge metric");
+  const criteria = input.criteria;
+  if (!criteria.length) throw new Error("Declare at least one judge criterion");
   const allowed = new Set(
     JUDGE_TOOLS.filter(
       (tool) => input.websearch || !["websearch", "webfetch"].includes(tool),
@@ -63,12 +63,12 @@ export async function installJudgeTools(
           name: "judge_context",
           options,
           description:
-            "Get this request's ID, phase, declared metrics, and current evidence index as structured data. Read this at the start of each judge turn.",
+            "Get this request's ID, phase, declared criteria, and current evidence index as structured data. Read this at the start of each judge turn.",
           input: Schema.Struct({}).annotate(STRICT_OBJECT),
           output: Schema.Struct({
             requestId: Schema.String,
             phase: Schema.Literals(["early", "final"]),
-            metrics: Schema.Array(
+            criteria: Schema.Array(
               Schema.Struct({ id: Schema.String, name: Schema.String }),
             ),
             evidence: Schema.Record(Schema.String, Schema.Unknown),
@@ -81,10 +81,10 @@ export async function installJudgeTools(
           name: "submit_judgment",
           options,
           description:
-            "Submit all metric decisions for this fixed evidence view. Values, required metric IDs, citations, and exact quotes are validated before acceptance. Errors are returned to you; correct the arguments and call again. An early submission must be irreversible for every metric. After acceptance, finish your turn.",
+            "Submit all criterion scores for this fixed evidence view. Values, required criterion IDs, citations, and exact quotes are validated before acceptance. Errors are returned to you; correct the arguments and call again. An early submission must be irreversible for every criterion. After acceptance, finish your turn.",
           input: Schema.Struct({
             requestId,
-            metrics: metricsSchema(metrics),
+            scores: criteriaSchema(criteria),
           }).annotate(STRICT_OBJECT),
           output: receipt,
           async execute(value) {
@@ -127,7 +127,7 @@ export async function installJudgeTools(
       const request = new JudgeRequest(
         phase,
         evidence,
-        metrics,
+        criteria,
         submissions,
         checkId,
         signal,

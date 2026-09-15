@@ -89,6 +89,7 @@ test("all authoring pages fit the viewport and use 16px reading text", async ({
     "terminology",
     "prompts",
     "rubrics",
+    "code-judges",
     "workspaces",
     "running",
     "scoring",

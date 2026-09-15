@@ -1,6 +1,9 @@
 import {
   benchmark,
-  legacyCriterionNote,
+  codePrompt,
+  codeJudge,
+  codeBenchmark,
+  hybridCode,
   preparation,
   prompt,
   rubric,
@@ -47,7 +50,7 @@ export const docs: Doc[] = [
     slug: "quickstart",
     title: "Your first eval",
     group: "Start",
-    description: "From two Markdown files to a recorded, scored agent run.",
+    description: "From a task and a judge to a recorded, scored agent run.",
     sections: [
       {
         id: "files",
@@ -60,7 +63,10 @@ export const docs: Doc[] = [
           ),
           code("evals/ask-dialect/prompt.md", prompt, "markdown"),
           code("evals/ask-dialect/judge.md", rubric, "markdown"),
-          note("Released syntax", legacyCriterionNote),
+          note(
+            "Code works too",
+            "A judge.ts function can replace judge.md or contribute additional criteria alongside it. Code-only benchmarks need no judge model. See Code & hybrid judges for the plain-function API.",
+          ),
           note(
             "One recording, two checks",
             "The answer is graded separately for asking about the SQL dialect and using bound parameters. A question-only answer passes the first criterion and fails the second.",
@@ -142,17 +148,61 @@ export const docs: Doc[] = [
           table(
             ["Term", "Meaning", "Example"],
             [
-              ["Benchmark", "A collection of evals and their run configuration.", "A set of agent tasks evaluated across models."],
-              ["Eval", "A task, its input and environment, and its grading specification.", "Produce a parameterized SQL query."],
-              ["Criterion", "A named requirement being graded. Plural: criteria.", "safe_parameters"],
-              ["Score", "Credit awarded to a criterion, normalized from 0 to 1, or an aggregate of that credit.", "1 for full credit; 0 for no credit."],
-              ["Metric", "An observed or calculated measurement. It contributes to grading only when a criterion uses it.", "Cost in USD, token count, or tool error rate."],
-              ["Rubric", "The criteria and rules for awarding scores.", "The conditions for accepting a parameterized query."],
-              ["Judge", "An evaluator that applies grading rules using code, an LLM, or both.", "An LLM applying a written rubric."],
-              ["Judgment", "A judge's output, including any named criterion scores and supporting data.", "A safe_parameters score with evidence."],
-              ["BenchmarkRun", "A recorded benchmark collection with its inputs and selected results.", "One retained comparison across models."],
-              ["EvalRun", "One candidate execution of an eval.", "A model's second repetition of the SQL task."],
-              ["JudgeRun", "A grading execution against recorded evidence.", "A new judgment of a retained EvalRun."],
+              [
+                "Benchmark",
+                "A collection of evals and their run configuration.",
+                "A set of agent tasks evaluated across models.",
+              ],
+              [
+                "Eval",
+                "A task, its input and environment, and its grading specification.",
+                "Produce a parameterized SQL query.",
+              ],
+              [
+                "Criterion",
+                "A named requirement being graded. Plural: criteria.",
+                "safe_parameters",
+              ],
+              [
+                "Score",
+                "Credit awarded to a criterion, normalized from 0 to 1, or an aggregate of that credit.",
+                "1 for full credit; 0 for no credit.",
+              ],
+              [
+                "Metric",
+                "An observed or calculated measurement. It contributes to grading only when a criterion uses it.",
+                "Cost in USD, token count, or tool error rate.",
+              ],
+              [
+                "Rubric",
+                "The criteria and rules for awarding scores.",
+                "The conditions for accepting a parameterized query.",
+              ],
+              [
+                "Judge",
+                "An evaluator that applies grading rules using code, an LLM, or both.",
+                "An LLM applying a written rubric.",
+              ],
+              [
+                "Judgment",
+                "A judge's output, including any named criterion scores and supporting data.",
+                "A safe_parameters score with evidence.",
+              ],
+              [
+                "BenchmarkRun",
+                "A recorded benchmark collection with its inputs and selected results.",
+                "One retained comparison across models.",
+              ],
+              [
+                "EvalRun",
+                "One candidate execution of an eval.",
+                "A model's second repetition of the SQL task.",
+              ],
+              [
+                "JudgeRun",
+                "A grading execution against recorded evidence.",
+                "A new judgment of a retained EvalRun.",
+              ],
             ],
           ),
         ],
@@ -164,9 +214,21 @@ export const docs: Doc[] = [
           table(
             ["Role", "Example", "Meaning"],
             [
-              ["Metric", "cost_usd = 0.84", "An observed or calculated cost in USD."],
-              ["Criterion", "within_budget", "Award full credit when cost_usd is at most 1.00."],
-              ["Criterion score", "within_budget = 1", "Credit awarded by applying that rule."],
+              [
+                "Metric",
+                "cost_usd = 0.84",
+                "An observed or calculated cost in USD.",
+              ],
+              [
+                "Criterion",
+                "within_budget",
+                "Award full credit when cost_usd is at most 1.00.",
+              ],
+              [
+                "Criterion score",
+                "within_budget = 1",
+                "Credit awarded by applying that rule.",
+              ],
             ],
           ),
           text(
@@ -191,39 +253,57 @@ export const docs: Doc[] = [
           table(
             ["Term", "Use it for"],
             [
-              ["Recording", "Retained messages, events, native session archives, and workspace artifacts, subject to recorded capture coverage."],
+              [
+                "Recording",
+                "Retained messages, events, native session archives, and workspace artifacts, subject to recorded capture coverage.",
+              ],
               ["Trace", "An ordered view of recorded model and tool activity."],
-              ["Evidence", "Recorded material that supports a judgment; citations identify the relevant parts."],
+              [
+                "Evidence",
+                "Recorded material that supports a judgment; citations identify the relevant parts.",
+              ],
             ],
           ),
         ],
       },
       {
-        id: "compatibility",
-        title: "Canonical terms and released syntax",
+        id: "contract",
+        title: "One scoring contract",
         blocks: [
-          note("Published SDK: 0.2.2", legacyCriterionNote),
           table(
-            ["Legacy 0.2.2 spelling", "Canonical meaning"],
+            ["Name", "Meaning"],
             [
-              ["## Metric: id — Label", "A criterion declaration in judge.md."],
-              ["MetricDefinition / rubricMetrics", "Criterion definitions and their Markdown parser."],
-              ["MetricJudgment / judgment.metrics", "Criterion scores in the released API and stored records."],
+              [
+                "## Criterion: id — Label",
+                "A criterion declaration in judge.md.",
+              ],
+              [
+                "CriterionDefinition / rubricCriteria",
+                "Criterion definitions and their Markdown parser.",
+              ],
+              [
+                "CriterionScore / judgment.scores",
+                "Normalized criterion scores, reasons, evidence, and source.",
+              ],
+              [
+                "JudgeContext",
+                "The data supplied to a plain judge.ts function.",
+              ],
             ],
           ),
           code(
-            "planned 0.3.0 syntax · not supported by 0.2.2",
+            "judge.md",
             "## Criterion: safe_parameters — Uses bound parameters",
             "markdown",
           ),
           text(
-            "Judge is the common name for code-based, LLM-based, and hybrid evaluators. The published SDK currently provides LLM judging through judge.md. JudgeContext, additive judge.md / judge.ts execution, boolean score normalization, and fractional criterion scores are planned for 0.3.0.",
+            "Judge is the common name for code-based, LLM-based, and hybrid evaluators. judge.md and judge.ts can both contribute distinct criteria to the same eval. Their scores have equal weight regardless of which file produced them.",
           ),
           text(
-            "SDK 0.2.2 accepts 0, 1, or null for each criterion. null means unresolved, not partial credit. In the planned code contract, entries in scores contribute criterion scores; other returned data can be metadata. Outputs without scores are unscored.",
+            "Scores accept booleans, finite numbers from 0 to 1, or null. Booleans become 0 or 1; null means unresolved. A code function can also return custom JSON. Only entries in scores contribute to grading; outputs without scores are unscored.",
           ),
           text(
-            "Preserve literal API identifiers, historical quotations, and external source titles. Use canonical terms when explaining them. Terminology migrations preserve recorded evidence and finalized judgments.",
+            "OpenEval 0.3.0 uses the canonical API and results schema 5. Preserve historical quotations, source titles, original recordings, and finalized judgments when carrying out a separate migration of an older store.",
           ),
         ],
       },
@@ -318,17 +398,16 @@ export const docs: Doc[] = [
     description: "Small, independent decisions with evidence you can inspect.",
     sections: [
       {
-        id: "metrics",
+        id: "criteria",
         title: "Declare each criterion",
         blocks: [
           code("judge.md", rubric, "markdown"),
-          note("Released syntax", legacyCriterionNote),
           table(
             ["Part", "Contract"],
             [
               [
-                "## Metric: id — Label",
-                "Legacy 0.2.2 syntax for a stable criterion ID and display label",
+                "## Criterion: id — Label",
+                "Declares a stable criterion ID and display label",
               ],
               [
                 "Scoring rules",
@@ -394,7 +473,7 @@ export const docs: Doc[] = [
             [
               [
                 "Define intended behavior",
-                "Validate criterion IDs and 0 / 1 / null scores",
+                "Validate criterion IDs and normalized 0–1 or null scores",
               ],
               [
                 "Accept equivalent correct approaches",
@@ -409,6 +488,198 @@ export const docs: Doc[] = [
                 "Aggregate criterion scores consistently",
               ],
             ],
+          ),
+        ],
+      },
+    ],
+  },
+  {
+    slug: "code-judges",
+    title: "Code & hybrid judges",
+    group: "Author",
+    description:
+      "Write an ordinary function. Read the recording. Return scores and your own data.",
+    sections: [
+      {
+        id: "function",
+        title: "A deterministic eval is a plain function",
+        blocks: [
+          code("evals/exact-answer/prompt.md", codePrompt, "markdown"),
+          code("evals/exact-answer/judge.ts", codeJudge, "typescript"),
+          code(
+            "benchmark.ts · no judge model needed",
+            codeBenchmark,
+            "typescript",
+          ),
+          text(
+            "The runner discovers judge.ts by convention. It receives JudgeContext and returns JSON, synchronously or asynchronously. response.text is always a string; missing text becomes an empty string. The execution outcome remains available on context.run.",
+          ),
+          table(
+            ["Returned value in scores", "Normalized credit"],
+            [
+              ["true / false", "1 / 0"],
+              ["0.375", "37.5% credit"],
+              ["null", "Unresolved"],
+              ["Outside 0–1, NaN, or a string", "A judging error"],
+            ],
+          ),
+          text(
+            "The author chooses criterion IDs and all grading rules. No task-specific scorers or builder APIs are required. Custom JSON is retained as-is. An output without scores is unscored and cannot silently disappear from the benchmark denominator.",
+          ),
+        ],
+      },
+      {
+        id: "hybrid",
+        title: "Both files contribute to one eval",
+        blocks: [
+          code(
+            "prompt.md",
+            'Summarize the incident in ./incident.txt. Return a JSON object with a "summary" string.',
+            "markdown",
+          ),
+          code(
+            "judge.md",
+            "## Criterion: supported_summary — Source-supported summary\n\nPass when the summary covers the incident's impact and resolution\nwithout contradicting the supplied report. Fail for missing or false\ninformation. Accept equivalent concise wording.",
+            "markdown",
+          ),
+          code("judge.ts", hybridCode, "typescript"),
+          text(
+            "Supply incident.txt in the workspace. The LLM grades supported_summary, while code grades json_shape. Both read the same candidate recording. Duplicate criterion IDs are errors; neither source overwrites the other. A hybrid judgment becomes active only after both sources succeed.",
+          ),
+          note(
+            "Equal weights",
+            "The files themselves have no weight. Each named criterion contributes equally within the eval. A code score of 0.5 and an LLM score of 1 produce 75% for that repetition.",
+          ),
+        ],
+      },
+      {
+        id: "context",
+        title: "All the recorded data, with lazy native access",
+        blocks: [
+          table(
+            ["Context primitive", "What it provides"],
+            [
+              [
+                "response / prompt",
+                "The final root answer and exact task prompt.",
+              ],
+              [
+                "run",
+                "The EvalRun, model reference, outcome, and execution inputs. Null for constructed controls.",
+              ],
+              [
+                "metrics",
+                "Candidate-only usage, cost, tool reliability, compactions, and timing.",
+              ],
+              [
+                "recording.events(filter?)",
+                "Native events with recorded sequence and time; filter by sessionID or type.",
+              ],
+              [
+                "recording.tools(filter?)",
+                "Recorded invocations, inputs, outputs, errors, and durations.",
+              ],
+              [
+                "recording.sessions()",
+                "All sessions belonging to the candidate's isolated native database.",
+              ],
+              [
+                "recording.messages(sessionID?)",
+                "Complete paginated message history, including before compaction.",
+              ],
+              [
+                "recording.export(sessionID?)",
+                "Native OpenCode session export.",
+              ],
+              [
+                "workspace.files/read/text/diff",
+                "Verified initial and final file snapshots.",
+              ],
+              [
+                "workspace.materialize(revision?)",
+                "A disposable workspace copy for author-owned verification commands.",
+              ],
+              [
+                "native.database()",
+                "Read-only SQLite access to a verified archive copy.",
+              ],
+              [
+                "native.sdk() / native.schema()",
+                "The pinned OpenCode SDK/API and schema. SDK operations use a disposable copy.",
+              ],
+            ],
+          ),
+          code(
+            "independent inspection",
+            'import { readRecording } from "@hona/openeval";\n\nawait using context = await readRecording("./results/RUN", "eval_ID");\nconst messages = await context.recording.messages();\nconst db = await context.native.database();\nconsole.log(db.query("SELECT name FROM sqlite_master").all());',
+            "typescript",
+          ),
+          text(
+            "The runner owns reader lifetimes and initializes native services only when requested. Native reads are bound to the recorded database, not your live OpenCode service. The archive's OpenCode version must match the pinned reader version.",
+          ),
+        ],
+      },
+      {
+        id: "measurements",
+        title: "Common measurements are automatic",
+        blocks: [
+          table(
+            ["Metric", "Definition"],
+            [
+              [
+                "cost / tokens",
+                "Deduplicated recorded OpenCode usage across candidate sessions, including recorded auxiliary usage such as compaction.",
+              ],
+              [
+                "tools.errorRate",
+                "Failed / (succeeded + failed). Null when no terminal calls exist; unfinished calls are separate.",
+              ],
+              [
+                "requests / compactions",
+                "Recorded starts, completions, failures, and retry events.",
+              ],
+              [
+                "timing.modelActiveMs",
+                "Union of closed model-step and compaction intervals, including time within those steps.",
+              ],
+              [
+                "timing.outputTokensPerSecond",
+                "Reported output tokens per model-active second; overlapping intervals count once.",
+              ],
+            ],
+          ),
+          text(
+            "A successful shell tool returning a failed test is distinct from a native tool failure. Counts describe recorded native invocations, not inferred operations inside a batch. Missing usage is unavailable. Reported zero cost does not establish free service.",
+          ),
+          text(
+            "Token categories keep their native meanings. Avoid double-counting reasoning/output or cache categories. These observations affect a score only when the author's function or rubric explicitly uses them. Markdown judges can inspect the same primitives through candidate_evidence with action metrics.",
+          ),
+        ],
+      },
+      {
+        id: "execution",
+        title: "Frozen inputs, bounded execution, inspectable results",
+        blocks: [
+          {
+            type: "image",
+            image: "code-judgment.png",
+            alt: "A code judgment with boolean and fractional criterion scores, returned JSON, and frozen source",
+            caption:
+              "Illustrative label-reading task. The code judge ran on constructed responses; no candidate model was called.",
+          },
+          text(
+            "The host bundles local imports without executing the judge during planning. Source maps and dependency manifests/lockfiles are recorded with its fingerprint. Code and reference changes schedule rejudging; the candidate recording is reused.",
+          ),
+          text(
+            "judge.ts runs in a separate Bun process under judge.timeoutMs, so the host can stop synchronous loops. Code and hybrid evals grade finalized recordings; earlyStop is supported for Markdown-only evals. The viewer shows returned JSON, frozen source, process logs, and candidate metrics.",
+          ),
+          code(
+            "code-only calibration",
+            'import { recordEvidence, judgeEvidence } from "@hona/openeval";\n\nconst evidence = await recordEvidence({\n  directory: "./controls/apple/evidence",\n  prompt: "Reply with exactly APPLE.",\n  response: "APPLE",\n});\nconst result = await judgeEvidence({\n  evidence,\n  code: "./evals/exact-answer/judge.ts",\n  directory: "./controls/apple/judge",\n});',
+            "typescript",
+          ),
+          text(
+            "Code-only controls use no model calls unless the author writes one explicitly. The original JSON is retained, while normalized scores are stored with their source. Failed grading does not overwrite finalized judgments.",
           ),
         ],
       },
@@ -623,7 +894,10 @@ export const docs: Doc[] = [
                 "Checks scored",
                 "Criterion scores across evals and repetitions",
               ],
-              ["Eval drilldown", "Individual criterion scores for one selected eval"],
+              [
+                "Eval drilldown",
+                "Individual criterion scores for one selected eval",
+              ],
               [
                 "Runtime",
                 "Union of active execution intervals; overlapping work counts once",
@@ -753,8 +1027,13 @@ export const docs: Doc[] = [
               ["evals/<id>/prompt.md", "Yes · eval", "Verbatim candidate task"],
               [
                 "evals/<id>/judge.md",
-                "Yes · eval",
+                "One or both judge files",
                 "A rubric with named criteria and scoring rules",
+              ],
+              [
+                "evals/<id>/judge.ts",
+                "One or both judge files",
+                "A plain function receiving JudgeContext and returning JSON",
               ],
               [
                 "evals/<id>/eval.ts",
@@ -852,7 +1131,11 @@ export const docs: Doc[] = [
                 "Required",
                 "Unique provider/model references; optional #variant",
               ],
-              ["judge.model", "Required", "Model that grades the recording"],
+              [
+                "judge.model",
+                "Required with judge.md",
+                "Model used by the Markdown judge",
+              ],
               ["repetitions", "3", "Candidate executions per eval / model"],
               ["concurrency", "10", "Shared worker budget"],
               [

@@ -234,7 +234,7 @@ function App(props: { path: string }) {
                   <span>Judge the evidence.</span>
                 </h1>
                 <p>
-                  A prompt, a rubric, and a real agent run.
+                  A prompt, code or an LLM judge, and a real agent run.
                   <br class="desktop-break" /> Measure the behavior you care
                   about. See why it passed.
                 </p>
@@ -264,8 +264,12 @@ function App(props: { path: string }) {
                     <code>judge.md</code> criteria
                   </span>
                   <span>
+                    <Icon name="code" />
+                    <code>judge.ts</code> function
+                  </span>
+                  <span>
                     <Icon name="check" />
-                    <code>0 | 1 | null</code> decisions
+                    <code>0–1 | null</code> scores
                   </span>
                 </div>
                 <a href="/docs/reference/">
@@ -286,11 +290,15 @@ function App(props: { path: string }) {
                   rows={[
                     ["prompt.md", "A natural, focused task"],
                     ["judge.md", "Named criteria and scoring rules"],
+                    ["judge.ts", "A plain function over recorded data"],
                     ["eval.ts", "Optional workspace and early stop"],
                   ]}
                 />
                 <a class="text-link" href="/docs/prompts/">
                   The authoring contract <Icon name="arrow-right" />
+                </a>
+                <a class="text-link" href="/docs/code-judges/">
+                  Write a code judge <Icon name="arrow-right" />
                 </a>
               </section>
               <section>

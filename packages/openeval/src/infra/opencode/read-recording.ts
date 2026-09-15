@@ -10,10 +10,15 @@ export async function readRecording(
   records: RunEvent[],
 ): Promise<SessionStage> {
   const judge = "evalRunId" in run.input;
+  const model = run.input.model;
+  if (!model)
+    throw new Error(
+      "Code judges produce JSON output rather than an OpenCode session",
+    );
   const stage: SessionStage = {
     ...emptyStage(),
     prompt: "prompt" in run.input ? run.input.prompt : run.input.rubric,
-    model: run.input.model,
+    model,
   };
   const directory = resolve(root, judge ? "judge-runs" : "eval-runs", run.id);
   const saved = Bun.file(resolve(directory, "session.json"));

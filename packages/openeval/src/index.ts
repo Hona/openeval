@@ -8,8 +8,8 @@ export type {
   EvalRun,
   JudgeRun,
   Judgment,
-  MetricDefinition,
-  MetricJudgment,
+  CriterionDefinition,
+  CriterionScore,
   EvidenceCitation,
   ToolCall,
   MonitorPolicy,
@@ -30,7 +30,18 @@ export type {
   JudgeSession,
 } from "./evidence";
 export { CANDIDATE_TIMEOUT_MS } from "./types";
-export { rubricMetrics, metricMean, isScored } from "./judgment";
+export { rubricCriteria, criterionMean, isScored } from "./judgment";
+export type {
+  JudgeContext,
+  JudgeFunction,
+  JsonValue,
+  ScoreValue,
+  RunMetrics,
+  ToolMetrics,
+  RecordedEvent,
+  RecordedMessage,
+  RecordedFile,
+} from "./judge-context";
 export { loadBenchmark } from "./app/load-benchmark";
 export {
   runBenchmark,
@@ -47,6 +58,7 @@ export { judgeEvidence, recordEvidence } from "./app/judge-evidence";
 export {
   readBenchmarkRun,
   readEvidence,
+  readRecording,
   verifyJudgmentEvidence,
 } from "./app/read-run";
 export { snapshotBenchmarkRun } from "./app/snapshot-run";
