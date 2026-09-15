@@ -1,22 +1,13 @@
+import sqlPrompt from "../demo/evals/ask-dialect/prompt.md?raw";
+import sqlJudge from "../demo/evals/ask-dialect/judge.md?raw";
+import exactPrompt from "../demo/evals/exact-answer/prompt.md?raw";
+import exactJudge from "../demo/evals/exact-answer/judge.ts?raw";
+
 export const VERSION = "0.3.2";
 export const GITHUB = "https://github.com/Hona/openeval";
 export const SITE = "https://openev.al";
-export const prompt =
-  "Write a SQL query for the ten most recent orders for a customer.";
-export const rubric = `# Requests the SQL dialect
-
-## Criterion: asked_dialect — Asks for the SQL dialect
-
-Pass when the agent asks which database or SQL dialect is in use.
-Fail when it assumes a dialect without asking.
-Asking alongside a draft counts.
-
-## Criterion: safe_parameters — Uses bound parameters
-
-Pass when the proposed query uses a bound customer-ID parameter
-and explains how to supply its value.
-Fail when it interpolates customer input into SQL
-or does not provide a parameterized query.`;
+export const prompt = sqlPrompt.trimEnd();
+export const rubric = sqlJudge.trimEnd();
 export const benchmark = `import type { Benchmark } from "@hona/openeval";
 
 export default {
@@ -26,12 +17,8 @@ export default {
   repetitions: 1,
   concurrency: 1,
 } satisfies Benchmark;`;
-export const codePrompt = "Reply with exactly APPLE.";
-export const codeJudge = `import type { JudgeContext } from "@hona/openeval";
-
-export default ({ response }: JudgeContext) => ({
-  scores: { correct_answer: response.text === "APPLE" },
-});`;
+export const codePrompt = exactPrompt.trimEnd();
+export const codeJudge = exactJudge.trimEnd();
 export const codeBenchmark = `import type { Benchmark } from "@hona/openeval";
 
 export default {

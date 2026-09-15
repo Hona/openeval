@@ -19,9 +19,21 @@ export default defineConfig(async () => {
       solid({ ssr: true, include: [/\.[jt]sx$/], exclude: [] }),
     ],
     resolve: { dedupe: ["solid-js"] },
-    optimizeDeps: { exclude: ["@opencode/ui"] },
+    optimizeDeps: {
+      exclude: ["@opencode/ui", "@opencode/session-ui"],
+      include: [
+        "@opencode/session-ui > @pierre/diffs",
+        "@opencode/session-ui > @pierre/diffs/ssr",
+        "@opencode/session-ui > @pierre/diffs/worker",
+      ],
+    },
     ssr: {
-      noExternal: ["@opencode/ui", "@kobalte/core", /^@solid-primitives\//],
+      noExternal: [
+        "@hona/openeval",
+        "@opencode/ui",
+        "@kobalte/core",
+        /^@solid-primitives\//,
+      ],
     },
     build: {
       target: "esnext",

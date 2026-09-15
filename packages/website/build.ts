@@ -6,6 +6,7 @@ import { SITE } from "./src/examples";
 import { selectFontsBeforePaint } from "./src/fonts";
 import { githubStarCount } from "./github-stars";
 import { agentFiles, markdownPages } from "./agent-files";
+import { buildDemo } from "./build-demo";
 import "./prepare";
 
 const directory = fileURLToPath(new URL("./", import.meta.url));
@@ -130,11 +131,21 @@ await writeFile(
   JSON.stringify(
     {
       version: 1,
-      include: ["/", "/index.html", "/docs/*"],
+      include: [
+        "/",
+        "/index.html",
+        "/docs/*",
+        "/demo",
+        "/demo/",
+        "/demo/index.html",
+      ],
       exclude: ["/docs/*.md"],
     },
     null,
     2,
   ),
 );
-console.log(`Prerendered ${pages.length} pages for ${SITE}`);
+await buildDemo();
+console.log(
+  `Prerendered ${pages.length} pages and the recorded demo for ${SITE}`,
+);

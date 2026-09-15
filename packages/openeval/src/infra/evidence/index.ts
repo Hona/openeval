@@ -12,6 +12,11 @@ export type { EvidenceQuery } from "../../evidence";
 import { trackTool } from "./tool-calls";
 import { hash as sha256, writeJson } from "../files";
 import { measureRecording } from "../recording/metrics";
+import {
+  evidencePage as page,
+  evidenceTextPage as textPage,
+  type ViewerEvidence,
+} from "../../viewer-export";
 type InferenceResponse = { text: string; textBlocks?: string[] };
 type ArtifactPolicy = { excludeDirectories: string[] };
 
@@ -388,38 +393,6 @@ export class EvidenceCapture {
   }
 }
 
-const offsetOf = (input: EvidenceQuery) => {
-  const offset = input.offset ?? 0;
-  if (!Number.isSafeInteger(offset) || offset < 0)
-    throw new Error("offset must be a non-negative integer");
-  return offset;
-};
-const limitOf = (input: EvidenceQuery, max: number, fallback: number) => {
-  const limit = input.limit ?? fallback;
-  if (!Number.isSafeInteger(limit) || limit < 1)
-    throw new Error("limit must be a positive integer");
-  return Math.min(limit, max);
-};
-const page = <T>(items: T[], input: EvidenceQuery) => {
-  const offset = offsetOf(input),
-    limit = limitOf(input, 100, 20);
-  const end = Math.min(items.length, offset + limit);
-  return {
-    items: items.slice(offset, end),
-    total: items.length,
-    next: end < items.length ? end : null,
-  };
-};
-const textPage = (text: string, input: EvidenceQuery) => {
-  const offset = offsetOf(input),
-    end = Math.min(text.length, offset + limitOf(input, 24000, 8000));
-  return {
-    text: text.slice(offset, end),
-    totalCharacters: text.length,
-    next: end < text.length ? end : null,
-  };
-};
-
 // Preserve the source archive exactly; omit explicit model/accounting metadata from judge queries.
 function blindEvent(record: EvidenceEvent) {
   const value = structuredClone(record);
@@ -454,6 +427,52 @@ export class CandidateEvidence {
 
   toolCalls(): ToolCall[] {
     return structuredClone(this.manifest.tools);
+  }
+
+  /** Complete values for a host-side publisher; the publisher must sanitize them. */
+  async viewerData(
+    allowedArtifacts: readonly string[] = [],
+  ): Promise<ViewerEvidence> {
+    const artifacts: ViewerEvidence["artifacts"] = { initial: [], final: [] };
+    for (const revision of ["initial", "final"] as const) {
+      for (const file of this.manifest[revision]?.files ?? []) {
+        if (!allowedArtifacts.includes(file.path)) continue;
+        if (file.symlink !== undefined || file.bytes > 1024 * 1024)
+          throw new Error(
+            `Public artifact must be UTF-8 text of at most 1 MiB: ${file.path}`,
+          );
+        artifacts[revision].push({
+          path: file.path,
+          bytes: file.bytes,
+          sha256: file.sha256,
+          text: new TextDecoder("utf-8", { fatal: true }).decode(
+            await this.bytes(file),
+          ),
+        });
+      }
+    }
+    return {
+      summary: this.summary(),
+      response: this.manifest.response.text,
+      messages: this.messages(),
+      events: this.records.map((record) => {
+        const blinded = blindEvent(record);
+        return {
+          sequence: record.sequence,
+          time: record.time,
+          event: {
+            type: record.event.type,
+            data: eventData(blinded.event as OpenCodeStreamEvent),
+          },
+        };
+      }),
+      tools: this.toolCalls(),
+      metrics: measureRecording(this.records, this.manifest.tools, {
+        directory: this.directory,
+        hash: this.hash,
+      }),
+      artifacts,
+    };
   }
 
   files(revision: "initial" | "final" = "final"): FileEntry[] {

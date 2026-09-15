@@ -9,8 +9,13 @@ import {
 } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
 import type { RunEvent, Stage } from "@hona/openeval/types";
-import type { LiveEvalRun, SessionStage, SessionSnapshot } from "@hona/openeval/view";
+import type {
+  LiveEvalRun,
+  SessionStage,
+  SessionSnapshot,
+} from "@hona/openeval/view";
 import { applySessionRecord, emptyStage } from "@hona/openeval/session";
+import { viewerSource } from "./data-source";
 
 const viewed = new Map<string, { document: SessionStage }>();
 export function createSessionStream(input: {
@@ -36,6 +41,29 @@ export function createSessionStream(input: {
       if (cached) return;
       if (!input.execution()) {
         setConnection("Waiting for session");
+        return;
+      }
+      if (viewerSource.saved) {
+        let disposed = false;
+        void viewerSource
+          .session(input.benchmark(), input.execution()!)
+          .then((saved) => {
+            if (disposed) return;
+            model = saved;
+            viewed.set(selected, { document: structuredClone(model) });
+            if (viewed.size > 8) viewed.delete(viewed.keys().next().value!);
+            batch(() => {
+              setDocument(reconcile(structuredClone(model)));
+              setRevision((value) => value + 1);
+              setConnection("Saved recording");
+            });
+          })
+          .catch(() => {
+            if (!disposed) setConnection("Session unavailable");
+          });
+        onCleanup(() => {
+          disposed = true;
+        });
         return;
       }
       const events = new EventSource(

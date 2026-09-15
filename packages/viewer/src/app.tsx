@@ -28,6 +28,7 @@ import { EvalName, SecretToggle, topSecret, SECRET_MODE_KEY } from "./privacy";
 import {
   duration,
   formatCost,
+  formatRecordedCost,
   formatDate,
   formatNumber,
   matchesModelFilters,
@@ -45,6 +46,7 @@ import {
   runtimeMs,
   runtimeClock,
 } from "@hona/openeval/view";
+import { viewerSource } from "./data-source";
 
 type Route = {
   id: string;
@@ -76,13 +78,7 @@ const readRoute = (): Route => {
   };
 };
 const get = async <T,>(path: string): Promise<T> => {
-  const response = await fetch(path);
-  if (!response.ok)
-    throw new Error(
-      (await response.json().catch(() => ({}))).error ??
-        `Request failed (${response.status})`,
-    );
-  return response.json();
+  return viewerSource.get<T>(path);
 };
 // Reuse the same document across page and drawer resources. A newer index stamp
 // invalidates it; concurrent consumers share one request.
@@ -154,6 +150,7 @@ export function App() {
   const [busy, setBusy] = createSignal(false);
   const [now, setNow] = createSignal(Date.now());
   onMount(() => {
+    if (!viewerSource.live) return;
     const clock = setInterval(() => setNow(Date.now()), 1000);
     onCleanup(() => clearInterval(clock));
   });
@@ -161,9 +158,10 @@ export function App() {
   const [index, indexActions] = createResource(() =>
     get<ResultIndex>("/api/results"),
   );
-  const isPublic = () => index()?.public ?? false;
+  // A totals-only publication differs from a reviewed export with full recordings.
+  const isPublic = () => (index()?.public ?? false) && !viewerSource.saved;
   const [activity, activityActions] = createResource(
-    () => index() && !index()!.public,
+    () => index() && !isPublic() && viewerSource.live,
     () => get<ActivityRun[]>("/api/activity"),
   );
   const resultVersion = (id: string) =>
@@ -244,8 +242,12 @@ export function App() {
     }
     if (isPublic() && route().view !== "results")
       navigate({ view: "results", eval: "", run: "", evalRun: "" }, true);
+    if (viewerSource.saved && route().view === "activity")
+      navigate({ view: "results" }, true);
   });
   onMount(() => {
+    if (viewerSource.config.title)
+      globalThis.document.title = viewerSource.config.title;
     theme.setTheme("oc-2");
     theme.setColorScheme("dark");
     const pop = () => {
@@ -254,6 +256,8 @@ export function App() {
       else setRoute(value);
     };
     window.addEventListener("popstate", pop);
+    onCleanup(() => window.removeEventListener("popstate", pop));
+    if (!viewerSource.live) return;
     const refresh = () => {
       if (!index.loading) void indexActions.refetch();
       if (index() && !index()!.public && !activity.loading)
@@ -315,10 +319,7 @@ export function App() {
       route().view === "evals"
         ? data()?.evalCosts?.[selectedEval()]
         : data()?.cost;
-    return (
-      value?.usd ??
-      (data()?.status === "running" ? value?.reportedUSD : undefined)
-    );
+    return value;
   };
   const evalScores = createMemo(
     () =>
@@ -469,11 +470,16 @@ export function App() {
           <span class="titlebar-divider" /> <span>Results</span>
         </div>
         <div class="titlebar-actions">
+          <Show when={viewerSource.config.home}>
+            <a class="recording-home" href={viewerSource.config.home}>
+              <Icon name="arrow-left" /> Overview
+            </a>
+          </Show>
           <SecretToggle />
         </div>
       </header>
       <aside class="sidebar" classList={{ visible: sidebar() }}>
-        <Show when={index() && !isPublic()}>
+        <Show when={index() && !isPublic() && viewerSource.live}>
           <button
             class="activity-link"
             classList={{ active: route().view === "activity" }}
@@ -525,7 +531,21 @@ export function App() {
         </div>
         <div class="sidebar-footer">
           <Icon name="folder" />
-          <span>{isPublic() ? "Totals only" : "Local results"}</span>
+          <span>
+            {viewerSource.saved
+              ? "Recorded results"
+              : isPublic()
+                ? "Totals only"
+                : "Local results"}
+          </span>
+          <Show when={viewerSource.saved}>
+            <a
+              href={viewerSource.config.manifest}
+              title="Publication metadata, filtering counts, and data hashes"
+            >
+              Manifest
+            </a>
+          </Show>
         </div>
       </aside>
       <main class="main-panel">
@@ -765,7 +785,7 @@ export function App() {
                     </div>
                     <div>
                       <span>{modelFilters().length ? "Run cost" : "Cost"}</span>
-                      <strong>{formatCost(scopedCost())}</strong>
+                      <strong>{formatRecordedCost(scopedCost())}</strong>
                     </div>
                   </div>
                 </Show>

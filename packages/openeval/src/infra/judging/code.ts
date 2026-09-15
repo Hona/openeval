@@ -1,5 +1,5 @@
 import { mkdir, rm } from "node:fs/promises";
-import { resolve } from "node:path";
+import { basename, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type {
   CodeJudgeDefinition,
@@ -36,7 +36,10 @@ export async function executeCodeJudge(
   try {
     const child = Bun.spawn(
       [
-        process.execPath,
+        // A Windows bunx.exe process stays in package-runner mode when respawned.
+        /^bunx(?:\.exe)?$/i.test(basename(process.execPath))
+          ? (Bun.which("bun") ?? "bun")
+          : process.execPath,
         fileURLToPath(new URL("./code-worker.ts", import.meta.url)),
       ],
       {

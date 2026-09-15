@@ -13,6 +13,7 @@ import { codeJudge, codePrompt, prompt, rubric } from "./examples";
 export const guideActions = {
   agent: { label: "Agent prompt", href: "/agent-start.md" },
   human: { label: "Human quick start", href: "/docs/quickstart/" },
+  demo: { label: "Demo", href: "/demo/" },
 };
 export const guideSteps = [
   "Task",
@@ -48,7 +49,7 @@ export const guideComparison = (source: string) =>
   code("benchmark.ts", source, "typescript");
 
 /** A text projection of the same tabs, scores, and metrics used by ResultsCard. */
-function resultsBlocks(): Block[] {
+export function resultsBlocks(): Block[] {
   return [
     { type: "text", text: resultsDescription },
     ...resultViews.flatMap(({ id, label }): Block[] => {
