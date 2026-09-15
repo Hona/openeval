@@ -9,12 +9,28 @@ const providerState =
   /^(?:providerState|providerResultState|providerContext|resultState)$/;
 const patterns = [
   /\b(?:Bearer|Basic)\s+[A-Za-z0-9_+\/.=-]{8,}/gi,
-  /\b(?:sk-(?:proj-|ant-)?[A-Za-z0-9_-]{16,}|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[A-Z0-9]{16})\b/g,
+  /\b(?:sk-(?:proj-|ant-)?[A-Za-z0-9_-]{32,}|gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[A-Z0-9]{16})\b/g,
   /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/g,
   /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----/g,
   /((?:api[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret|password)\s*["']?\s*[:=]\s*["']?)[^\s"',;<>]{8,}/gi,
   /(https?:\/\/)[^\s/@:]+:[^\s/@]+@/gi,
 ];
+const credentialMatch = (rule: number, value: string) => {
+  if (rule !== 0) return true;
+  const [scheme, token] = value.split(/\s+/, 2);
+  if (scheme.toLowerCase() === "bearer")
+    return token.length >= 16 || /[\d_+/.=-]/.test(token);
+  // Syntax grammars contain "basic entity.other..."; Basic auth is base64(user:password).
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(token)) return false;
+  const decoded = Buffer.from(token, "base64");
+  return (
+    decoded.toString("base64").replace(/=+$/, "") ===
+      token.replace(/=+$/, "") &&
+    /^[^\u0000-\u001f\u007f\ufffd]*:[^\u0000-\u001f\u007f\ufffd]*$/u.test(
+      decoded.toString("utf8"),
+    )
+  );
+};
 export function pick<T extends object, K extends keyof T>(
   value: T,
   keys: readonly K[],
@@ -55,8 +71,9 @@ export class Publication {
         this.omit("known-credential");
         text = text.replaceAll(secret, withheld);
       }
-    for (const pattern of patterns)
-      text = text.replace(pattern, () => {
+    for (const [rule, pattern] of patterns.entries())
+      text = text.replace(pattern, (value) => {
+        if (!credentialMatch(rule, value)) return value;
         this.omit("credential-pattern");
         return withheld;
       });
@@ -269,9 +286,13 @@ export class Publication {
       throw new Error(
         "Publication blocked: a known credential or credential fragment remains",
       );
-    for (const pattern of patterns.slice(0, 4)) {
+    for (const [rule, pattern] of patterns.slice(0, 4).entries()) {
       pattern.lastIndex = 0;
-      if (pattern.test(text))
+      if (
+        [...text.matchAll(pattern)].some(([value]) =>
+          credentialMatch(rule, value),
+        )
+      )
         throw new Error("Publication blocked: a credential pattern remains");
     }
   }

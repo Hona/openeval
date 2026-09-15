@@ -5,6 +5,20 @@ import type { SessionStage } from "../view";
 
 const secret = "demo_canary_6Qh7fR9k2zNt8W4pV5sD";
 
+test("credential scanning accepts syntax grammars while rejecting real authentication shapes", () => {
+  const policy = new Publication([]);
+  const grammar =
+    "basic entity.other.attribute-name.html sk-prompt-condition sk-prompt-state-selector";
+  expect(policy.text(grammar)).toBe(grammar);
+  expect(() => policy.assertClean(grammar)).not.toThrow();
+  const basic = `Basic ${Buffer.from("example:private-password").toString("base64")}`;
+  expect(policy.text(basic)).toContain("withheld");
+  expect(() => policy.assertClean(basic)).toThrow("credential pattern");
+  const key = `sk-${"A7x".repeat(16)}`;
+  expect(policy.text(key)).toContain("withheld");
+  expect(() => policy.assertClean(key)).toThrow("credential pattern");
+});
+
 test("public sessions retain real tool results while excluding credentials and provider state", () => {
   const policy = new Publication([secret]);
   const stage: SessionStage = {
