@@ -1,4 +1,4 @@
-export const VERSION = "0.3.1";
+export const VERSION = "0.3.2";
 export const GITHUB = "https://github.com/Hona/openeval";
 export const SITE = "https://openev.al";
 export const install = "bun add --exact @hona/openeval";
