@@ -43,7 +43,7 @@ export default defineConfig({
   ],
   webServer: {
     command:
-      "bun run build && bunx --no-install vite preview --host 127.0.0.1 --port 4178 --strictPort",
+      "bun run build && bunx --bun --no-install vite preview --host 127.0.0.1 --port 4178 --strictPort",
     url: "http://127.0.0.1:4178",
     reuseExistingServer: false,
     timeout: 120_000,

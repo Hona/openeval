@@ -4,17 +4,9 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { strToU8, zipSync } from "fflate";
 import { docs, docHref, docMarkdownHref, overview } from "./src/content";
-import {
-  codeJudge,
-  codePrompt,
-  GITHUB,
-  prompt,
-  rubric,
-  runCommands,
-  SITE,
-  VERSION,
-} from "./src/examples";
-import { codeFence, renderDocument } from "./markdown";
+import { GITHUB, SITE, VERSION } from "./src/examples";
+import { renderDocument } from "./markdown";
+import { guideActions, overviewSections } from "./src/overview-content";
 
 const directory = fileURLToPath(new URL("./", import.meta.url));
 export const markdownPages: Record<string, string> = {
@@ -109,33 +101,10 @@ export async function agentFiles(): Promise<
       resolve(directory, "../../agent-start.md"),
       "utf8",
     ),
-    "/index.md": [
-      `# ${overview.title}`,
-      overview.description,
-      `[Agent setup guide](${SITE}/agent-start.md) · [Human quick start](${SITE}${docMarkdownHref("quickstart")})`,
-      "## 1. Task",
-      "### evals/ask-dialect/prompt.md",
-      codeFence(prompt, "markdown"),
-      "## 2. Judge",
-      "### evals/ask-dialect/judge.md",
-      codeFence(rubric, "markdown"),
-      "A deterministic eval can use an ordinary function instead:",
-      "### evals/exact-answer/prompt.md",
-      codeFence(codePrompt, "markdown"),
-      "### evals/exact-answer/judge.ts",
-      codeFence(codeJudge, "typescript"),
-      "## 3. Run",
-      `Complete the [quick start](${SITE}${docMarkdownHref("quickstart")}), then run from your benchmark directory:`,
-      codeFence(runCommands, "sh"),
-      "## 4. Inspect",
-      "Open http://127.0.0.1:4173. Select an eval and model to inspect the candidate session, criterion scores, and judgment. The website's interactive chart uses example data.",
-      `[Read the evidence](${SITE}${docMarkdownHref("evidence")}) · [Understand scores](${SITE}${docMarkdownHref("scoring")})`,
-      "## 5. Compare",
-      "The overview's example benchmark.ts lists six models and their variants. Choose models connected in your own OpenCode installation.",
-      codeFence(comparison, "typescript"),
-      `[Documentation index](${SITE}/llms.txt)`,
-      "",
-    ].join("\n\n"),
+    "/index.md": renderDocument(
+      { ...overview, sections: overviewSections(comparison) },
+      [{ type: "links", items: Object.values(guideActions) }],
+    ),
     ...Object.fromEntries(
       docs.map((doc) => [docMarkdownHref(doc.slug), renderDocument(doc)]),
     ),

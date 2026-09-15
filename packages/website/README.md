@@ -13,6 +13,9 @@ same `@opencode/ui` components, OC-2 theme, and fonts as the results viewer.
 Install the test browsers once with `bunx --no-install playwright install chromium webkit --only-shell`
 from `packages/website`.
 
+The website scripts run Vite in Bun so build-time Markdown can use the same
+TypeScript SDK scoring functions as the browser components.
+
 ## Content
 
 - `src/content.ts`: overview copy, documentation pages, code samples, tables, and navigation.
@@ -20,7 +23,9 @@ from `packages/website`.
 - `src/examples.ts`: example evals, package version, and downloadable starter.
 - `src/app.tsx`: documentation shell and page navigation.
 - `src/landing.tsx`: numbered Task, Judge, Run, Inspect, and Compare overview with the shared viewer chart.
+- `src/overview-content.ts`: shared overview actions, steps, file examples, and text projections for Markdown.
 - `demo/benchmark.ts`: typed model configuration used by the overview and displayed verbatim in Compare.
+- `demo/results.ts` and `demo/calculator.ts`: shared example data, labels, and SDK scoring used by both interactive components and Markdown.
 - `src/components.tsx`: copy controls, code blocks, documentation screenshots, and score explorer.
 - `src/styles.css`: compact layouts using OC-2 theme tokens.
 - `prepare.ts`: copy public screenshots and produce the starter ZIP.
@@ -40,6 +45,14 @@ Pages contain readable HTML before JavaScript loads. JavaScript adds file tabs,
 search, copy controls, and illustrative interactions; it never calls a live model.
 
 ## Agent reading
+
+HTML and Markdown have separate renderers over shared content. Documentation
+pages use the blocks in `src/content.ts`; the overview uses
+`src/overview-content.ts`. Interactive examples expose their initial state and
+tab data through the same demo modules used by the UI. Markdown contains no
+separately maintained overview narrative or hard-coded calculator answers.
+Browser checks compare rendered examples, scores, and metrics with their
+Markdown output. Generated `.md` pages live only in the build output.
 
 Start at **https://openev.al/llms.txt**. It links to `/agent-start.md`, all ten
 documentation pages at `/docs/<slug>/index.md`, the overview at `/index.md`, and

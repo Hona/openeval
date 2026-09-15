@@ -264,6 +264,79 @@ test("search keeps its position and size for many, one, and zero matches", async
   unchanged(pageBefore, await layout(page, chrome));
 });
 
+test("HTML and Markdown agree on overview examples, results, and calculator state", async ({
+  page,
+}, info) => {
+  test.skip(
+    info.project.name !== "desktop",
+    "Content parity is viewport-independent",
+  );
+  await ready(page);
+  const markdown = await (await page.request.get("/index.md")).text();
+  expect(markdown).toContain(await page.locator(".lp-hero h1").innerText());
+  expect(markdown).toContain(await page.locator(".lp-hero p").innerText());
+  const code = async (selector: string) => {
+    const source = (
+      await page.locator(`${selector} .line-content`).allTextContents()
+    )
+      .join("")
+      .trimEnd();
+    expect(source, selector).not.toBe("");
+    return source;
+  };
+  for (const judge of ["judge.md", "judge.ts"]) {
+    await page.getByRole("tab", { name: judge, exact: true }).click();
+    expect(markdown).toContain(
+      await code('.guide-task-code > [aria-hidden="false"]'),
+    );
+    expect(markdown).toContain(
+      await code('.guide-judge [role="tabpanel"][aria-hidden="false"]'),
+    );
+  }
+  expect(markdown).toContain(await code("#guide-compare"));
+  expect(markdown).toContain(
+    await page.locator(".lp-command code").innerText(),
+  );
+  for (const view of ["Benchmark", "ask-dialect", "exact-answer"]) {
+    await page.getByRole("tab", { name: view, exact: true }).click();
+    const rows = page.locator(".chart-model");
+    for (let index = 0; index < (await rows.count()); index++) {
+      const row = rows.nth(index);
+      const model = await row.locator(".model-identity strong").innerText();
+      const thinking = await row.locator(".model-identity small").innerText();
+      const score = await row.locator(".chart-score > span").innerText();
+      expect(markdown).toContain(`| ${model} | ${thinking} | ${score} |`);
+      await row.locator(".chart-row").first().click();
+      const values = await page
+        .locator(".results-card-detail dd")
+        .allTextContents();
+      expect(markdown).toContain(`| ${model} | ${values.join(" | ")} |`);
+    }
+  }
+  await ready(page, "/docs/scoring/");
+  const scoring = await (
+    await page.request.get("/docs/scoring/index.md")
+  ).text();
+  const inputs = page.locator(".calculator-inputs > div");
+  for (let index = 0; index < (await inputs.count()); index++) {
+    const input = inputs.nth(index);
+    const row = await Promise.all([
+      input.locator("small").innerText(),
+      input.locator("strong").innerText(),
+      input.locator("button").innerText(),
+    ]);
+    expect(scoring).toContain(
+      `| ${row.map((value) => value.trim()).join(" | ")} |`,
+    );
+  }
+  const label = await page.locator(".calculator-output small").innerText();
+  const score = await page.locator(".calculator-output strong").innerText();
+  expect(scoring).toContain(`${label}: **${score}**`);
+  expect(scoring).toContain(
+    await page.locator(".calculator .utility-note").innerText(),
+  );
+});
+
 test("score changes only affect the values and filled portion of the meter", async ({
   page,
 }) => {

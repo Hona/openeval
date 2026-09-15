@@ -2,140 +2,50 @@ import { createMemo, createSignal, For, Show } from "solid-js";
 import { Icon } from "@opencode/ui/icon";
 import { Tabs } from "@opencode/ui/tabs";
 import { ProviderIcon } from "@opencode/ui/provider-icon";
-import { modelScore, type ModelScore } from "@hona/openeval/view";
 import { ScoreChart } from "../../viewer/src/components/score-chart";
-import {
-  duration,
-  formatCost,
-  modelName,
-  provider,
-} from "../../viewer/src/model";
+import { modelName, provider } from "../../viewer/src/model";
 import { CodeBlock, CopyButton, StableTabPanel } from "./components";
-import { codeJudge, codePrompt, prompt, rubric } from "./examples";
 import agentPrompt from "../../../agent-start.md?raw";
 import { overview } from "./content";
-import comparison from "../demo/benchmark";
 import comparisonSource from "../demo/benchmark.ts?raw";
-
-const run = "bunx --bun @hona/openeval run";
-
-type Sample = {
-  model: (typeof comparison.models)[number];
-  passes: Record<string, number>;
-  costUSD?: number;
-  toolCalls?: number;
-  contextTokens?: number;
-  durationMs?: number;
-};
-
-const evals = {
-  "ask-dialect": [
-    { criterion: "asked_dialect", name: "Asks for the SQL dialect" },
-    { criterion: "safe_parameters", name: "Uses bound parameters" },
-  ],
-  "exact-answer": [{ criterion: "correct_answer", name: "Correct answer" }],
-};
-const repetitions = comparison.repetitions;
-// Example outcomes reproduce the author's reported model percentages.
-// Big Pickle's outcome is an illustration, not a collected result.
-const samples: Sample[] = [
-  {
-    model: comparison.models[0],
-    passes: { asked_dialect: 8, safe_parameters: 9, correct_answer: 8 },
-    costUSD: 0.91,
-    toolCalls: 14,
-    contextTokens: 41_200,
-    durationMs: 312_000,
-  },
-  {
-    model: comparison.models[1],
-    passes: { asked_dialect: 7, safe_parameters: 8, correct_answer: 6 },
-    costUSD: 1.34,
-    toolCalls: 18,
-    contextTokens: 52_400,
-    durationMs: 401_000,
-  },
-  {
-    model: comparison.models[2],
-    passes: { asked_dialect: 4, safe_parameters: 4, correct_answer: 4 },
-    costUSD: 0.22,
-    toolCalls: 9,
-    contextTokens: 28_100,
-    durationMs: 148_000,
-  },
-  {
-    model: comparison.models[3],
-    passes: { asked_dialect: 6, safe_parameters: 7, correct_answer: 6 },
-    costUSD: 0.18,
-    toolCalls: 22,
-    contextTokens: 61_000,
-    durationMs: 530_000,
-  },
-  {
-    model: comparison.models[4],
-    passes: { asked_dialect: 5, safe_parameters: 5, correct_answer: 5 },
-    costUSD: 0.05,
-    toolCalls: 11,
-    contextTokens: 33_000,
-    durationMs: 205_000,
-  },
-  {
-    model: comparison.models[5],
-    passes: { asked_dialect: 7, safe_parameters: 7, correct_answer: 6 },
-  },
-];
-
-const components = (sample: Sample, only?: string) =>
-  Object.entries(evals)
-    .filter(([id]) => !only || id === only)
-    .flatMap(([id, criteria]) =>
-      criteria.map((item) => {
-        const passed = sample.passes[item.criterion];
-        return {
-          eval: id,
-          ...item,
-          value: passed / repetitions,
-          scored: repetitions,
-          expected: repetitions,
-          passed,
-          scoredSum: passed,
-        };
-      }),
-    );
-
-const observed = (
-  value: number | undefined,
-  format: (value: number) => string = String,
-) => (value === undefined ? "Not run" : format(value));
+import {
+  exampleMetrics,
+  exampleScores,
+  resultViews,
+  resultsDescription,
+  samples,
+} from "../demo/results";
+import {
+  guideActions,
+  guideComparison,
+  guideExamples,
+  guideJudgeFiles,
+  guideRun,
+  guideSteps,
+  guideStepId,
+  type GuideJudge,
+  type GuideStep,
+} from "./overview-content";
 
 /** The viewer's score chart, mounted with sample data and its own controls. */
 export function ResultsCard() {
   const [view, setView] = createSignal("benchmark");
   const [selected, setSelected] = createSignal<string>(samples[0].model);
-  const scores = createMemo<ModelScore[]>(() =>
-    samples.map((sample) =>
-      modelScore(
-        sample.model,
-        components(sample, view() === "benchmark" ? undefined : view()),
-      ),
-    ),
-  );
+  const scores = createMemo(() => exampleScores(view()));
   const detail = () => samples.find((s) => s.model === selected())!;
   return (
     <section class="results-card" aria-label="Sample benchmark results">
       <div class="results-card-bar">
         <Tabs variant="pill" value={view()} onChange={setView}>
           <Tabs.List aria-label="Benchmark or eval breakdown">
-            <Tabs.Trigger value="benchmark">Benchmark</Tabs.Trigger>
-            <For each={Object.keys(evals)}>
-              {(id) => <Tabs.Trigger value={id}>{id}</Tabs.Trigger>}
+            <For each={resultViews}>
+              {(view) => (
+                <Tabs.Trigger value={view.id}>{view.label}</Tabs.Trigger>
+              )}
             </For>
           </Tabs.List>
         </Tabs>
-        <span>
-          Example data · 2 evals · {samples.length} models · {repetitions}{" "}
-          repetitions
-        </span>
+        <span>{resultsDescription}</span>
       </div>
       <ScoreChart
         scores={scores()}
@@ -149,27 +59,14 @@ export function ResultsCard() {
             <strong>{modelName(detail().model)}</strong>
           </span>
           <dl>
-            <div>
-              <dt>Cost</dt>
-              <dd>{observed(detail().costUSD, formatCost)}</dd>
-            </div>
-            <div>
-              <dt>Tool calls</dt>
-              <dd>{observed(detail().toolCalls)}</dd>
-            </div>
-            <div>
-              <dt>Context</dt>
-              <dd>
-                {observed(
-                  detail().contextTokens,
-                  (value) => `${Math.round(value / 1000)}k tokens`,
-                )}
-              </dd>
-            </div>
-            <div>
-              <dt>Duration</dt>
-              <dd>{observed(detail().durationMs, duration)}</dd>
-            </div>
+            <For each={exampleMetrics(detail())}>
+              {(metric) => (
+                <div>
+                  <dt>{metric.label}</dt>
+                  <dd>{metric.value}</dd>
+                </div>
+              )}
+            </For>
           </dl>
         </div>
       </div>
@@ -177,18 +74,15 @@ export function ResultsCard() {
   );
 }
 
-type JudgeFile = "judge.md" | "judge.ts";
-
-function TaskCode(props: { judge: JudgeFile }) {
+function TaskCode(props: { judge: GuideJudge }) {
   return (
     <div class="guide-task-code">
-      <For each={["judge.md", "judge.ts"] as const}>
+      <For each={guideJudgeFiles}>
         {(file) => (
           <div aria-hidden={props.judge !== file} inert={props.judge !== file}>
             <CodeBlock
-              file="prompt.md"
-              code={file === "judge.md" ? prompt : codePrompt}
-              language="markdown"
+              {...guideExamples[file].prompt}
+              file={guideExamples[file].prompt.file.split("/").at(-1)!}
             />
           </div>
         )}
@@ -198,39 +92,37 @@ function TaskCode(props: { judge: JudgeFile }) {
 }
 
 function JudgeChoice(props: {
-  value: JudgeFile;
-  onChange: (value: JudgeFile) => void;
+  value: GuideJudge;
+  onChange: (value: GuideJudge) => void;
 }) {
-  const files = { "judge.md": rubric, "judge.ts": codeJudge };
   return (
     <div class="guide-judge">
       <Tabs
         variant="line"
         value={props.value}
-        onChange={(value) => props.onChange(value as JudgeFile)}
+        onChange={(value) => props.onChange(value as GuideJudge)}
       >
         <div class="guide-judge-toolbar">
           <Tabs.List aria-label="Judge type">
-            <For each={Object.keys(files)}>
+            <For each={guideJudgeFiles}>
               {(file) => <Tabs.Trigger value={file}>{file}</Tabs.Trigger>}
             </For>
           </Tabs.List>
           <Show when={props.value} keyed>
             {(file) => (
-              <CopyButton text={files[file]} label={`Copy ${file}`} compact />
+              <CopyButton
+                text={guideExamples[file].judge.code}
+                label={`Copy ${file}`}
+                compact
+              />
             )}
           </Show>
         </div>
         <div class="stable-tabs-panels">
-          <For each={Object.entries(files)}>
-            {([file, code]) => (
+          <For each={guideJudgeFiles}>
+            {(file) => (
               <StableTabPanel value={file} selected={props.value}>
-                <CodeBlock
-                  file={file}
-                  code={code}
-                  language={file === "judge.md" ? "markdown" : "typescript"}
-                  bare
-                />
+                <CodeBlock {...guideExamples[file].judge} file={file} bare />
               </StableTabPanel>
             )}
           </For>
@@ -247,12 +139,12 @@ function Start() {
         <CopyButton
           text={agentPrompt}
           label="Copy agent prompt"
-          caption="Agent prompt"
+          caption={guideActions.agent.label}
           compact
         />
       </div>
-      <a class="action-link" href="/docs/quickstart/">
-        Human quick start <Icon name="arrow-right" />
+      <a class="action-link" href={guideActions.human.href}>
+        {guideActions.human.label} <Icon name="arrow-right" />
       </a>
     </div>
   );
@@ -264,40 +156,30 @@ function RunCommand() {
       <span class="terminal-prompt" aria-hidden="true">
         $
       </span>
-      <code>{run}</code>
-      <CopyButton text={run} label="Copy run command" compact />
+      <code>{guideRun.code}</code>
+      <CopyButton text={guideRun.code} label="Copy run command" compact />
     </div>
   );
 }
 
-const steps = ["Task", "Judge", "Run", "Inspect", "Compare"] as const;
-type Step = (typeof steps)[number];
-const stepId = (step: Step) => `guide-${step.toLowerCase()}`;
-
 function GuidedSteps() {
-  const [judge, setJudge] = createSignal<JudgeFile>("judge.md");
+  const [judge, setJudge] = createSignal<GuideJudge>(guideJudgeFiles[0]);
 
-  const content = (step: Step) => {
+  const content = (step: GuideStep) => {
     if (step === "Task") return <TaskCode judge={judge()} />;
     if (step === "Judge")
       return <JudgeChoice value={judge()} onChange={setJudge} />;
     if (step === "Run") return <RunCommand />;
     if (step === "Inspect") return <ResultsCard />;
-    return (
-      <CodeBlock
-        file="benchmark.ts"
-        code={comparisonSource}
-        language="typescript"
-      />
-    );
+    return <CodeBlock {...guideComparison(comparisonSource)} />;
   };
 
   return (
     <div class="guide">
       <ol class="guide-steps">
-        <For each={steps}>
+        <For each={guideSteps}>
           {(step, index) => (
-            <li id={stepId(step)} class="guide-step">
+            <li id={guideStepId(step)} class="guide-step">
               <h2 class="guide-label">
                 <span class="guide-number" aria-hidden="true">
                   {String(index() + 1).padStart(2, "0")}

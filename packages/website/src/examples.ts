@@ -57,10 +57,6 @@ export default {
     { cwd: ".", argv: ["bun", "install", "--frozen-lockfile"] },
   ],
 } satisfies Eval;`;
-export const runCommands = `bunx --bun @hona/openeval image
-bunx --bun @hona/openeval plan
-bunx --bun @hona/openeval run
-bunx --bun @hona/openeval view`;
 export const query = `SELECT id, created_at, total
 FROM orders
 WHERE customer_id = $1

@@ -21,12 +21,15 @@ for (const args of [
     "--emptyOutDir",
   ],
 ]) {
-  const child = Bun.spawn(["bun", "x", "--no-install", "vite", ...args], {
-    cwd: directory,
-    env: { ...process.env, OPENEVAL_GITHUB_STARS: String(stars) },
-    stdout: "inherit",
-    stderr: "inherit",
-  });
+  const child = Bun.spawn(
+    ["bun", "x", "--bun", "--no-install", "vite", ...args],
+    {
+      cwd: directory,
+      env: { ...process.env, OPENEVAL_GITHUB_STARS: String(stars) },
+      stdout: "inherit",
+      stderr: "inherit",
+    },
+  );
   if (await child.exited)
     throw new Error(`Website build failed: ${args.join(" ")}`);
 }

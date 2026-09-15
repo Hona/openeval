@@ -3,11 +3,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bun prepare.ts && vite --host 127.0.0.1 --port 4176 --strictPort",
+    "dev": "bun prepare.ts && bunx --bun --no-install vite --host 127.0.0.1 --port 4176 --strictPort",
     "build": "bun build.ts",
     "verify": "bun verify.ts",
     "test:browser": "playwright test",
-    "preview": "vite preview --host 127.0.0.1 --port 4176 --strictPort",
+    "preview": "bunx --bun --no-install vite preview --host 127.0.0.1 --port 4176 --strictPort",
     "deploy": "wrangler pages deploy dist --project-name openeval --branch main"
   },
   "dependencies": {

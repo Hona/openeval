@@ -3,7 +3,14 @@ import { Button } from "@opencode/ui/button";
 import { Icon } from "@opencode/ui/icon";
 import { IconButton } from "@opencode/ui/icon-button";
 import { Tabs } from "@opencode/ui/tabs";
-import { modelScore } from "@hona/openeval/view";
+import {
+  calculator,
+  calculatorLabel,
+  calculatorScore,
+  calculatorStatus,
+  decisionLabel,
+  type Decision,
+} from "../demo/calculator";
 import type { Block } from "./content";
 import { screenshotDimensions, type ScreenshotName } from "./media";
 
@@ -283,55 +290,35 @@ export function Screenshot(props: {
 }
 
 export function ScoreCalculator() {
-  const definitions = [
-    { eval: "sql", criterion: "asked_dialect", name: "Asks for dialect" },
-    { eval: "sql", criterion: "safe_parameters", name: "Bound parameters" },
-    { eval: "summary", criterion: "actionable", name: "Actionable summary" },
-  ];
-  const [values, setValues] = createSignal<Array<0 | 1 | null>>([1, 0, 1]);
-  const score = createMemo(() =>
-    modelScore(
-      "example",
-      definitions.map((criterion, index) => ({
-        ...criterion,
-        value: values()[index],
-        expected: 1,
-        scored: values()[index] === null ? 0 : 1,
-        passed: values()[index] ?? 0,
-        scoredSum: values()[index] ?? 0,
-      })),
-    ),
-  );
+  const [values, setValues] = createSignal<Decision[]>([...calculator.values]);
+  const score = createMemo(() => calculatorScore(values()));
   const toggle = (index: number) =>
     setValues((current) =>
       current.map((value, i) =>
         i === index ? (value === 1 ? 0 : value === 0 ? null : 1) : value,
       ),
     );
-  const label = (value: number | null) =>
-    value === null ? "Unknown" : value ? "Pass" : "Fail";
   return (
     <div class="calculator">
       <div class="panel-label">
         <Icon name="status" />
-        Score explorer<span>Illustration · one repetition per criterion</span>
+        {calculator.title}
+        <span>{calculator.description}</span>
       </div>
       <div class="calculator-inputs">
-        <For each={definitions}>
+        <For each={calculator.criteria}>
           {(criterion, index) => (
             <div>
-              <small>
-                {criterion.eval === "sql" ? "SQL query" : "Issue summary"}
-              </small>
+              <small>{criterion.evalName}</small>
               <strong>{criterion.name}</strong>
               <Button
                 size="small"
                 variant="outline"
                 class={`verdict-button verdict-${values()[index()] === null ? "unknown" : values()[index()] ? "pass" : "fail"}`}
-                aria-label={`${criterion.name}: ${label(values()[index()])}. Change decision.`}
+                aria-label={`${criterion.name}: ${decisionLabel(values()[index()])}. Change decision.`}
                 onClick={() => toggle(index())}
               >
-                {label(values()[index()])}
+                {decisionLabel(values()[index()])}
                 <Icon name="chevron-down" />
               </Button>
             </div>
@@ -340,12 +327,8 @@ export function ScoreCalculator() {
       </div>
       <div class="calculator-output" aria-live="polite">
         <div>
-          <small>Benchmark score</small>
-          <strong>
-            {score().percentage === null
-              ? `${score().bounds.lower.toFixed(0)}–${score().bounds.upper.toFixed(0)}%`
-              : `${score().percentage!.toFixed(0)}%`}
-          </strong>
+          <small>{calculator.scoreLabel}</small>
+          <strong>{calculatorLabel(score())}</strong>
         </div>
         <div
           class="score-meter"
@@ -364,16 +347,9 @@ export function ScoreCalculator() {
             }}
           />
         </div>
-        <span>
-          {score().percentage === null
-            ? "Waiting on unknowns"
-            : "Equal eval weights"}
-        </span>
+        <span>{calculatorStatus(score())}</span>
       </div>
-      <p class="utility-note">
-        Select a decision to cycle through pass → fail → unknown. The
-        calculation uses OpenEval's score projection.
-      </p>
+      <p class="utility-note">{calculator.hint}</p>
     </div>
   );
 }

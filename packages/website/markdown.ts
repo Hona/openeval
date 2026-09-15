@@ -1,5 +1,12 @@
 import type { Block, Doc } from "./src/content";
 import { SITE } from "./src/examples";
+import {
+  calculator,
+  calculatorLabel,
+  calculatorScore,
+  calculatorStatus,
+  decisionLabel,
+} from "./demo/calculator";
 
 export const codeFence = (code: string, language = "text") => {
   const length = Math.max(
@@ -47,24 +54,31 @@ function renderBlock(block: Block): string {
       return `![${block.alt}](${SITE}/images/${block.image})\n\n${block.caption}`;
     case "calculator":
       return [
+        `### ${calculator.title}`,
+        calculator.description,
         markdownTable(
           ["Eval", "Criterion", "Score"],
-          [
-            ["SQL query", "Asks for dialect", "1"],
-            ["SQL query", "Bound parameters", "0"],
-            ["Issue summary", "Actionable summary", "1"],
-          ],
+          calculator.criteria.map((criterion, index) => [
+            criterion.evalName,
+            criterion.name,
+            decisionLabel(calculator.values[index]),
+          ]),
         ),
-        "The eval scores are 50% and 100%. Their equal-weight mean is 75%.",
-        "If Actionable summary is unknown, the benchmark is unresolved with completion bounds of 25–75%.",
+        `${calculator.scoreLabel}: **${calculatorLabel(calculatorScore())}** · ${calculatorStatus(calculatorScore())}`,
+        calculator.hint,
+        `[${calculator.title}](${SITE}${calculator.href})`,
       ].join("\n\n");
   }
 }
 
-export function renderDocument(doc: Doc) {
+export function renderDocument(
+  doc: Pick<Doc, "title" | "description" | "sections">,
+  intro: Block[] = [],
+) {
   return [
     `# ${doc.title}`,
     doc.description,
+    ...intro.map(renderBlock),
     ...doc.sections.flatMap((section) => [
       `<a id="${section.id}"></a>\n\n## ${section.title}`,
       ...section.blocks.map(renderBlock),
