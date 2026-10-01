@@ -69,9 +69,10 @@ export function verificationSession(options: {
     const retained = outputs.get(result.id);
     if (!retained) throw new Error("Read outputs from a verification produced by this context");
     const artifact = retained.artifacts.find(item => item.path === path);
-    if (!artifact) throw new Error(`Verification did not retain ${path}`);
-    const bytes = await Bun.file(contained(options.directory, artifact.file)).bytes();
-    if (hash(bytes) !== artifact.sha256) throw new Error("Verification artifact hash mismatch");
+    const file = artifact?.file ?? (path === "stdout" ? retained.stdout : path === "stderr" ? retained.stderr : undefined);
+    if (!file) throw new Error(`Verification did not retain ${path}`);
+    const bytes = await Bun.file(contained(options.directory, file)).bytes();
+    if (artifact && hash(bytes) !== artifact.sha256) throw new Error("Verification artifact hash mismatch");
     return bytes;
   };
   return {
@@ -93,6 +94,8 @@ export function verificationSession(options: {
         if (timeoutMs <= 0) throw new Error("Code-judge deadline was reached before verification");
         const cwd = verificationPath(request.cwd ?? ".");
         const artifacts = (request.artifacts ?? []).map(verificationPath);
+        if (artifacts.some(path => path === "stdout" || path === "stderr"))
+          throw new Error("stdout and stderr are reserved verification log names");
         const revision = request.revision ?? "final";
         if (revision !== "initial" && revision !== "final") throw new Error("Unknown verification revision");
         const id = `verification_${randomUUID()}`;

@@ -66,6 +66,8 @@ with Chromium. Import Playwright from
 `/opt/verify/node_modules/playwright/index.mjs`. Dependencies needed by a task
 must be available in the image or supplied as frozen inputs; network installs
 are intentionally unavailable. Materialization alone is not a sandbox.
+`verification.text(result, "stdout" | "stderr")` reads the retained bounded logs;
+those names are reserved and cannot also name output artifacts.
 
 The primitive verifies a reconstructed artifact. It does **not** prove what was
 alive in the original candidate container, whether the candidate ran a test,
