@@ -90,8 +90,8 @@ or does not provide a parameterized query.
 | Required recording is unavailable | **null** | **null** |
 
 Add an optional `Categories: misalignment` line under a heading to compare models
-by category in the viewer's radar chart and heatmap. Categories never trigger
-rejudging.
+by category in the viewer's radar chart, heatmap, and benchmark scorecard. Export
+the scorecard as a PNG from the results page. Categories never trigger rejudging.
 
 → [Write good rubrics](https://openev.al/docs/rubrics/) · [Download the SQL starter](https://openev.al/starter.zip)
 

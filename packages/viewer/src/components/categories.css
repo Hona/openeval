@@ -323,8 +323,116 @@
   background: var(--app-layer);
   font-size: 13px;
 }
-.chart-panel + .chart-panel {
+.chart-panel + .chart-panel,
+.chart-panel.scorecard-panel {
   margin-top: 18px;
+}
+
+/* Scorecard: one benchmark down the left, category rows × model columns.
+   Cells reuse the heatmap's green shading and range hatching. */
+.category-scorecard {
+  border-collapse: separate;
+  border-spacing: 3px;
+  width: 100%;
+  font-variant-numeric: tabular-nums;
+}
+.category-scorecard thead th {
+  vertical-align: bottom;
+  padding: 0 6px 10px;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--app-faint);
+  text-align: left;
+  white-space: nowrap;
+}
+.category-scorecard thead .scorecard-model {
+  text-align: center;
+  min-width: 104px;
+}
+.scorecard-model .provider-mark {
+  width: 26px;
+  height: 26px;
+  margin: 0 auto 7px;
+}
+.scorecard-model strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 550;
+  line-height: 1.3;
+  color: var(--app-text);
+  white-space: normal;
+}
+.scorecard-model small {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--font-family-mono);
+  font-size: 10px;
+  color: var(--app-faint);
+}
+.scorecard-benchmark {
+  width: 1%;
+  min-width: 110px;
+  max-width: 180px;
+  padding: 12px 18px 0 2px;
+  vertical-align: top;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 550;
+  color: var(--app-text);
+  overflow-wrap: anywhere;
+}
+.scorecard-category {
+  padding: 0 14px 0 6px;
+  text-align: left;
+  font-weight: 400;
+  white-space: nowrap;
+}
+.scorecard-category > span {
+  display: block;
+  font-size: 13px;
+  color: var(--app-text);
+}
+.scorecard-overall .scorecard-category > span {
+  font-weight: 600;
+}
+.scorecard-category small {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--font-family-mono);
+  font-size: 9.5px;
+  color: var(--app-faint);
+}
+.scorecard-category small.low {
+  color: var(--v2-state-fg-warning, var(--app-faint));
+}
+.category-scorecard .category-cell {
+  /* Contains visually hidden labels inside the horizontal scroller. */
+  position: relative;
+  min-width: 96px;
+  height: 44px;
+  font-size: 13px;
+  color: var(--app-text);
+}
+.category-scorecard .category-cell.leader {
+  font-weight: 650;
+  border-color: var(--app-success);
+}
+/* The page heading already names the benchmark; keep category labels in view. */
+@media (max-width: 700px) {
+  .category-scorecard thead th:first-child,
+  .scorecard-benchmark {
+    display: none;
+  }
+  .category-scorecard thead th:nth-child(2),
+  .scorecard-category {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--app-bg);
+  }
+  .category-scorecard .category-cell {
+    min-width: 82px;
+  }
 }
 @media (max-width: 1050px) {
   .category-radar {
