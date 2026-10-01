@@ -55,9 +55,13 @@ export function createCredentialSnapshot(
     db.close(true);
   }
 }
-export const credentialsFor = (model: ModelRef, websearch: "exa" | false) => {
+/** Console-routed providers authenticate through the OpenCode connection. */
+export const integrationFor = (model: ModelRef) => {
   const provider = model.split("/")[0];
-  const integration = provider.startsWith("console-") ? "opencode" : provider;
+  return provider.startsWith("console-") ? "opencode" : provider;
+};
+export const credentialsFor = (model: ModelRef, websearch: "exa" | false) => {
+  const integration = integrationFor(model);
   const required = [
     ...new Set([integration, ...(websearch ? ["opencode", "exa"] : [])]),
   ];

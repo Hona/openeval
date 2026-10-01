@@ -12,11 +12,13 @@ import type {
   JudgeRun,
   CriterionDefinition,
   Judgment,
+  ModelNames,
 } from "./types";
 import type { RunMetrics } from "./judge-context";
 import { runtimeMs, type RuntimeInterval } from "./runtime";
 export { mergeRuntime, runtimeMs, runtimeClock } from "./runtime";
 export type { RuntimeInterval } from "./runtime";
+export type { ModelNames } from "./types";
 
 export type ScoreBounds = { lower: number; upper: number; coverage: number };
 export type ModelScore = {
@@ -144,6 +146,7 @@ export type Overview = {
   scores: ModelScore[];
   evals: string[];
   evalNames: Record<string, string>;
+  modelNames: ModelNames;
   cost: Cost;
   evalCosts: Record<string, Cost>;
   runtime: RuntimeInterval[];

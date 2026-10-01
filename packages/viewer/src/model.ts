@@ -1,4 +1,13 @@
-export const modelName = (ref: string) => {
+import { createSignal } from "solid-js";
+import type { ModelNames } from "@hona/openeval/view";
+
+const [catalogNames, setCatalogNames] = createSignal<ModelNames>({});
+/** Use the OpenCode catalog names recorded with the displayed result. */
+export const setModelNames = (names: ModelNames | undefined) =>
+  setCatalogNames(names ?? {});
+
+/** Readable fallback for results recorded without a catalog name. */
+const guessedName = (ref: string) => {
   const id = ref.slice(ref.indexOf("/") + 1).split("#")[0];
   return id
     .replace(/^omen-alpha$/i, "Omen Alpha")
@@ -19,6 +28,8 @@ export const modelName = (ref: string) => {
     .replace(/-pro-preview$/, " Pro Preview")
     .replace(/-flash$/, " Flash");
 };
+export const modelName = (ref: string) =>
+  catalogNames()[ref.split("#")[0]] ?? guessedName(ref);
 export const provider = (ref: string) =>
   /deepseek/.test(ref)
     ? "deepseek"

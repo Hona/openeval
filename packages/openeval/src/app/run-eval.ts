@@ -5,6 +5,7 @@ import { executeCandidate } from "../infra/containers/candidate";
 import type { EvidenceFeed } from "../evidence";
 import { CandidateEvidence } from "../infra/evidence";
 import { measureRecording } from "../infra/recording/metrics";
+import { candidateProviders } from "./input-fingerprints";
 
 /** The normal candidate use case: record its inputs, execute, finalize its evidence. */
 export async function runEval(
@@ -42,7 +43,10 @@ export async function runEval(
       websearch: context.definition.candidate.websearch,
       container: context.definition.container,
       imageId: context.runtime.imageId,
-      providers: context.definition.candidate.providers,
+      providers: candidateProviders(
+        context.definition.candidate.providers,
+        slot.model,
+      ),
     },
     directory,
     (event) => {

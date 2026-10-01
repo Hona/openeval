@@ -276,6 +276,8 @@ export type Slot = {
   judgeRunId: string | null;
   active: boolean;
 };
+/** OpenCode catalog display names keyed by `provider/model`, without the variant. */
+export type ModelNames = Record<string, string>;
 export type BenchmarkRun = {
   id: string;
   name: string;
@@ -288,6 +290,8 @@ export type BenchmarkRun = {
   scheduledSlotIds: readonly string[];
   definition: BenchmarkDefinition;
   runtime: { imageId: string; candidateHash: string; judgeHash: string };
+  /** Display metadata read from the candidate image's catalog; never part of input fingerprints. */
+  modelNames?: ModelNames;
   error?: string;
   mergedInto?: string;
   sources?: Array<{
