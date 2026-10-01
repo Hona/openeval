@@ -984,12 +984,16 @@ export const docs: Doc[] = [
                 "Rejudge the retained recording",
               ],
               ["A new model", "Add its eval / repetition slots"],
+              [
+                "The runner stopped mid-run",
+                "Close its open sessions as interrupted and collect them again",
+              ],
               ["--new", "Create a separate benchmark result"],
             ],
           ),
           note(
             "One runner per aggregate",
-            "Let an active invocation finish before extending the same result with another invocation. Failed executions require an explicit retry or rejudge.",
+            "Let an active invocation finish before extending the same result with another invocation. If a runner stops without finishing, run, retry, and rejudge wait until its heartbeat is two minutes old, then recover. Other failed executions require an explicit retry or rejudge.",
           ),
         ],
       },

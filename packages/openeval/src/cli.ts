@@ -133,6 +133,9 @@ Requires Bun 1.4.2+, Docker, and an authenticated OpenCode installation.`);
             reason: item.reason,
           })),
           status: result.benchmark?.state,
+          ...("recovered" in result && result.recovered
+            ? { recovered: result.recovered }
+            : {}),
         },
         null,
         2,

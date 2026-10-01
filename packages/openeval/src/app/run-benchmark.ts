@@ -23,6 +23,7 @@ import { canJudgeEval } from "./eval-state";
 import { isScored } from "../judgment";
 import { benchmarkScores } from "./scores";
 import { CostBudget, estimateWork } from "./cost-plan";
+import { recoverStoppedRunner, runnerStopped } from "./recover-run";
 import {
   categoryKey,
   categoryList,
@@ -101,7 +102,8 @@ export function finishBenchmark(context: ExecutionContext) {
         (run) =>
           run.input.evalRunId === slot.evalRunId &&
           run.input.judgeHash === slot.judgeHash &&
-          ["failed", "timed_out"].includes(run.state),
+          ["failed", "timed_out"].includes(run.state) &&
+          !run.interrupted,
       ) &&
         !slot.judgeRunId),
   );
@@ -183,6 +185,7 @@ export async function runBenchmark(
     (!options.fresh
       ? await currentBenchmarkRun(definition.directory)
       : undefined);
+  let stopped = false;
   if (directory) {
     using previous = new Results(resolve(directory, "runner.db"), true);
     const saved = previous.benchmark!;
@@ -190,8 +193,9 @@ export async function runBenchmark(
       throw new Error(
         `This run was merged into ${saved.mergedInto}; use the aggregate run`,
       );
-    if (saved.state === "running")
+    if (saved.state === "running" && !runnerStopped(saved))
       throw new Error("This benchmark run is already running");
+    stopped = saved.state === "running";
     definition.models = [
       ...new Set([...saved.definition.models, ...definition.models]),
     ];
@@ -220,10 +224,16 @@ export async function runBenchmark(
       ? new Results(database, true)
       : new Results(":memory:")
     : new Results(database);
+  // A stopped runner leaves sessions open. A dry run plans them as interrupted work.
+  const recovered = stopped && !options.dryRun
+    ? recoverStoppedRunner(results)
+    : undefined;
   const previousSelections = new Map(
     results.slots().map((slot) => [slot.id, slot]),
   );
-  let plan = planBenchmark(definition, runtime, results);
+  let plan = planBenchmark(definition, runtime, results, {
+    stoppedRunner: stopped,
+  });
   if (selected || onlyEvals || options.onlyRepetitions) {
     const retained = new Map(results.slots().map((slot) => [slot.id, slot]));
     plan = plan.map((item) =>
@@ -260,7 +270,7 @@ export async function runBenchmark(
     fingerprint(previous.runtime) === fingerprint(runtime) &&
     fingerprint(previous.modelNames ?? {}) === fingerprint(modelNames)
   )
-    return { directory, plan, estimate, benchmark: previous };
+    return { directory, plan, estimate, benchmark: previous, recovered };
   const benchmark: BenchmarkRun = {
     id: previous?.id ?? `benchmark_${randomUUID()}`,
     name: definition.name,
@@ -397,7 +407,13 @@ export async function runBenchmark(
         deferred: plan.filter((item) => item.action === "deferred").length,
       },
     });
-    return { directory, plan, estimate, benchmark: finishBenchmark(context) };
+    return {
+      directory,
+      plan,
+      estimate,
+      benchmark: finishBenchmark(context),
+      recovered,
+    };
   } catch (error) {
     results.saveBenchmark({
       ...results.benchmark!,

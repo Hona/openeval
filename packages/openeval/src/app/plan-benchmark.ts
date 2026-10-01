@@ -22,14 +22,18 @@ export {
 export const slotId = (evalId: string, model: ModelRef, repetition: number) =>
   `${evalId}:${model}:${repetition}`;
 
-/** Plan only missing or changed work. A failed execution requires an explicit retry. */
+/** Plan only missing or changed work. A failed execution requires an explicit retry,
+ * except work a stopped runner interrupted. `stoppedRunner` plans open executions that way. */
 export function planBenchmark(
   definition: BenchmarkDefinition,
   runtime: BenchmarkRun["runtime"],
   results: Results,
+  options: { stoppedRunner?: boolean } = {},
 ): PlanItem[] {
   const previous = new Map(results.slots().map((slot) => [slot.id, slot]));
   const judgments = results.judgeRuns();
+  const interrupted = (run: { state: string; interrupted?: boolean }) =>
+    !!run.interrupted || (!!options.stoppedRunner && run.state === "running");
   return Array.from(
     { length: definition.repetitions },
     (_, index) => index + 1,
@@ -70,6 +74,17 @@ export function planBenchmark(
               : "New eval/model/repetition",
           };
         const execution = results.evalRun(slot.evalRunId)!;
+        if (interrupted(execution))
+          return {
+            slot: {
+              ...slot,
+              evalRunId: null,
+              judgeRunId: null,
+              previousEvalRunId: execution.id,
+            },
+            action: "candidate",
+            reason: "The runner stopped during this session; collecting it again",
+          };
         if (!canJudgeEval(execution))
           return {
             slot,
@@ -119,12 +134,13 @@ export function planBenchmark(
             action: "reuse",
             reason: "Candidate inputs and judgment unchanged",
           };
-        const failed = judgments.find(
+        const attempts = judgments.filter(
           (run) =>
             run.input.evalRunId === slot.evalRunId &&
             run.input.judgeHash === slot.judgeHash &&
             run.state !== "completed",
         );
+        const failed = attempts.find((run) => !interrupted(run));
         if (failed)
           return {
             slot,
@@ -134,9 +150,11 @@ export function planBenchmark(
         return {
           slot,
           action: "judge",
-          reason: !sameJudge
-            ? "Judge inputs changed"
-            : "Recorded work is ready for judging",
+          reason: attempts.length
+            ? "The runner stopped during judging; judging again"
+            : !sameJudge
+              ? "Judge inputs changed"
+              : "Recorded work is ready for judging",
         };
       }),
     ),

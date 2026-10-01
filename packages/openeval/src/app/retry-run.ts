@@ -6,6 +6,7 @@ import { candidateFingerprint } from "./plan-benchmark";
 import { runEvalPipeline } from "./run-eval-pipeline";
 import { ExecutionBudget } from "./execution-budget";
 import { finishBenchmark } from "./run-benchmark";
+import { recoverStoppedRunner, runnerStopped } from "./recover-run";
 
 export async function retryEvalRun(
   directory: string,
@@ -13,13 +14,16 @@ export async function retryEvalRun(
   onEvent?: ExecutionObserver,
 ) {
   using results = new Results(resolve(directory, "runner.db"));
-  const benchmark = results.benchmark!;
-  if (benchmark.mergedInto)
+  if (results.benchmark!.mergedInto)
     throw new Error(
-      `This run was merged into ${benchmark.mergedInto}; use the aggregate run`,
+      `This run was merged into ${results.benchmark!.mergedInto}; use the aggregate run`,
     );
-  if (benchmark.state === "running")
-    throw new Error("Wait for the active benchmark run");
+  if (results.benchmark!.state === "running") {
+    if (!runnerStopped(results.benchmark!))
+      throw new Error("Wait for the active benchmark run");
+    recoverStoppedRunner(results);
+  }
+  const benchmark = results.benchmark!;
   const previous = results.evalRun(evalRunId);
   if (!previous || previous.state === "completed")
     throw new Error(

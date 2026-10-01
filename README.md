@@ -143,7 +143,9 @@ bunx --bun @hona/openeval view
 ```
 
 The viewer opens at **http://127.0.0.1:4173**. `run` resumes the same aggregate;
-scope flags select work while retaining existing scores.
+scope flags select work while retaining existing scores. If a runner stops
+mid-run, the next `run` waits until its heartbeat is two minutes old, keeps the
+interrupted records, and collects that work again.
 
 To remove a model from an existing aggregate, remove its entry from
 `benchmark.ts`, then retire its active selections:

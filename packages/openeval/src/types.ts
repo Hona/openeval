@@ -220,6 +220,8 @@ export type EvalRun = {
   error?: string;
   replaces?: string;
   stop?: EvalStop;
+  /** The runner stopped before this session finished; the planner collects it again. */
+  interrupted?: boolean;
 };
 export type CriterionDefinition = { id: string; name: string };
 export type EvidenceCitation = (
@@ -282,6 +284,8 @@ export type JudgeRun = {
   monitorError?: string;
   monitorErrorAt?: string;
   monitorLimit?: string;
+  /** The runner stopped before judging finished; the planner judges the evidence again. */
+  interrupted?: boolean;
 };
 export type Slot = {
   id: string;

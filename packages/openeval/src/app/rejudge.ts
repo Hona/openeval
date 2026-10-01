@@ -8,6 +8,7 @@ import { executeQueue, finishBenchmark } from "./run-benchmark";
 import { judgingFingerprint } from "../infra/judging";
 import { canJudgeEval } from "./eval-state";
 import { verificationRuntime } from "../infra/verification/image";
+import { recoverStoppedRunner, runnerStopped } from "./recover-run";
 
 /** Rejudging changes only the selected judgment. The candidate execution is never repeated. */
 export async function judgeRun(
@@ -26,13 +27,16 @@ export async function judgeRuns(
 ): Promise<JudgeRun[]> {
   if (!evalRunIds.length) return [];
   using results = new Results(resolve(directory, "runner.db"));
-  const previous = results.benchmark!;
-  if (previous.mergedInto)
+  if (results.benchmark!.mergedInto)
     throw new Error(
-      `This run was merged into ${previous.mergedInto}; use the aggregate run`,
+      `This run was merged into ${results.benchmark!.mergedInto}; use the aggregate run`,
     );
-  if (previous.state === "running")
-    throw new Error("Wait for the active benchmark run");
+  if (results.benchmark!.state === "running") {
+    if (!runnerStopped(results.benchmark!))
+      throw new Error("Wait for the active benchmark run");
+    recoverStoppedRunner(results);
+  }
+  const previous = results.benchmark!;
   const candidates = [...new Set(evalRunIds)].map((evalRunId) => {
     const candidate = results.evalRun(evalRunId);
     if (!canJudgeEval(candidate))
