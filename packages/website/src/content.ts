@@ -1324,6 +1324,16 @@ export const docs: Doc[] = [
             ["Setting", "Default", "Meaning"],
             [
               [
+                "name",
+                "Directory name",
+                "Benchmark name in viewer headings and exported images",
+              ],
+              [
+                "suite",
+                "None",
+                "Label for one benchmark.ts among several that share a name, such as Frontier",
+              ],
+              [
                 "models",
                 "Required",
                 "Unique provider/model references; optional #variant",

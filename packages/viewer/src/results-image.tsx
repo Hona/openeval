@@ -8,13 +8,20 @@ import { criteriaCount, LOW_COVERAGE } from "./components/category-filter";
 
 export type ResultsImage = {
   name: string;
+  /** Shown after the name, such as "Frontier". */
+  suite?: string;
   scores: Array<{
     model: string;
     percentage: number | null;
     bounds: ScoreBounds;
   }>;
 };
-export type ScorecardImage = { name: string; startedAt: string; card: Scorecard };
+export type ScorecardImage = {
+  name: string;
+  suite?: string;
+  startedAt: string;
+  card: Scorecard;
+};
 
 export const RESULTS_IMAGE_SIZE = { width: 1600, height: 900 };
 
@@ -192,7 +199,12 @@ export async function createResultsImage(input: ResultsImage): Promise<Blob> {
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.textBaseline = "alphabetic";
   const { text } = writer(ctx);
-  text(input.name, 40, 99, 82, 1520, palette.text);
+  const titleWidth = input.suite ? 1180 : 1520;
+  text(input.name, 40, 99, 82, titleWidth, palette.text);
+  if (input.suite) {
+    const nameWidth = Math.min(ctx.measureText(input.name).width, titleWidth);
+    text(input.suite, 40 + nameWidth + 28, 99, 42, 1520 - nameWidth - 28, palette.muted, 500);
+  }
   const top = 145;
   const rowHeight = (canvas.height - top - 24) / scores.length;
   scores.forEach((score, index) => {
@@ -367,9 +379,12 @@ export async function createScorecardImage(input: ScorecardImage): Promise<Blob>
   });
   rule(margin, width - margin, top);
 
-  lines(input.name, 28, 650, benchmark - 28, 3).forEach((line, index) =>
+  const title = lines(input.name, 28, 650, benchmark - 28, 3);
+  title.forEach((line, index) =>
     text(line, margin, top + 46 + index * 34, 28, benchmark - 28, palette.text, 650),
   );
+  if (input.suite)
+    text(input.suite, margin, top + 46 + (title.length - 1) * 34 + 30, 20, benchmark - 28, palette.muted, 500);
   card.rows.forEach((entry, rowIndex) => {
     const y = top + row * rowIndex;
     const middle = y + row / 2;
@@ -451,19 +466,27 @@ const download = (blob: Blob, name: string) => {
   // Give the browser time to start the download before releasing its source.
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
-const fileName = (name: string, startedAt: string, kind: string) =>
-  `${name.replace(/[^a-zA-Z0-9_.-]/g, "-")}-${startedAt.slice(0, 10)}-${kind}.png`;
+const fileName = (
+  name: string,
+  suite: string | undefined,
+  startedAt: string,
+  kind: string,
+) =>
+  `${[name, suite].filter(Boolean).join("-").replace(/[^a-zA-Z0-9_.-]/g, "-")}-${startedAt.slice(0, 10)}-${kind}.png`;
 
 export async function downloadResultsImage(
   input: ResultsImage,
   startedAt: string,
 ) {
-  download(await createResultsImage(input), fileName(input.name, startedAt, "results"));
+  download(
+    await createResultsImage(input),
+    fileName(input.name, input.suite, startedAt, "results"),
+  );
 }
 
 export async function downloadScorecardImage(input: ScorecardImage) {
   download(
     await createScorecardImage(input),
-    fileName(input.name, input.startedAt, "categories"),
+    fileName(input.name, input.suite, input.startedAt, "categories"),
   );
 }

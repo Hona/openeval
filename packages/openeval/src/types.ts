@@ -36,6 +36,8 @@ export type Judge = {
 };
 export type Benchmark = {
   name?: string;
+  /** Display label for one benchmark.ts among several that share `name`, such as "Frontier". */
+  suite?: string;
   models: readonly ModelRef[];
   judge?: Judge;
   repetitions?: number;
@@ -101,6 +103,7 @@ export type EvalDefinition = {
 };
 export type BenchmarkDefinition = {
   name: string;
+  suite?: string;
   directory: string;
   models: ModelRef[];
   judge: { model?: ModelRef; timeoutMs: number; websearch: "exa" | false; verification?: VerificationRuntime | Required<VerificationEnvironment> };

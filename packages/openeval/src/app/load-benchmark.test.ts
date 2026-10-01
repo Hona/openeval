@@ -42,6 +42,38 @@ test("loads namespaced model IDs and preserves them for OpenCode", async () => {
   }
 });
 
+test("a suite labels a benchmark without changing candidate or judge identity", async () => {
+  const root = await mkdtemp(
+    resolve(
+      process.platform === "win32" ? "C:/tmp/opencode" : tmpdir(),
+      "openeval-suite-",
+    ),
+  );
+  try {
+    const declare = (extra: string) =>
+      Bun.write(
+        resolve(root, "benchmark.ts"),
+        `export default { name: "sql-bench", ${extra} models: ["example/model"], judge: { model: "example/judge" } };`,
+      );
+    await Bun.write(resolve(root, "evals/answer/prompt.md"), "Answer the question.");
+    await Bun.write(
+      resolve(root, "evals/answer/judge.md"),
+      "## Criterion: correct — Correct answer\nPass when the answer is correct.",
+    );
+    await declare("");
+    const plain = await loadBenchmark(root);
+    await declare('suite: " Frontier ",');
+    const labelled = await loadBenchmark(root);
+    expect(labelled).toMatchObject({ name: "sql-bench", suite: "Frontier" });
+    expect(plain.suite).toBeUndefined();
+    expect(labelled.evals).toEqual(plain.evals);
+    await declare('suite: "",');
+    await expect(loadBenchmark(root)).rejects.toThrow("suite must be a label");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("criteria declare categories in judge.md and judge.ts without changing judge inputs", async () => {
   const root = await mkdtemp(
     resolve(

@@ -58,6 +58,7 @@ const entryOf = (
   name: evalId
     ? (run.definition.evals.find((item) => item.id === evalId)?.name ?? evalId)
     : run.name,
+  ...(!evalId && run.definition.suite ? { suite: run.definition.suite } : {}),
   status: run.state,
   startedAt: run.createdAt,
   updatedAt: Date.parse(run.updatedAt),
@@ -78,6 +79,7 @@ export class ResultReader {
     benchmark: BenchmarkRun,
     now: number,
     candidate?: EvalRun,
+    judges?: readonly JudgeRun[],
   ) {
     const key = `${results.path}:${run.id}`;
     const cached = this.runtimes.get(key);
@@ -91,8 +93,7 @@ export class ResultReader {
         scheduled(slot, benchmark, now);
       if (current && "evalRunId" in run.input)
         current =
-          results
-            .judgeRuns()
+          (judges ?? results.judgeRuns())
             .filter(
               (judge) =>
                 judge.input.evalRunId === candidate!.id &&
@@ -279,7 +280,16 @@ export class ResultReader {
         evalId,
       ),
     );
-    const candidates = results.evalRuns(),
+    // Runtime and cost describe the work behind the active selections, not retired history.
+    const active = new Set(
+      results
+        .slots()
+        .filter((slot) => slot.active)
+        .map((slot) => slot.id),
+    );
+    const candidates = results
+        .evalRuns()
+        .filter((candidate) => active.has(candidate.slotId)),
       allJudges = results.judgeRuns();
     const now = Date.now(),
       candidateIndex = new Map(candidates.map((run) => [run.id, run]));
@@ -291,7 +301,9 @@ export class ResultReader {
           : (execution as EvalRun);
       if (!candidate) continue;
       const intervals = evalRuntime.get(candidate.input.evalId) ?? [];
-      intervals.push(...this.runtime(execution, results, run, now, candidate));
+      intervals.push(
+        ...this.runtime(execution, results, run, now, candidate, allJudges),
+      );
       evalRuntime.set(candidate.input.evalId, intervals);
     }
     for (const [id, intervals] of evalRuntime)
@@ -323,6 +335,9 @@ export class ResultReader {
       entry: entryOf(run, id, evalId),
       overview: {
         name: evalId ? evals[0].name : run.name,
+        ...(!evalId && run.definition.suite
+          ? { suite: run.definition.suite }
+          : {}),
         kind: evalId ? "eval" : "benchmark",
         status: run.state,
         startedAt: run.createdAt,
@@ -353,59 +368,69 @@ export class ResultReader {
     if (split < 0) throw new Error("Select an eval");
     const evalId = decodeURIComponent(id.slice(split + 1));
     using results = await this.database(id);
-    const benchmark = results.benchmark!,
-      executions = results.evalRuns(),
-      judges = results.judgeRuns();
-    const runs = results
-      .slots()
-      .filter((slot) => slot.active && slot.evalId === evalId)
-      .map((slot) => {
-        const candidate = executions.find((run) => run.id === slot.evalRunId);
-        const current = liveRun(
-          slot,
-          candidate,
-          judges,
-          benchmark,
-          results,
-          (run) => this.runtime(run, results, benchmark, Date.now(), candidate),
-        );
-        const related = executions.filter((run) => run.slotId === slot.id),
-          ids = new Set(related.map((run) => run.id));
-        return {
-          ...current,
-          cost: runCosts(
-            [
-              ...related,
-              ...judges.filter((run) => ids.has(run.input.evalRunId)),
-            ],
-            results,
-          ),
-          elapsedMs: runtimeMs(
-            [...current.eval.runtime, ...current.judge.runtime],
-            Date.now(),
-          ),
-        };
-      });
+    const benchmark = results.benchmark!;
     return {
       entry: entryOf(benchmark, id, evalId),
       eval: evalId,
       benchmarkId: benchmark.id,
-      runs,
+      runs: this.liveRuns(results, [evalId]).get(evalId)!,
     };
+  }
+  /** Active slot rows for the requested evals, from one read of the store. */
+  private liveRuns(results: Results, evalIds: readonly string[]) {
+    const benchmark = results.benchmark!,
+      executions = results.evalRuns(),
+      judges = results.judgeRuns(),
+      now = Date.now();
+    const byId = new Map(executions.map((run) => [run.id, run]));
+    const bySlot = Map.groupBy(executions, (run) => run.slotId);
+    const judgesFor = Map.groupBy(judges, (run) => run.input.evalRunId);
+    const out = new Map<string, EvalRunSummary[]>(
+      evalIds.map((evalId) => [evalId, []]),
+    );
+    for (const slot of results.slots()) {
+      const rows = out.get(slot.evalId);
+      if (!slot.active || !rows) continue;
+      const candidate = slot.evalRunId ? byId.get(slot.evalRunId) : undefined;
+      const current = liveRun(
+        slot,
+        candidate,
+        candidate ? (judgesFor.get(candidate.id) ?? []) : [],
+        benchmark,
+        results,
+        (run) => this.runtime(run, results, benchmark, now, candidate, judges),
+      );
+      const related = bySlot.get(slot.id) ?? [];
+      rows.push({
+        ...current,
+        cost: runCosts(
+          [...related, ...related.flatMap((run) => judgesFor.get(run.id) ?? [])],
+          results,
+        ),
+        elapsedMs: runtimeMs(
+          [...current.eval.runtime, ...current.judge.runtime],
+          now,
+        ),
+      });
+    }
+    return out;
   }
   async activity(): Promise<ActivityRun[]> {
     const index = await this.index(),
       out: ActivityRun[] = [];
     for (const entry of index.entries) {
+      const summary = await this.summary(entry.id);
       using results = await this.database(entry.id);
       const benchmark = results.benchmark!;
-      const summary = await this.summary(entry.id);
+      const live = this.liveRuns(
+        results,
+        benchmark.definition.evals.map((item) => item.id),
+      );
       for (const [
         evalOrder,
         evalDefinition,
       ] of benchmark.definition.evals.entries()) {
-        const id = evalResultId(benchmark.id, evalDefinition.id),
-          runs = await this.evalRuns(id);
+        const id = evalResultId(benchmark.id, evalDefinition.id);
         out.push({
           id,
           benchmarkId: benchmark.id,
@@ -415,15 +440,27 @@ export class ResultReader {
             id,
             eval: evalDefinition.id,
             benchmark: benchmark.id,
+            name: benchmark.name,
+            ...(benchmark.definition.suite
+              ? { suite: benchmark.definition.suite }
+              : {}),
             startedAt: benchmark.createdAt,
             heartbeatAt: benchmark.updatedAt,
             status: benchmark.state,
             concurrency: benchmark.definition.concurrency,
             evalOrder,
-            runs: runs.runs,
+            runs: live.get(evalDefinition.id)!,
             runtime: summary.related.find(
               (item) => item.eval === evalDefinition.id,
             )!.runtime,
+            ...(benchmark.execution
+              ? {
+                  invocation: {
+                    startedAt: benchmark.execution.startedAt,
+                    spentUSD: benchmark.execution.spentUSD,
+                  },
+                }
+              : {}),
           },
         });
       }
