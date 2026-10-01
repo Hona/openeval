@@ -28,7 +28,10 @@ export async function retryEvalRun(
   const slot = results.slot(previous.slotId)!;
   if (slot.evalRunId !== previous.id)
     throw new Error("Select the current eval run for this repetition");
-  const runtime = await runtimeFingerprint(benchmark.definition.container);
+  const runtime = await runtimeFingerprint(
+    benchmark.definition.container,
+    benchmark.definition.judge.verification,
+  );
   if (
     candidateFingerprint(
       benchmark.definition,

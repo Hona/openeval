@@ -1026,7 +1026,7 @@ export const docs: Doc[] = [
             "typescript",
           ),
           text(
-            "Early stopping requires every criterion score to be irreversible and non-null. Monitoring cannot steer the candidate. If monitoring pauses or exhausts its budget, final grading still follows execution.",
+            "Early stopping requires every criterion score to be irreversible and non-null. Monitoring cannot steer the candidate. If monitoring pauses or exhausts its budget, final grading still follows execution. If you turn early stopping off, the next run collects new sessions only where it stopped one. Sessions that finished normally stay reusable.",
           ),
         ],
       },

@@ -3,6 +3,7 @@ import type {
   BenchmarkDefinition,
   BenchmarkRun,
   JudgeRunInput,
+  PlanItem,
   Slot,
 } from "../types";
 import { JUDGE_PROTOCOL } from "../judgment";
@@ -148,6 +149,129 @@ test.each([
     ).toBe(original);
   },
 );
+
+test.each([
+  { name: "stays while early stopping applies", stopped: true, settings: { earlyStop: true }, action: "reuse" },
+  { name: "is re-collected once early stopping is off", stopped: true, settings: {}, action: "candidate" },
+  {
+    name: "is re-collected for a model early stopping no longer covers",
+    stopped: true,
+    settings: { earlyStop: { onlyModels: ["local/other"] } },
+    action: "candidate",
+  },
+  { name: "that finished naturally stays reusable", stopped: false, settings: {}, action: "reuse" },
+] satisfies Array<{
+  name: string;
+  stopped: boolean;
+  settings: BenchmarkDefinition["evals"][number]["settings"];
+  action: PlanItem["action"];
+}>)("a session recorded with early stopping $name", ({ stopped, settings, action }) => {
+  using results = new Results(":memory:");
+  const collected: BenchmarkDefinition = {
+    ...definition,
+    evals: [{ ...definition.evals[0], settings: { earlyStop: true } }],
+  };
+  const current: BenchmarkDefinition = {
+    ...definition,
+    evals: [{ ...definition.evals[0], settings }],
+  };
+  const item = collected.evals[0];
+  const model = definition.models[0];
+  const now = new Date().toISOString();
+  const slot: Slot = {
+    id: slotId(item.id, model, 1),
+    evalId: item.id,
+    model,
+    repetition: 1,
+    active: true,
+    candidateHash: candidateFingerprint(collected, item.id, model, runtime),
+    judgeHash: judgeFingerprint(collected, item.id),
+    evalRunId: null,
+    judgeRunId: null,
+  };
+  const candidate = results.startEval(slot, {
+    evalId: item.id,
+    model,
+    repetition: 1,
+    prompt: item.prompt,
+    candidateHash: slot.candidateHash,
+    sourceHash: item.sourceHash,
+    imageId: runtime.imageId,
+    timeoutMs: 1000,
+    earlyStop: true,
+    runtime,
+  });
+  const evidence = { directory: "evidence", hash: "recording" };
+  const checkpoint = { ...evidence, revision: 1, through: 3, createdAt: now };
+  results.saveCheckpoint(candidate.id, checkpoint);
+  const judge = results.startJudge({
+    evalRunId: candidate.id,
+    evidence: checkpoint,
+    rubric: item.judge,
+    kind: "llm",
+    agent: JUDGE_AGENT,
+    model: definition.judge.model,
+    judgeHash: slot.judgeHash,
+    timeoutMs: 1000,
+    websearch: false,
+    mode: "monitor",
+    runtimeHash: runtime.judgeHash,
+    protocol: JUDGE_PROTOCOL,
+    criteria: item.criteria,
+    monitor: { minIntervalMs: 45_000, maxChecks: 12, maxCostUSD: 1 },
+  });
+  const judgment = {
+    value: 1,
+    reason: "The fact is present.",
+    scores: {
+      answer: {
+        value: 1,
+        reason: "The fact is present.",
+        evidence: [{ kind: "response" as const }],
+        source: "judge.md" as const,
+      },
+    },
+  };
+  const check = results.startJudgeCheck(judge.id, "early", checkpoint);
+  results.finishJudgeCheck({
+    ...check,
+    state: "completed",
+    completedAt: now,
+    decision: { kind: "decided", judgment },
+  });
+  if (stopped)
+    results.requestEvalStop(candidate.id, {
+      reason: "judge_decided",
+      requestedAt: now,
+      judgeRunId: judge.id,
+      checkId: check.id,
+      checkpoint,
+    });
+  const running = results.evalRun(candidate.id)!;
+  results.finishEval({
+    ...running,
+    state: stopped ? "stopped" : "completed",
+    completedAt: now,
+    elapsedMs: 0,
+    evidence,
+    ...(running.stop ? { stop: { ...running.stop, applied: true } } : {}),
+  });
+  results.finishJudge({
+    ...judge,
+    state: "completed",
+    completedAt: now,
+    elapsedMs: 0,
+    judgment,
+    decisionCheckId: check.id,
+  });
+
+  const [planned] = planBenchmark(current, runtime, results);
+  expect(planned.action).toBe(action);
+  expect(planned.slot.evalRunId).toBe(action === "reuse" ? candidate.id : null);
+  expect(planned.slot.previousEvalRunId).toBe(
+    action === "reuse" ? undefined : candidate.id,
+  );
+});
 
 test("completion respects admitted work while retaining scored results from an older runtime", () => {
   const current: BenchmarkDefinition = {
