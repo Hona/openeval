@@ -31,6 +31,7 @@ import {
   formatDate,
   formatNumber,
   matchesModelFilters,
+  setModelNames,
 } from "./model";
 import type {
   ActivityRun,
@@ -190,6 +191,7 @@ export function App() {
     ({ id, version }) => getResult<EvalRunIndex>(id, "runs", version),
   );
   const data = createMemo(() => document()?.overview);
+  createEffect(() => setModelNames(data()?.modelNames));
   const traceRun = () =>
     traceDocument()?.entry.id === route().run ? traceDocument() : undefined;
   const selectedEval = createMemo(() => route().eval || data()?.evals[0] || "");

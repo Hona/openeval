@@ -48,6 +48,8 @@ vendored source remains pinned while its published dependencies use 2.0.3.
 `vendor/session-ui/upstream.json` records the upstream commit and namespace
 rewrite used for the vendored UI, plus source commits for production API
 adaptations. OpenEval 0.3.2 brings in the production tool-group plural translation.
+OpenEval 0.3.3 records OpenCode catalog model names on each benchmark run and
+fingerprints only the provider configuration that a candidate receives.
 Source, declarations, and the original MIT
 license are checked in so a checkout can build without a local upstream repo.
 Vite includes dependency license notices in the distributed viewer.

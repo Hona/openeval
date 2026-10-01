@@ -11,7 +11,7 @@
     },
     "packages/openeval": {
       "name": "@hona/openeval",
-      "version": "0.3.2",
+      "version": "0.3.3",
       "bin": {
         "openeval": "src/cli.ts",
       },

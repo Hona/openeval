@@ -315,6 +315,7 @@ export class ResultReader {
         evalNames: Object.fromEntries(
           evals.map((item) => [item.id, item.name]),
         ),
+        modelNames: run.modelNames ?? {},
         cost: evalId ? evalCosts[evalId] : sumCosts(Object.values(evalCosts)),
         evalCosts,
         runtime,

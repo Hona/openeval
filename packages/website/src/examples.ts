@@ -1,4 +1,4 @@
-export const VERSION = "0.3.2";
+export const VERSION = "0.3.3";
 export const GITHUB = "https://github.com/Hona/openeval";
 export const SITE = "https://openev.al";
 export const prompt =

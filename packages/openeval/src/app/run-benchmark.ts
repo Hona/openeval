@@ -10,6 +10,7 @@ import type {
 } from "../types";
 import { Results } from "../infra/sqlite";
 import { runtimeFingerprint } from "../infra/containers/oci";
+import { readModelNames } from "../infra/containers/catalog";
 import { prepareWorkspace } from "../infra/containers/workspace";
 import { fingerprint, errorMessage } from "../infra/files";
 import { loadBenchmark, modelRef } from "./load-benchmark";
@@ -215,11 +216,17 @@ export async function runBenchmark(
     (item) => item.action === "candidate" || item.action === "judge",
   );
   const previous = results.benchmark;
+  const modelNames = {
+    ...previous?.modelNames,
+    // Names are display metadata; an unavailable catalog keeps the recorded names.
+    ...(await readModelNames(definition, runtime.imageId).catch(() => ({}))),
+  };
   if (
     !work.length &&
     previous &&
     fingerprint(previous.definition) === fingerprint(definition) &&
-    fingerprint(previous.runtime) === fingerprint(runtime)
+    fingerprint(previous.runtime) === fingerprint(runtime) &&
+    fingerprint(previous.modelNames ?? {}) === fingerprint(modelNames)
   )
     return { directory, plan, estimate, benchmark: previous };
   const benchmark: BenchmarkRun = {
@@ -232,6 +239,7 @@ export async function runBenchmark(
     scheduledSlotIds: work.map((item) => item.slot.id),
     definition,
     runtime,
+    modelNames,
     sources: previous?.sources,
     execution: {
       startedAt: now,

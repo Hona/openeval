@@ -88,6 +88,7 @@ export async function mergeBenchmarkRuns(
     {
       ...previous,
       definition,
+      modelNames: { ...source.benchmark!.modelNames, ...previous.modelNames },
       state: "incomplete",
       updatedAt: new Date().toISOString(),
       sources: [
