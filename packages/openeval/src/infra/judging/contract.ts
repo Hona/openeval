@@ -81,10 +81,10 @@ export function validateCriteria(
   };
 }
 
-function parseCitation(value: unknown): EvidenceCitation {
+export function parseCitation(value: unknown): EvidenceCitation {
   if (
     !object(value) ||
-    !["response", "tool", "message", "event", "artifact", "metric"].includes(
+    !["response", "recording", "tool", "message", "event", "artifact", "metric", "verification"].includes(
       String(value.kind),
     )
   )
@@ -104,6 +104,12 @@ function parseCitation(value: unknown): EvidenceCitation {
     ...(value.offset !== undefined ? { offset: value.offset as number } : {}),
   };
   if (value.kind === "response") return { kind: "response", ...extra };
+  if (value.kind === "recording") return { kind: "recording", ...extra };
+  if (value.kind === "verification") {
+    if (!reason(value.id) || (value.path !== undefined && !reason(value.path)))
+      throw new Error("Verification citations require an ID and an optional output path");
+    return { kind: "verification", id: value.id, ...(value.path ? { path: value.path as string } : {}), ...extra };
+  }
   if (value.kind === "artifact") {
     if (
       !reason(value.path) ||
@@ -134,6 +140,8 @@ export async function validateCitations(
 ) {
   for (const [id, score] of Object.entries(judgment.scores))
     for (const citation of score.evidence) {
+      if (citation.kind === "verification")
+        throw new Error("Verification citations must be checked against their JudgeRun receipts, not candidate evidence");
       const query: EvidenceQuery =
         citation.kind === "recording"
           ? { action: "summary" }

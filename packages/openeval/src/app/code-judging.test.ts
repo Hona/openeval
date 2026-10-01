@@ -141,6 +141,34 @@ test("planning compiles code without executing it and fingerprints imported refe
   }
 });
 
+test("reporting-only metadata changes do not change executable judge identity", async () => {
+  const code = (name: string, category: string) => `export const criteria = { answer: {name: ${JSON.stringify(name)}, categories: [${JSON.stringify(category)}]} };
+export default () => ({scores:{answer:true}});`;
+  const item = await fixture(code("Answer", "coding"));
+  try {
+    const before = await loadBenchmark(item.root);
+    await Bun.write(resolve(item.directory, "judge.ts"), code("Readable answer label", "general"));
+    const after = await loadBenchmark(item.root);
+    expect(after.evals[0].code?.hash).toBe(before.evals[0].code?.hash);
+    expect(after.evals[0].code?.sourceMap).not.toBe(before.evals[0].code?.sourceMap);
+    expect(after.evals[0].codeCriteria?.[0].name).toBe("Readable answer label");
+    await Bun.write(resolve(item.directory, "judge.ts"), code("Answer", "coding").replace("answer:true", "answer:false"));
+    expect((await loadBenchmark(item.root)).evals[0].code?.hash).not.toBe(before.evals[0].code?.hash);
+  } finally { await rm(item.root, { recursive: true, force: true }); }
+});
+
+test("readable code scores retain reasons and measurements; malformed details are judge errors", async () => {
+  const item = await fixture(`export default () => ({ scores: { answer: { value: true, reason: "The response satisfies the check.", evidence: [{kind:"response"}], measurements: {items:3} } } });`);
+  try {
+    const result = await judgeEvidence({ evidence: item.evidence, code: resolve(item.directory, "judge.ts"), directory: resolve(item.root, "judged") });
+    expect(result.judgment?.scores.answer).toMatchObject({ value: 1, reason: "The response satisfies the check.", measurements: { items: 3 } });
+    await Bun.write(resolve(item.directory, "judge.ts"), 'export default () => ({ scores: { answer: {value: 1, reason: ""} } });');
+    const invalid = await judgeEvidence({ evidence: item.evidence, code: resolve(item.directory, "judge.ts"), directory: resolve(item.root, "invalid") });
+    expect(invalid.state).toBe("failed");
+    expect(invalid.error).toContain("non-empty reason");
+  } finally { await rm(item.root, { recursive: true, force: true }); }
+});
+
 test("code output without scores is retained as unscored data", async () => {
   const item = await fixture(
     'export default () => ({ observation: ["ready", true, null] });',

@@ -6,24 +6,28 @@ import type {
   JudgeContext,
   RecordedMessage,
   Revision,
+  VerificationRuntime,
+  VerificationResult,
 } from "../../judge-context";
 import type { EvalRun, EvidenceRef } from "../../types";
 import { CandidateEvidence } from "../evidence";
 import { contained, hash } from "../files";
 import { OPENCODE_VERSION } from "../opencode/version";
 import { measureRecording } from "./metrics";
+import { verificationSession } from "../verification/session";
 
 export type RecordingInput = {
   evidence: EvidenceRef;
   run?: EvalRun;
   runDirectory?: string;
+  verification?: { environment?: VerificationRuntime; directory: string; owner: string; deadlineAt: number };
 };
 
 /** Own disposable native readers; the authoritative archive is only read. */
 export async function openRecording(
   input: RecordingInput,
   workDirectory: string,
-): Promise<JudgeContext & AsyncDisposable> {
+): Promise<JudgeContext & AsyncDisposable & { verificationResults: VerificationResult[] }> {
   const reference = {
     ...input.evidence,
     directory: resolve(input.evidence.directory),
@@ -86,7 +90,7 @@ export async function openRecording(
     new TextDecoder("utf-8", { fatal: true }).decode(
       await evidence.readFile(path, revision),
     );
-  return {
+  const context: Omit<JudgeContext, "verification"> & AsyncDisposable = {
     response: { text: evidence.manifest.response?.text ?? "" },
     prompt: evidence.manifest.prompt,
     run: run ? structuredClone(run) : null,
@@ -237,4 +241,12 @@ export async function openRecording(
       }
     },
   };
+  const verifier = verificationSession({
+    ...input.verification,
+    directory: input.verification?.directory ?? workDirectory,
+    owner: input.verification?.owner ?? "unconfigured",
+    deadlineAt: input.verification?.deadlineAt ?? Date.now() + 120_000,
+    materialize: context.workspace.materialize,
+  });
+  return { ...context, verification: verifier.context, verificationResults: verifier.results };
 }

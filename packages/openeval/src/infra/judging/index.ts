@@ -39,6 +39,7 @@ export const judgingFingerprint = async () =>
     composition: await Bun.file(
       fileURLToPath(new URL("../../app/grade-recording.ts", import.meta.url)),
     ).text(),
+    verification: await treeHash(fileURLToPath(new URL("../verification/", import.meta.url)), { ignore: /\.test\.[jt]sx?$/ }),
     useCase: await Bun.file(
       fileURLToPath(new URL("../../app/judge-run.ts", import.meta.url)),
     ).text(),

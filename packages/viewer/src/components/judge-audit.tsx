@@ -61,6 +61,13 @@ export function JudgeAuditPanel(props: {
       if (input.path) params.set("path", input.path);
       if (input.revision) params.set("revision", input.revision);
       if (input.metric) params.set("metric", input.metric);
+      if (input.action === "verification") {
+        params.delete("check"); params.delete("action");
+        return fetch(`/api/verification?${params}`).then(async response => {
+          if (!response.ok) throw new Error(await response.text());
+          return input.path ? { text: await response.text() } : response.json();
+        });
+      }
       return get<Record<string, unknown>>(`/api/check-evidence?${params}`);
     },
   );
@@ -153,6 +160,13 @@ export function JudgeAuditPanel(props: {
                   </span>
                 </header>
                 <p>{score.reason}</p>
+                <Show when={score.measurements}>
+                  <dl class="verification-measurements">
+                    <For each={Object.entries(score.measurements ?? {})}>{([key, value]) => <>
+                      <dt>{key}</dt><dd>{typeof value === "object" ? JSON.stringify(value) : String(value)}</dd>
+                    </>}</For>
+                  </dl>
+                </Show>
                 <div class="checkpoint-actions">
                   <For each={score.evidence}>
                     {(citation) => (
@@ -174,7 +188,7 @@ export function JudgeAuditPanel(props: {
                             ...("path" in citation
                               ? {
                                   path: citation.path,
-                                  revision: citation.revision,
+                                   ...("revision" in citation ? { revision: citation.revision } : {}),
                                 }
                               : {}),
                             offset: citation.offset,
@@ -213,13 +227,42 @@ export function JudgeAuditPanel(props: {
                 </span>
               </header>
               <Show when={code().output !== undefined}>
-                <details open>
+                <details>
                   <summary>Returned JSON</summary>
                   <pre class="checkpoint-content">
                     {JSON.stringify(code().output, null, 2)}
                   </pre>
                 </details>
               </Show>
+              <For each={code().verifications}>
+                {(verification) => {
+                  const url = (path?: string) => `/api/verification?${new URLSearchParams({
+                    benchmark: props.benchmarkId, judge: props.judgeId, id: verification.id,
+                    ...(path ? { path } : {}),
+                  })}`;
+                  const show = (path?: string) => {
+                    setSelected("judgment"); setBack([]);
+                    setQuery({ action: "verification", id: verification.id, ...(path ? { path } : {}) });
+                  };
+                  return <details class="verification-receipt" open>
+                    <summary>Artifact verification · {verification.state === "timed_out" ? "Timed out" : `exit ${verification.exitCode}`} · {duration(verification.elapsedMs)}</summary>
+                    <p>{verification.revision} workspace · {verification.environment.image} · {verification.environment.cpus} CPUs · {verification.environment.memoryMiB} MiB · no network</p>
+                    <For each={verification.commands}>{command => <div class="verification-command">
+                      <code>{command.argv.join(" ")}</code><span>exit {command.exitCode ?? "unknown"} · {duration(command.elapsedMs)}</span>
+                    </div>}</For>
+                    <div class="checkpoint-actions">
+                      <button onClick={() => show()}>Read receipt</button>
+                      <button onClick={() => show("stdout")}>Standard output</button>
+                      <button onClick={() => show("stderr")}>Standard error</button>
+                      <For each={verification.artifacts}>{artifact =>
+                        <a href={url(artifact.path)} target="_blank" rel="noreferrer">Open {artifact.path}</a>
+                      }</For>
+                    </div>
+                    <Show when={verification.logsTruncated}><p>Logs reached the retention limit.</p></Show>
+                    <Show when={verification.missingArtifacts.length}><p>Not produced: {verification.missingArtifacts.join(", ")}</p></Show>
+                  </details>;
+                }}
+              </For>
               <details>
                 <summary>
                   Frozen source · {code().sourceHash.slice(0, 12)}

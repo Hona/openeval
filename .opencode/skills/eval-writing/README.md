@@ -24,6 +24,7 @@ eval-writing/
   README.md
   references/
     examples.md
+    evaluation-science.md
     openeval.md
     research.md
 ```
@@ -53,5 +54,8 @@ the public SDK, and immutable recordings. The
 [coaching examples](references/examples.md) are fictional design exercises.
 [Research notes](references/research.md) explain the supporting public sources
 and their limits.
+[Evaluation science](references/evaluation-science.md) covers representative
+sampling, coherent longer tasks, paired uncertainty, and controlled improvement
+without tuning on the final test.
 
 Licensed under this repository's MIT license.

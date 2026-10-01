@@ -11,6 +11,8 @@ import { executeCodeJudge } from "../infra/judging/code";
 import { codeJudgment, combineJudgments } from "../infra/judging/code-result";
 import { executeJudge } from "../infra/judging";
 import { errorMessage } from "../infra/files";
+import { CandidateEvidence } from "../infra/evidence";
+import { validateCitations } from "../infra/judging/contract";
 
 export type GradedRecording = {
   state: "completed" | "failed" | "timed_out";
@@ -37,10 +39,24 @@ export async function gradeRecording(
         recording,
         resolve(directory, "code"),
         input.timeoutMs,
+        input.verification,
       );
       if (code.state !== "completed")
         return { state: code.state, code, error: code.error };
       const judged = codeJudgment(code.output!);
+      if (input.codeCriteria?.length && (
+        Object.keys(judged.scores).length !== input.codeCriteria.length ||
+        input.codeCriteria.some(item => !Object.hasOwn(judged.scores, item.id))
+      )) throw new Error("judge.ts must return exactly its declared criterion IDs");
+      for (const score of Object.values(judged.scores)) for (const citation of score.evidence) {
+        if (citation.kind !== "verification") continue;
+        const result = code.verifications?.find(item => item.id === citation.id);
+        if (!result || (citation.path && !result.artifacts.some(item => item.path === citation.path)))
+          throw new Error("Code judgment cites missing verification evidence");
+      }
+      await validateCitations({ ...judged, scores: Object.fromEntries(Object.entries(judged.scores).map(([id, score]) =>
+        [id, { ...score, evidence: score.evidence.filter(citation => citation.kind !== "verification") }])) },
+        await CandidateEvidence.open(recording.evidence.directory, recording.evidence.hash));
       for (const id of Object.keys(judged.scores))
         if (input.criteria.some((criterion) => criterion.id === id))
           throw new Error(

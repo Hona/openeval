@@ -20,7 +20,7 @@
 - A measurement affects the score only through an author-defined criterion. Keep measurement units and scoring meaning explicit.
 - Judge covers code-based, LLM-based, and hybrid implementations. Use LLM judge when that distinction matters. The injected context is JudgeContext; do not introduce ScorerContext or ScorerRun.
 - Use BenchmarkRun, EvalRun, and JudgeRun for execution records. A recording retains execution data; a trace presents recorded activity; evidence supports a judgment.
-- Rubric headings use `## Criterion: id — Label`. judge.md and judge.ts contribute distinct criterion scores to the same eval. Use the canonical 0.3.0 API and results schema 5; do not add compatibility aliases or runtime migrations.
+- Rubric headings use `## Criterion: id — Label`. judge.md and judge.ts contribute distinct criterion scores to the same eval. Keep the canonical plain-function API and results schema 5; do not add compatibility aliases or runtime migrations.
 - Use criterion/criteria for grading and metrics for observations. Preserve historical quotations and external source titles. Author-approved migrations are separate one-off operations that retain the original evidence/store.
 - Code judges are ordinary functions with an optional scores map and arbitrary JSON output. Normalize boolean scores and validate finite numeric credit from 0 to 1. Keep task-specific grading rules in benchmark code; provide data primitives rather than built-in task scorers.
 - Keep documented release support accurate. Unequal weights and category-specific policies are separate future work.

@@ -1,5 +1,5 @@
-import { readdir } from "node:fs/promises";
-import { resolve, dirname } from "node:path";
+import { readdir, realpath } from "node:fs/promises";
+import { resolve, dirname, sep } from "node:path";
 import { Results } from "../infra/sqlite";
 import type { BenchmarkRun, EvalRun, JudgeRun, Slot, Cost } from "../types";
 import type {
@@ -26,7 +26,7 @@ import {
 } from "../runtime";
 import { canJudgeEval } from "./eval-state";
 import { CandidateEvidence, type EvidenceQuery } from "../infra/evidence";
-import { contained } from "../infra/files";
+import { contained, hash } from "../infra/files";
 
 const scheduled = (slot: Slot, benchmark: BenchmarkRun, now: number) =>
   benchmark.state === "running" &&
@@ -167,7 +167,7 @@ export class ResultReader {
     if (!judge) throw new Error("Unknown judge run");
     const candidate = results.evalRun(judge.input.evalRunId);
     const criteria = new Map(
-      judge.input.criteria.map((criterion) => [criterion.id, criterion]),
+      [...judge.input.criteria, ...judge.input.codeCriteria ?? []].map((criterion) => [criterion.id, criterion]),
     );
     for (const id of Object.keys(judge.judgment?.scores ?? {}))
       if (!criteria.has(id))
@@ -224,6 +224,23 @@ export class ResultReader {
           mode: run.input.mode,
         })),
     };
+  }
+  async verificationEvidence(benchmarkId: string, judgeRunId: string, id: string, path?: string) {
+    using results = await this.database(benchmarkId);
+    const judge = results.judgeRun(judgeRunId);
+    const verification = judge?.code?.verifications?.find(item => item.id === id);
+    if (!verification) throw new Error("Unknown verification");
+    if (!path) return { receipt: verification };
+    const artifact = verification.artifacts.find(item => item.path === path);
+    const file = path === "stdout" ? verification.stdout : path === "stderr" ? verification.stderr : artifact?.file;
+    if (!file) throw new Error("Unknown verification artifact");
+    const root = await realpath(dirname(results.path));
+    const target = await realpath(contained(root, file));
+    if (target !== root && !target.startsWith(root + sep)) throw new Error("Verification artifact leaves its run directory");
+    const bytes = await Bun.file(target).bytes();
+    if (bytes.length > 32 * 1024 * 1024 || (artifact && hash(bytes) !== artifact.sha256))
+      throw new Error("Verification artifact is too large or its hash differs");
+    return { bytes, path };
   }
   async checkEvidence(
     benchmarkId: string,

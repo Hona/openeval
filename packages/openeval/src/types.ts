@@ -8,6 +8,9 @@ import type {
   CodeJudgeDefinition,
   CodeJudgeExecution,
   RunMetrics,
+  VerificationEnvironment,
+  VerificationRuntime,
+  JsonValue,
 } from "./judge-context";
 export type OpenCodeStreamEvent = OpenCodeEvent | SessionLogItem;
 
@@ -29,6 +32,7 @@ export type Judge = {
   model?: ModelRef;
   timeoutMs?: number;
   websearch?: "exa" | false;
+  verification?: VerificationEnvironment;
 };
 export type Benchmark = {
   name?: string;
@@ -99,7 +103,7 @@ export type BenchmarkDefinition = {
   name: string;
   directory: string;
   models: ModelRef[];
-  judge: { model?: ModelRef; timeoutMs: number; websearch: "exa" | false };
+  judge: { model?: ModelRef; timeoutMs: number; websearch: "exa" | false; verification?: VerificationRuntime | Required<VerificationEnvironment> };
   repetitions: number;
   concurrency: number;
   candidate: {
@@ -223,6 +227,7 @@ export type EvidenceCitation = (
   | { kind: "recording" }
   | { kind: "tool" | "message" | "event" | "metric"; id: string }
   | { kind: "artifact"; path: string; revision: "initial" | "final" }
+  | { kind: "verification"; id: string; path?: string }
 ) & { quote?: string; offset?: number };
 export type CriterionScore = {
   value: number | null;
@@ -230,6 +235,7 @@ export type CriterionScore = {
   evidence: EvidenceCitation[];
   sources?: string[];
   source: "judge.md" | "judge.ts";
+  measurements?: Record<string, JsonValue>;
 };
 /** value is the equal-weight criterion mean, or null if any score is unknown. */
 export type Judgment = {
@@ -248,6 +254,8 @@ export type JudgeRunInput = {
   model?: ModelRef;
   kind: "llm" | "code" | "hybrid";
   code?: CodeJudgeDefinition;
+  codeCriteria?: CriterionDefinition[];
+  verification?: VerificationRuntime;
   judgeHash: string;
   timeoutMs: number;
   websearch: "exa" | false;
@@ -301,7 +309,7 @@ export type BenchmarkRun = {
   /** Work selected by the current run/retry/rejudge operation. */
   scheduledSlotIds: readonly string[];
   definition: BenchmarkDefinition;
-  runtime: { imageId: string; candidateHash: string; judgeHash: string };
+  runtime: { imageId: string; candidateHash: string; judgeHash: string; verification?: VerificationRuntime };
   /** Display metadata read from the candidate image's catalog; never part of input fingerprints. */
   modelNames?: ModelNames;
   error?: string;

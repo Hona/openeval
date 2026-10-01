@@ -12,6 +12,7 @@ import { extractWorkspaceArchive } from "./transfer";
 import { treeHash, fingerprint, writeJson } from "../files";
 import { OPENCODE_VERSION } from "../opencode/host";
 import { judgingFingerprint } from "../judging";
+import { verificationRuntime } from "../verification/image";
 
 const runtimeDirectory = fileURLToPath(new URL("./runtime/", import.meta.url));
 export async function buildImage(config: BenchmarkDefinition["container"]) {
@@ -46,8 +47,10 @@ export async function inspectImage(config: BenchmarkDefinition["container"]) {
 }
 export async function runtimeFingerprint(
   config: BenchmarkDefinition["container"],
+  verification?: BenchmarkDefinition["judge"]["verification"],
 ) {
   const imageId = await inspectImage(config);
+  const verified = await verificationRuntime(verification);
   return {
     imageId,
     candidateHash: fingerprint({
@@ -80,6 +83,7 @@ export async function runtimeFingerprint(
       ),
     }),
     judgeHash: await judgingFingerprint(),
+    ...(verified ? { verification: verified } : {}),
   };
 }
 

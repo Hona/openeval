@@ -53,6 +53,9 @@ runner. Code-only benchmarks do not need a judge model.
 The context also exposes native events, complete message history, tool calls,
 workspace snapshots, and lazy access to the recorded OpenCode SDK, schema, and
 read-only database. See [code judges and data access](https://openev.al/docs/code-judges/).
+For executable artifacts, use [isolated verification](VERIFICATION.md), not
+host-side execution of `workspace.materialize()` copies. Optional structured
+scores add reasons, measurements, and links to retained verification outputs.
 
 ### Model-based: write a rubric
 

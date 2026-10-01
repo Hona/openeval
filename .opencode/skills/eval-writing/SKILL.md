@@ -16,6 +16,8 @@ This workflow is framework-neutral. When using OpenEval, also read
 and execution contracts. Use [references/examples.md](references/examples.md)
 for coaching patterns and [references/research.md](references/research.md) for
 the public research behind the guidance. These paths are relative to this skill.
+For suite audits, longer tasks, uncertainty, or approved optimization, read
+[references/evaluation-science.md](references/evaluation-science.md).
 
 ## Respect the author's scope
 
@@ -39,7 +41,7 @@ Use the [OpenEval vocabulary](https://openev.al/docs/terminology/) when working
 with OpenEval: criteria are named graded requirements, scores are awarded
 credit, and metrics are measurements such as tokens or cost. A rubric defines
 criteria and scoring rules; a judge applies them; a judgment records the output.
-Use BenchmarkRun, EvalRun, and JudgeRun for execution records. OpenEval 0.3.0
+Use BenchmarkRun, EvalRun, and JudgeRun for execution records. OpenEval
 uses `## Criterion:` headings and plain JudgeContext functions. The OpenEval
 reference below describes the code, Markdown, and additive judging contracts.
 
@@ -62,6 +64,11 @@ Separate **can do it when instructed** from **chooses to do it unprompted**.
 Supplying the exact procedure changes that question. Separate representative
 sampling from targeted stress tests: discovering a failure establishes a
 possibility, not how often it occurs in production.
+
+Explain why a case is valuable and hard before selecting it by a model's failures.
+Keep cheap regression checks separate from frontier-capability claims. Inspect
+uniform failure for task, environment, opportunity, and judge defects; near-ceiling
+success can call for regression graduation rather than more format traps.
 
 For a weak proposal, explain the counterexample and offer a repair:
 
@@ -101,6 +108,11 @@ from accidental broken setup.
 If essential evidence cannot be collected, surface that design gap. Propose a
 supported observation or a separately scoped harness change. Do not call an
 unobservable requirement a runnable eval or fabricate a successful execution.
+
+For longer work, require a coherent deliverable with dependent decisions and
+state continuity, not sleeps or a pile of independent questions. Record human
+task-duration estimates separately from candidate and tool runtime. Check feedback
+availability and the framework's time cap before promising a long-horizon pilot.
 
 ## 3. Specify small, meaningful criteria
 
@@ -179,7 +191,7 @@ calibration response for the unchanged task. Present additions to the author.
   with counts and label balance. A constant-label judge can look accurate on an
   imbalanced set. Correlation with human scores is not an agreement rate.
 - Inspect reasons too. An alleged flaw must exist and justify the label. A valid
-  citation locates evidence; it does not prove the judge interpreted it correctly.
+citation locates evidence; it does not prove the judge interpreted it correctly.
 - Treat another judge as an auditor. Resolve factual disputes with applicable
   evidence and policy disputes with the author. Do not relabel controls merely
   to increase judge agreement.
@@ -189,6 +201,9 @@ calibration response for the unchanged task. Present additions to the author.
 
 Small curated controls can protect known boundaries. They are not a general
 accuracy estimate. Scale human review and statistical analysis to the claim.
+Check fixed-output judge stability under an authorized calibration scope. Prefer
+an independently validated judge; a model grading itself or its own family is a
+bias risk to inspect, not proof of bias or a substitute for human labels.
 
 ## 6. Pilot, preserve, and report
 
@@ -209,6 +224,18 @@ State the aggregation unit and weights. A mean of partial criteria is not the
 same as full-task success, best-of-k success, or all-k reliability. Repeated runs
 are not new independent task types. Distinguish incomplete-result bounds from
 statistical confidence, and do not mistake a protocol change for a model gain.
+
+Compare matched task-level scores with paired differences and account for related
+tasks and repetitions. Size collection for a decision-relevant effect, not a
+generic cases-times-repeats formula. Keep candidate, judge, environment, and
+generated-artifact variance distinct; unknown cost is not zero cost.
+
+If optimization is explicitly requested, freeze the measurement and change one
+falsifiable mechanism at a time. Split by task/source family. A set consulted to
+choose rounds is validation, not an untouched test; reserve fresh confirmation.
+Keep the proposer away from held-out content and never paste answers into the
+candidate's instructions. On a plateau, diagnose the task, judge, harness, and
+noise before adding more instructions. Do not start paid work from a review request.
 
 ## Hand back a decision, not a lecture
 

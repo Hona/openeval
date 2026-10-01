@@ -12,6 +12,8 @@ import {
   serveResults,
   mergeBenchmarkRuns,
   snapshotBenchmarkRun,
+  buildVerificationImage,
+  VERIFICATION_IMAGE,
 } from "./index";
 import type { ModelRef } from "./index";
 
@@ -55,14 +57,24 @@ Options:
   --only-repetition <n>  Execute only this repetition (repeatable)
   --max-cost <usd>       Scheduling budget for this invocation
   --final-only          Judge only after candidates finish
+  --verification        Build only the standard verification image (image command)
   --port <port>         Viewer port (default: 4173)
 
 Requires Bun 1.4.2+, Docker, and an authenticated OpenCode installation.`);
   } else if (command === "--version") {
     console.log((await Bun.file(new URL("../package.json", import.meta.url)).json()).version);
   } else if (command === "image") {
-    await buildImage((await loadBenchmark(benchmark)).container);
-    console.log("Candidate image ready");
+    const definition = await loadBenchmark(benchmark);
+    if (!args.includes("--verification")) {
+      await buildImage(definition.container);
+      console.log("Candidate image ready");
+    }
+    const verification = definition.judge.verification ?? (args.includes("--verification")
+      ? { image: VERIFICATION_IMAGE, engine: definition.container.engine } : undefined);
+    if (verification) {
+      await buildVerificationImage(verification);
+      console.log("Verification image ready");
+    }
   } else if (command === "view") {
     const viewer = await serveResults({
       resultsPath: resolve(benchmark, "results"),

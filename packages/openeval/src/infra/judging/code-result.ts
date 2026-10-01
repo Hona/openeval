@@ -1,6 +1,7 @@
 import type { JsonValue } from "../../judge-context";
 import type { CriterionScore, Judgment } from "../../types";
 import { criterionMean, isScored } from "../../judgment";
+import { parseCitation } from "./contract";
 
 /** Preserve author JSON exactly; reject values JSON would silently discard or coerce. */
 export function jsonOutput(
@@ -53,7 +54,12 @@ export function codeJudgment(output: JsonValue): Judgment {
     Object.entries(values).map(([id, supplied]): [string, CriterionScore] => {
       if (!/^[a-z][a-z0-9_]*$/.test(id))
         throw new Error(`Invalid criterion ID: ${id}`);
-      const value = typeof supplied === "boolean" ? Number(supplied) : supplied;
+      const detailed = supplied !== null && typeof supplied === "object" && !Array.isArray(supplied) ? supplied : undefined;
+      if (detailed && (Object.keys(detailed).some(key => !["value", "reason", "evidence", "measurements"].includes(key)) ||
+        typeof detailed.reason !== "string" || !detailed.reason.trim()))
+        throw new Error(`scores.${id} requires a non-empty reason and only value, reason, evidence, and measurements`);
+      const raw = detailed ? detailed.value : supplied;
+      const value = typeof raw === "boolean" ? Number(raw) : raw;
       if (value !== null && !isScored(value))
         throw new Error(
           `scores.${id} must be a boolean, a finite number from 0 to 1, or null`,
@@ -62,11 +68,23 @@ export function codeJudgment(output: JsonValue): Judgment {
         id,
         {
           value: value as number | null,
-          reason:
+          reason: detailed ? detailed.reason as string :
             value === null
               ? "judge.ts returned an unresolved score."
               : `judge.ts returned ${String(supplied)}.`,
-          evidence: value === null ? [] : [{ kind: "recording" }],
+          evidence: detailed?.evidence !== undefined
+            ? (() => {
+              if (!Array.isArray(detailed.evidence) || detailed.evidence.length > 32)
+                throw new Error(`scores.${id}.evidence must contain at most 32 citations`);
+              return detailed.evidence.map(parseCitation);
+            })()
+            : value === null ? [] : [{ kind: "recording" }],
+          ...(detailed?.measurements !== undefined ? { measurements: (() => {
+            const values = detailed.measurements;
+            if (!values || typeof values !== "object" || Array.isArray(values))
+              throw new Error(`scores.${id}.measurements must be an object`);
+            return values;
+          })() } : {}),
           source: "judge.ts",
         },
       ];

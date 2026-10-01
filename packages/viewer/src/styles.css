@@ -544,6 +544,21 @@ h3 {
   color: var(--app-muted);
   font-size: 11px;
 }
+.verification-measurements {
+  display: grid;
+  grid-template-columns: minmax(100px, 1fr) 2fr;
+  gap: 5px 12px;
+  font-size: 11px;
+  margin: 12px 0;
+}
+.verification-measurements dt { color: var(--app-muted); }
+.verification-measurements dd { margin: 0; overflow-wrap: anywhere; }
+.verification-receipt { border-top: 1px solid var(--app-border); margin-top: 12px; }
+.verification-receipt p { color: var(--app-muted); font-size: 11px; }
+.verification-command { display: flex; gap: 12px; justify-content: space-between; padding: 6px 0; font-size: 11px; }
+.verification-command code { overflow-wrap: anywhere; }
+.verification-command span { color: var(--app-faint); white-space: nowrap; }
+.verification-receipt .checkpoint-actions a { font-size: 11px; color: var(--app-muted); }
 .chart-caption {
   padding: 14px 26px;
   display: flex;

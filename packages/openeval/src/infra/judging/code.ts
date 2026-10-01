@@ -1,15 +1,19 @@
-import { mkdir, rm } from "node:fs/promises";
+import { mkdir, rm, readdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { randomUUID } from "node:crypto";
 import type {
   CodeJudgeDefinition,
   CodeJudgeExecution,
   JsonValue,
   RunMetrics,
+  VerificationRuntime,
+  VerificationResult,
 } from "../../judge-context";
 import type { RecordingInput } from "../recording";
 import { codeJudgment, jsonOutput } from "./code-result";
 import { errorMessage, writeJson } from "../files";
+import { closeVerification } from "../verification/session";
 
 /** A separate process bounds synchronous loops as well as asynchronous judges. */
 export async function executeCodeJudge(
@@ -17,6 +21,7 @@ export async function executeCodeJudge(
   recording: RecordingInput,
   directory: string,
   timeoutMs: number,
+  verification?: VerificationRuntime,
 ): Promise<CodeJudgeExecution> {
   directory = resolve(directory);
   await mkdir(directory, { recursive: true });
@@ -31,7 +36,8 @@ export async function executeCodeJudge(
   const startedAt = new Date().toISOString();
   let timer: ReturnType<typeof setTimeout> | undefined;
   let timedOut = false;
-  let raw: JsonValue | undefined, metrics: RunMetrics | undefined;
+  let raw: JsonValue | undefined, metrics: RunMetrics | undefined, verifications: VerificationResult[] | undefined;
+  const owner = randomUUID();
   const base = { startedAt, sourceHash: code.hash, stdout, stderr };
   try {
     const child = Bun.spawn(
@@ -52,7 +58,9 @@ export async function executeCodeJudge(
       child.kill();
     }, timeoutMs);
     await child.stdin.write(
-      JSON.stringify({ ...recording, module, output, scratch }),
+      JSON.stringify({ ...recording, module, output, scratch, verification: {
+        environment: verification, directory, owner, deadlineAt: Date.now() + timeoutMs,
+      } }),
     );
     child.stdin.end();
     const exit = await child.exited;
@@ -60,6 +68,7 @@ export async function executeCodeJudge(
       throw new Error(`judge.ts exceeded its ${timeoutMs}ms time limit`);
     const result = await Bun.file(output).json();
     metrics = result.metrics;
+    verifications = result.verifications;
     if (exit !== 0 || result.error)
       throw new Error(result.error ?? `judge.ts exited with code ${exit}`);
     raw = jsonOutput(result.output);
@@ -71,11 +80,16 @@ export async function executeCodeJudge(
       elapsedMs: Date.now() - Date.parse(startedAt),
       output: raw,
       metrics,
+      verifications,
       scores: Object.fromEntries(
         Object.entries(judgment.scores).map(([id, score]) => [id, score.value]),
       ),
     };
   } catch (error) {
+    // Completed receipts survive a killed worker or a later malformed submission.
+    verifications ??= await Promise.all((await readdir(resolve(directory, "verification")).catch(() => []))
+      .map(id => Bun.file(resolve(directory, "verification", id, "receipt.json")).json().catch(() => undefined)))
+      .then(items => items.filter((item): item is VerificationResult => !!item));
     return {
       ...base,
       state: timedOut ? "timed_out" : "failed",
@@ -84,9 +98,11 @@ export async function executeCodeJudge(
       error: errorMessage(error),
       output: raw,
       metrics,
+      verifications,
     };
   } finally {
     clearTimeout(timer);
+    if (verification) await closeVerification(verification.engine, owner).catch(() => {});
     await rm(scratch, {
       recursive: true,
       force: true,
