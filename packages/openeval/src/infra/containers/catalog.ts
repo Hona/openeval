@@ -1,18 +1,64 @@
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
-import type { BenchmarkDefinition, ModelNames } from "../../types";
+import type {
+  BenchmarkDefinition,
+  ModelNames,
+  ModelRef,
+  ProviderDefinitions,
+} from "../../types";
 import { CandidateContainer } from "./oci";
 import { createSessionDatabase } from "../opencode/host";
 import { createCredentialSnapshot, integrationFor } from "../opencode/auth";
 import { clientFor, parseModel } from "../opencode/session";
+import { candidateProviders } from "../../app/input-fingerprints";
 
 const CATALOG_TIMEOUT_MS = 60_000;
 
-/** Display names from the candidates' OpenCode catalog, including declared provider overrides. */
+type CatalogDefinition = Pick<
+  BenchmarkDefinition,
+  "models" | "candidate" | "container"
+>;
+
+/** Display names from the candidates' OpenCode catalog, including declared provider overrides.
+ * Like candidates, each container receives only one integration's credentials and its models' provider configuration.
+ */
 export async function readModelNames(
-  definition: Pick<BenchmarkDefinition, "models" | "candidate" | "container">,
+  definition: CatalogDefinition,
   imageId: string,
+): Promise<ModelNames> {
+  const names = await Promise.all(
+    catalogRequests(definition).map((request) =>
+      readIntegrationNames(definition.container, imageId, request).catch(
+        () => ({}),
+      ),
+    ),
+  );
+  return Object.assign({}, ...names);
+}
+
+export type CatalogRequest = {
+  integration: string;
+  models: readonly ModelRef[];
+  providers?: ProviderDefinitions;
+};
+
+/** One request per credential integration, scoped like the candidates it names. */
+export const catalogRequests = (
+  definition: Pick<BenchmarkDefinition, "models" | "candidate">,
+): CatalogRequest[] =>
+  [...Map.groupBy(definition.models, integrationFor)].map(
+    ([integration, models]) => ({
+      integration,
+      models,
+      providers: scopedProviders(definition.candidate.providers, models),
+    }),
+  );
+
+async function readIntegrationNames(
+  container: BenchmarkDefinition["container"],
+  imageId: string,
+  { integration, models, providers }: CatalogRequest,
 ): Promise<ModelNames> {
   const staging = await mkdtemp(
     resolve(process.env.TMP ?? tmpdir(), "catalog-"),
@@ -23,31 +69,19 @@ export async function readModelNames(
     await mkdir(workspace);
     await createSessionDatabase(
       database,
-      createCredentialSnapshot(undefined, [
-        ...new Set(definition.models.map(integrationFor)),
-      ]),
+      createCredentialSnapshot(undefined, [integration]),
     );
-    await using container = await CandidateContainer.create(
-      definition.container,
-      imageId,
-    );
-    await container.prepare(
-      workspace,
-      database,
-      false,
-      [],
-      staging,
-      definition.candidate.providers,
-    );
+    await using catalog = await CandidateContainer.create(container, imageId);
+    await catalog.prepare(workspace, database, false, [], staging, providers);
     const client = clientFor(
-      await container.start(CATALOG_TIMEOUT_MS),
-      container.password,
+      await catalog.start(CATALOG_TIMEOUT_MS),
+      catalog.password,
     );
     const location = { directory: "/workspace" };
     await client.plugin.awaitActivation({ location });
     const listed = (await client.model.list({ location })).data;
     return Object.fromEntries(
-      definition.models.flatMap((model) => {
+      models.flatMap((model) => {
         const selected = parseModel(model),
           found = listed.find(
             (item) =>
@@ -67,4 +101,26 @@ export async function readModelNames(
       retryDelay: 100,
     });
   }
+}
+
+/** Union of what each listed candidate would receive, without other providers' entries. */
+function scopedProviders(
+  providers: ProviderDefinitions | undefined,
+  models: readonly ModelRef[],
+): ProviderDefinitions | undefined {
+  let scoped: NonNullable<ProviderDefinitions> | undefined;
+  for (const model of models)
+    for (const [id, entry] of Object.entries(
+      candidateProviders(providers, model) ?? {},
+    )) {
+      scoped ??= {};
+      scoped[id] = {
+        ...scoped[id],
+        ...entry,
+        ...(scoped[id]?.models || entry.models
+          ? { models: { ...scoped[id]?.models, ...entry.models } }
+          : {}),
+      };
+    }
+  return scoped;
 }
