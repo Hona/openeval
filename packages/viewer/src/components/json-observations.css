@@ -1,0 +1,13 @@
+.verification-measurements.json-observations { display: grid; grid-template-columns: minmax(100px, 1fr) 2fr; gap: 8px 12px; font-size: 11px; margin: 12px 0; }
+.json-observations dt { color: var(--app-muted, var(--site-muted)); }
+.json-observations dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.observation-table-scroll { max-width: 100%; overflow: auto; }
+.observation-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.observation-table th, .observation-table td { padding: 6px 9px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--app-border, var(--site-line)); }
+.observation-table th { color: var(--app-muted, var(--site-muted)); font-weight: 500; }
+.observation-table td:first-child { min-width: 120px; }
+.observation-pass { color: var(--app-success, var(--site-success)); }
+.observation-fail { color: var(--app-danger, var(--site-danger)); }
+.observation-note { color: var(--app-faint, var(--site-faint)); font-size: 10px; }
+.observation-list { padding-left: 16px; margin: 0; }
+@media (max-width: 700px) { .verification-measurements.json-observations { grid-template-columns: 1fr; } }

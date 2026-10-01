@@ -13,6 +13,7 @@ import {
 } from "../demo/calculator";
 import type { Block } from "./content";
 import { screenshotDimensions, type ScreenshotName } from "./media";
+import { JsonObservations } from "../../viewer/src/components/json-observations";
 
 /** Inactive panels still reserve their natural size, but cannot receive focus. */
 export function StableTabPanel(props: {
@@ -362,6 +363,7 @@ export function RenderBlock(props: { block: Block }) {
   if (block.type === "flow") return <Flow steps={block.steps} />;
   if (block.type === "image") return <Screenshot {...block} />;
   if (block.type === "calculator") return <ScoreCalculator />;
+  if (block.type === "observations") return <div class="observations-example"><JsonObservations values={block.values} /><p class="utility-note">{block.caption}</p></div>;
   if (block.type === "links")
     return (
       <p class="doc-links">

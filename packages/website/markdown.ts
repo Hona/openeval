@@ -52,6 +52,8 @@ function renderBlock(block: Block): string {
         .join("\n");
     case "image":
       return `![${block.alt}](${SITE}/images/${block.image})\n\n${block.caption}`;
+    case "observations":
+      return `${codeFence(JSON.stringify(block.values, null, 2), "json")}\n\n${block.caption}`;
     case "calculator":
       return [
         `### ${calculator.title}`,

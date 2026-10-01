@@ -87,6 +87,9 @@ scores add `reason`, `evidence`, and JSON `measurements`. These details appear i
 the normal viewer beside verification receipts; arbitrary returned JSON remains
 inspectable. Declared code criteria must be returned exactly. Missing evidence
 references are judging errors, not candidate zeros.
+Arrays of named check observations render as readable tables, including author
+supplied pass/fail details. They do not introduce additional scores or weights.
+Large tables are explicitly bounded in the display; full returned JSON is retained.
 
 `recordEvidence({ workspace: { initial, final }, ... })` can retain constructed
 artifact controls without executing them. `judgeEvidence` then uses the same

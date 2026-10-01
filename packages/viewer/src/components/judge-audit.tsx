@@ -11,6 +11,7 @@ import { Select } from "@opencode/ui/select";
 import type { JudgeAudit } from "../types";
 import { duration, stateLabel, formatPercent } from "../model";
 import { topSecret } from "../privacy";
+import { JsonObservations } from "./json-observations";
 
 type Query = {
   action: string;
@@ -161,11 +162,7 @@ export function JudgeAuditPanel(props: {
                 </header>
                 <p>{score.reason}</p>
                 <Show when={score.measurements}>
-                  <dl class="verification-measurements">
-                    <For each={Object.entries(score.measurements ?? {})}>{([key, value]) => <>
-                      <dt>{key}</dt><dd>{typeof value === "object" ? JSON.stringify(value) : String(value)}</dd>
-                    </>}</For>
-                  </dl>
+                  <JsonObservations values={score.measurements!} />
                 </Show>
                 <div class="checkpoint-actions">
                   <For each={score.evidence}>
