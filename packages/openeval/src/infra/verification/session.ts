@@ -127,7 +127,7 @@ export function verificationSession(options: {
         try {
           await engineCommand(runtime.engine, verificationArgs(runtime, options.owner, name, timeoutMs));
           await engineCommand(runtime.engine, ["exec", "--interactive", "--user", "10001:10001", name,
-            "tar", "--no-same-owner", "-xf", "-", "-C", "/workspace"], { input: archive, timeoutMs });
+            "tar", "--no-same-owner", "--no-overwrite-dir", "-xf", "-", "-C", "/workspace"], { input: archive, timeoutMs });
           await engineCommand(runtime.engine, ["cp", `${trusted}/.`, `${name}:/verification`], { timeoutMs });
           for (const argv of request.commands) {
             const started = Date.now();

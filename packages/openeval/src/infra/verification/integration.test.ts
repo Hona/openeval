@@ -28,6 +28,7 @@ export default async ctx => {
  return { scores: { correct: {value: result.exitCode === 0, reason: "Verified the final answer in isolation.", evidence: [{kind:"verification",id:result.id,path:"result.json"}], measurements: values} } };
 };`);
     const result = await judgeEvidence({ evidence, code: file, judge: { timeoutMs: 30000, verification: { image: VERIFICATION_IMAGE } }, directory: resolve(root, "judged") });
+    expect(result.error).toBeUndefined();
     expect(result.state).toBe("completed");
     expect(result.judgment?.scores.correct.reason).toBe("Verified the final answer in isolation.");
     expect(result.judgment?.scores.correct.measurements).toEqual({ answer: 2, denied: true });
