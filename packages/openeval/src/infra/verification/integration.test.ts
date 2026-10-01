@@ -4,9 +4,7 @@ import { resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { recordEvidence, judgeEvidence } from "../../app/judge-evidence";
 import { VERIFICATION_IMAGE } from "./image";
-import { loadBenchmark } from "../../app/load-benchmark";
 import { prepareInputs } from "../../app/prepare-inputs";
-import { buildImage } from "../containers/oci";
 
 // Explicit CI-only, no-model integration check. Ordinary unit tests need no engine.
 test.skipIf(process.env.OPENEVAL_VERIFY_INTEGRATION !== "1")("verify restored artifacts, retain outputs, and deny mutation of the trusted check", async () => {
@@ -49,8 +47,6 @@ test.skipIf(process.env.OPENEVAL_VERIFY_INTEGRATION !== "1")("prepare actual inp
     await Bun.write(resolve(root, "evals/example/judge.ts"), "export default () => ({scores:{ready:true}});");
     await Bun.write(resolve(root, "evals/example/workspace/input.txt"), "original input");
     await Bun.write(resolve(root, "evals/example/eval.ts"), 'export default {prepare:[{cwd:".",argv:["bun","-e",\'await Bun.write("ready.txt","prepared");\']}]};');
-    const definition = await loadBenchmark(root);
-    await buildImage(definition.container);
     const result = await prepareInputs(root, { directory: resolve(root, "prepared") });
     expect(result.candidateExecutions).toBe(0);
     expect(result.judgeExecutions).toBe(0);

@@ -38,6 +38,8 @@ jobs:
           bun-version: 1.4.2
       - run: bun install --frozen-lockfile
       - run: docker build --label "openeval.verification=$(bun -e 'import {treeHash} from "./packages/openeval/src/infra/files"; console.log(await treeHash("packages/openeval/src/infra/verification/runtime"));')" -t openeval-verification:0.5.0 packages/openeval/src/infra/verification/runtime
+      - run: docker build --label "openeval.runtime=$(bun -e 'import {treeHash} from "./packages/openeval/src/infra/files"; console.log(await treeHash("packages/openeval/src/infra/containers/runtime"));')" -t openeval-runtime:2.0.3 packages/openeval/src/infra/containers/runtime
+        timeout-minutes: 15
       - run: bun test packages/openeval/src/infra/verification/integration.test.ts
         env:
           OPENEVAL_VERIFY_INTEGRATION: "1"
