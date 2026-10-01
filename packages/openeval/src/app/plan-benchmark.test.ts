@@ -3,6 +3,7 @@ import type {
   BenchmarkDefinition,
   BenchmarkRun,
   JudgeRunInput,
+  PlanItem,
   Slot,
 } from "../types";
 import { JUDGE_PROTOCOL } from "../judgment";
@@ -163,7 +164,7 @@ test.each([
   name: string;
   stopped: boolean;
   settings: BenchmarkDefinition["evals"][number]["settings"];
-  action: string;
+  action: PlanItem["action"];
 }>)("a session recorded with early stopping $name", ({ stopped, settings, action }) => {
   using results = new Results(":memory:");
   const collected: BenchmarkDefinition = {
