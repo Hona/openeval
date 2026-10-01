@@ -1,6 +1,6 @@
 # Apply the workflow with OpenEval
 
-This reference describes the public `@hona/openeval` 0.5.0 contracts, reviewed
+This reference describes the public `@hona/openeval` 0.5.1 contracts, reviewed
 2026-10-01. Check the installed version's documentation before using its APIs.
 Follow the benchmark author's own repository rules, inventory, and collection
 policy. Repository-specific commands and approvals are not universal SDK features.
@@ -144,7 +144,7 @@ artifact execution, verify required dependencies, and bound verification resourc
 Use `verification.run()` with `judge.verification` configured for executable
 artifact checks. It restores a snapshot into an isolated OCI container and retains
 bounded commands, logs, and outputs. `verification.read/text()` checks output hashes.
-See the published [verification contract](https://github.com/Hona/openeval/blob/v0.5.0/packages/openeval/VERIFICATION.md).
+See the published [verification contract](https://github.com/Hona/openeval/blob/v0.5.1/packages/openeval/VERIFICATION.md).
 
 Useful public exports:
 
@@ -224,7 +224,7 @@ not a guaranteed billing ceiling; active work can finish above the estimate.
 ## Public references
 
 - [OpenEval README](https://github.com/Hona/openeval#readme)
-- [0.5.0 judging contract](https://github.com/Hona/openeval/blob/v0.5.0/packages/openeval/JUDGING.md)
+- [0.5.1 judging contract](https://github.com/Hona/openeval/blob/v0.5.1/packages/openeval/JUDGING.md)
 - [Task prompts](https://openev.al/docs/prompts/)
 - [Judge rubrics](https://openev.al/docs/rubrics/)
 - [Workspace preparation](https://openev.al/docs/workspaces/)

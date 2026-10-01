@@ -11,6 +11,7 @@ import {
   VERSION,
 } from "./examples";
 import type { ScreenshotName } from "./media";
+import type { JsonValue } from "@hona/openeval";
 
 export const overview = {
   title: "Write your own eval in 30 seconds.",
@@ -26,7 +27,9 @@ export type Block =
   | { type: "flow"; steps: string[] }
   | { type: "image"; image: ScreenshotName; alt: string; caption: string }
   | { type: "links"; items: { label: string; href: string }[] }
-  | { type: "calculator" };
+  | { type: "calculator" }
+  | { type: "observations"; values: Record<string, JsonValue>; caption: string };
+  // Author-owned data examples share the viewer's renderer, not a grading DSL.
 export type Section = { id: string; title: string; blocks: Block[] };
 export type Doc = {
   slug: string;
@@ -845,6 +848,11 @@ export const docs: Doc[] = [
         id: "execution",
         title: "Frozen inputs, bounded execution, inspectable results",
         blocks: [
+          { type: "observations", values: {
+            checks: [{ name: "Input schema", pass: true }, { name: "Returned rows", pass: false, error: "Two rows missing" }],
+            elapsedMs: 1400,
+            reportedCoverage: "3/5",
+          }, caption: "Illustrative author-owned check data. These observations do not create extra criterion scores; no candidate model was called." },
           {
             type: "image",
             image: "code-judgment.png",

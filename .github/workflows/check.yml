@@ -29,6 +29,12 @@ jobs:
           name: website-browser-traces
           path: packages/website/test-results/
           if-no-files-found: ignore
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: code-observation-images
+          path: packages/website/test-results/observation-images/
+          if-no-files-found: ignore
   verification:
     runs-on: ubuntu-latest
     steps:
