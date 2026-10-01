@@ -211,7 +211,8 @@ not a guaranteed billing ceiling; active work can finish above the estimate.
   before an authorized scoring revision.
 - Rubric-only changes can reuse recorded work. Changed task/workspace inputs
   require new candidate evidence. An old early stop may leave too little evidence
-  for a revised rubric; use the planner's affected-work decisions.
+  for a revised rubric; use the planner's affected-work decisions. Turning early
+  stopping off re-collects only the sessions that it stopped.
 - `run` resumes the current BenchmarkRun and preserves unchanged work. Use `--new`
   only when a separate result is intended, not as a shortcut for rubric maintenance.
 - Average repetitions per criterion, then criteria per eval, then evals equally;

@@ -1,6 +1,13 @@
 import { expect, test } from "bun:test";
-import type { BenchmarkDefinition, BenchmarkRun } from "../types";
-import { candidateFingerprint, candidateProviders } from "./input-fingerprints";
+import type { BenchmarkDefinition, BenchmarkRun, JudgeRunInput } from "../types";
+import { JUDGE_PROTOCOL } from "../judgment";
+import { JUDGE_AGENT } from "../infra/judging/agent";
+import {
+  candidateFingerprint,
+  candidateProviders,
+  judgeFingerprint,
+  savedJudgeFingerprint,
+} from "./input-fingerprints";
 
 const definition: BenchmarkDefinition = {
   name: "SDK fixture",
@@ -76,4 +83,107 @@ test("a candidate receives and fingerprints only its own provider configuration"
       "custom",
     ),
   ).toBe(hash(withProviders(providers), "custom"));
+});
+
+const markdown: BenchmarkDefinition = {
+  ...definition,
+  evals: [
+    {
+      ...definition.evals[0],
+      judge:
+        "## Criterion: answer — Answer\nPass if the response supplies the fact.",
+      criteria: [{ id: "answer", name: "Answer" }],
+    },
+  ],
+};
+const verifier = (imageId: string) => ({
+  engine: "docker" as const,
+  image: "openeval-verification:0.5.0",
+  imageId: `sha256:${imageId.repeat(64)}`,
+  cpus: 2,
+  memoryMiB: 4096,
+});
+const verified = (
+  value: BenchmarkDefinition,
+  imageId: string,
+): BenchmarkDefinition => ({
+  ...value,
+  judge: { ...value.judge, verification: verifier(imageId) },
+});
+const coded = (value: BenchmarkDefinition): BenchmarkDefinition => ({
+  ...value,
+  evals: value.evals.map((item) => ({
+    ...item,
+    code: {
+      file: "judge.ts",
+      hash: "judge-code",
+      source: "",
+      sourceMap: "",
+      dependencies: {},
+    },
+  })),
+});
+const savedInput = (value: BenchmarkDefinition): JudgeRunInput => {
+  const item = value.evals[0];
+  return {
+    evalRunId: "eval",
+    evidence: { directory: "evidence", hash: "recording" },
+    rubric: item.judge,
+    agent: JUDGE_AGENT,
+    model: value.judge.model,
+    kind: item.code ? "hybrid" : "llm",
+    code: item.code,
+    verification: value.judge.verification as JudgeRunInput["verification"],
+    judgeHash: "pending",
+    timeoutMs: value.judge.timeoutMs,
+    websearch: value.judge.websearch,
+    mode: "final",
+    runtimeHash: runtime.judgeHash,
+    criteria: item.criteria,
+    protocol: JUDGE_PROTOCOL,
+  };
+};
+
+// Recorded with the released 0.4.0 package. Upgrading must not reschedule unchanged work.
+const RELEASED = {
+  candidate: "ecd1b6f52dab74671b6349d28f93ead4dde48ac31fbca8bd3201516a6fbf7e4e",
+  judge: "5488546a4229f7bcbcb29c537cf17daee30b3f416f2bea132cbd44951b7f31d8",
+};
+
+test("unchanged evals keep their released identities after an upgrade", () => {
+  const upgraded = verified(
+    {
+      ...markdown,
+      evals: [{ ...markdown.evals[0], settings: { earlyStop: true } }],
+    },
+    "a",
+  );
+
+  expect(hash(markdown, "listed")).toBe(RELEASED.candidate);
+  expect(hash(upgraded, "listed")).toBe(RELEASED.candidate);
+  expect(judgeFingerprint(markdown, "answer")).toBe(RELEASED.judge);
+  expect(judgeFingerprint(upgraded, "answer")).toBe(RELEASED.judge);
+});
+
+test("the verification runtime changes code judgments only", () => {
+  expect(judgeFingerprint(verified(markdown, "a"), "answer")).toBe(
+    judgeFingerprint(verified(markdown, "b"), "answer"),
+  );
+  expect(judgeFingerprint(verified(coded(markdown), "a"), "answer")).not.toBe(
+    judgeFingerprint(verified(coded(markdown), "b"), "answer"),
+  );
+  const codeOnly = coded({
+    ...markdown,
+    evals: [{ ...markdown.evals[0], judge: "", criteria: [] }],
+  });
+  expect(judgeFingerprint(verified(codeOnly, "a"), "answer")).not.toBe(
+    judgeFingerprint(verified(codeOnly, "b"), "answer"),
+  );
+});
+
+test("saved judge inputs reproduce the planned identity", () => {
+  for (const value of [verified(markdown, "a"), verified(coded(markdown), "a")])
+    expect(savedJudgeFingerprint(savedInput(value))).toBe(
+      judgeFingerprint(value, "answer"),
+    );
 });

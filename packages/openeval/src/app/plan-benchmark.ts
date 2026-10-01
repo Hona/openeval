@@ -7,6 +7,7 @@ import type {
 } from "../types";
 import type { Results } from "../infra/sqlite";
 import { canJudgeEval } from "./eval-state";
+import { monitorPolicy } from "./monitor-policy";
 import {
   candidateFingerprint,
   judgeFingerprint,
@@ -74,6 +75,22 @@ export function planBenchmark(
             slot,
             action: "failed",
             reason: `Candidate ${execution.state}; explicit retry required`,
+          };
+        // A session cut short is evidence only under a stopping rule that still applies.
+        if (
+          execution.state === "stopped" &&
+          execution.stop &&
+          !monitorPolicy(evalDefinition.settings.earlyStop, model)
+        )
+          return {
+            slot: {
+              ...slot,
+              evalRunId: null,
+              judgeRunId: null,
+              previousEvalRunId: execution.id,
+            },
+            action: "candidate",
+            reason: "Early stopping is off; the recorded session stopped early",
           };
         if (slot.judgeRunId)
           if (

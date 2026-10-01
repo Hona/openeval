@@ -100,4 +100,6 @@ Unused `criteria` labels/categories are removed from executable bundling. Debug
 source maps remain retained but do not affect code identity. If grading reads a
 metadata value, it is executable behavior and remains fingerprinted. Changes to
 criterion IDs, actual grading code, imported inputs, dependencies, or verification
-environment are not reporting-only edits.
+environment are not reporting-only edits. The verification environment is part
+of judge identity only for evals with `judge.ts`. Rebuilding the image does not
+rejudge Markdown-only evals.
