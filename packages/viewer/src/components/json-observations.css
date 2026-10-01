@@ -9,5 +9,6 @@
 .observation-pass { color: var(--app-success, var(--site-success)); }
 .observation-fail { color: var(--app-danger, var(--site-danger)); }
 .observation-note { color: var(--app-faint, var(--site-faint)); font-size: 10px; }
+.observation-absent { color: var(--app-faint, var(--site-faint)); }
 .observation-list { padding-left: 16px; margin: 0; }
 @media (max-width: 700px) { .verification-measurements.json-observations { grid-template-columns: 1fr; } }

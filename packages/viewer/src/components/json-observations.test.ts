@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { observationTable } from "./json-observations-data";
+import { observationLabel, observationTable } from "./json-observations-data";
 
 test("tables preserve author-owned columns and values without inventing scores", () => {
   expect(observationTable([{ name: "Input", pass: true }, { name: "Output", pass: false, error: "Missing row" }])).toEqual({
@@ -14,4 +14,11 @@ test("large observations have explicit display bounds while raw data is unchange
   expect(observationTable(values)?.rows).toHaveLength(50);
   expect(observationTable(values)?.omittedRows).toBe(30);
   expect(values).toHaveLength(80);
+});
+
+test("labels are readable without changing author keys", () => {
+  expect(observationLabel("elapsedMs")).toBe("Elapsed ms");
+  expect(observationLabel("reported_coverage")).toBe("Reported coverage");
+  expect(observationLabel("pass")).toBe("Pass");
+  expect(observationLabel("maximumJumpPx")).toBe("Maximum jump px");
 });
