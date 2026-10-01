@@ -76,6 +76,12 @@ evidence. Do not put evaluator scripts in candidate workspaces.
 
 ## Readable judgments and controls
 
+`openeval prepare --output <new-directory>` assembles real candidate inputs and
+runs declared preparation in the candidate image, then archives the prepared
+workspace. `--only-eval` scopes it. This makes zero model calls, creates no
+EvalRun/JudgeRun, and does not change selections. Use it to prove fixture setup
+before collection; it does not prove agent success or human task duration.
+
 Existing boolean, numeric, and null scores remain sufficient. Optional structured
 scores add `reason`, `evidence`, and JSON `measurements`. These details appear in
 the normal viewer beside verification receipts; arbitrary returned JSON remains

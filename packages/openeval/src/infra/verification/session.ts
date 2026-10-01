@@ -157,7 +157,10 @@ export function verificationSession(options: {
           }
           if (!timedOut) for (const path of artifacts) {
             const tar = resolve(staging, `output-${randomUUID()}.tar`);
-            const child = Bun.spawn([runtime.engine, "cp", `${name}:/workspace/${path}`, "-"], { stdout: "pipe", stderr: "pipe" });
+            // Read inside the running mount namespace: docker cp cannot reliably
+            // see files in a container's tmpfs mounts.
+            const child = Bun.spawn([runtime.engine, "exec", "--user", "10001:10001", name,
+              "tar", "-cf", "-", "-C", posix.dirname(`/workspace/${path}`), "--", posix.basename(path)], { stdout: "pipe", stderr: "pipe" });
             const timer = setTimeout(() => child.kill(), 30_000);
             const [code, output, error] = await Promise.all([child.exited, bounded(child.stdout, OUTPUT_BYTES, () => child.kill()), bounded(child.stderr, LOG_BYTES)]).finally(() => clearTimeout(timer));
             if (output.truncated) throw new Error("Verification output exceeds 32 MiB");

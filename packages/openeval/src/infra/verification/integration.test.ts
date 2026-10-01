@@ -24,7 +24,7 @@ writeFileSync('/workspace/result.json', JSON.stringify({answer,denied}));`;
     await Bun.write(file, `export const criteria = { correct: { name: "Correct", categories: ["coding"] } };
 export default async ctx => {
  const result = await ctx.verification.run({ commands: [["bun", "/verification/check.mjs"]], files: { "check.mjs": ${JSON.stringify(check)} }, artifacts: ["result.json"], timeoutMs: 20000 });
- if (!result.artifacts.length) throw new Error(await ctx.verification.text(result, "stderr") || "The check produced no result file");
+ if (!result.artifacts.length) throw new Error((await ctx.verification.text(result, "stderr")) || JSON.stringify({exitCode:result.exitCode,missing:result.missingArtifacts}));
  const values = JSON.parse(await ctx.verification.text(result, "result.json"));
  return { scores: { correct: {value: result.exitCode === 0, reason: "Verified the final answer in isolation.", evidence: [{kind:"verification",id:result.id,path:"result.json"}], measurements: values} } };
 };`);
