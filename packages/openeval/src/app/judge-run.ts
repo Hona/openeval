@@ -27,6 +27,8 @@ export async function judgeEvalRun(
     model: definition.judge ? context.definition.judge.model : undefined,
     kind: definition.code ? (definition.judge ? "hybrid" : "code") : "llm",
     code: definition.code,
+    codeCriteria: definition.codeCriteria,
+    verification: context.runtime.verification,
     judgeHash: slot.judgeHash,
     timeoutMs: context.definition.judge.timeoutMs,
     websearch: context.definition.judge.websearch,
@@ -76,6 +78,14 @@ export async function judgeEvalRun(
             ...graded.code,
             stdout: relative(context.directory, graded.code.stdout),
             stderr: relative(context.directory, graded.code.stderr),
+            verifications: graded.code.verifications?.map(result => ({
+              ...result,
+              stdout: relative(context.directory, resolve(directory, "code", result.stdout)),
+              stderr: relative(context.directory, resolve(directory, "code", result.stderr)),
+              artifacts: result.artifacts.map(artifact => ({ ...artifact,
+                file: relative(context.directory, resolve(directory, "code", artifact.file)),
+              })),
+            })),
           }
         : undefined,
       session: graded.session

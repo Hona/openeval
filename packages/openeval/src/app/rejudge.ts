@@ -7,6 +7,7 @@ import { judgeEvalRun } from "./judge-run";
 import { executeQueue, finishBenchmark } from "./run-benchmark";
 import { judgingFingerprint } from "../infra/judging";
 import { canJudgeEval } from "./eval-state";
+import { verificationRuntime } from "../infra/verification/image";
 
 /** Rejudging changes only the selected judgment. The candidate execution is never repeated. */
 export async function judgeRun(
@@ -59,6 +60,8 @@ export async function judgeRuns(
             judgeHash: updated.judgeHash,
             criteria: updated.criteria,
             code: updated.code,
+            codeCriteria: updated.codeCriteria,
+            categories: updated.categories,
             name: updated.name,
           }
         : evalDefinition;
@@ -67,7 +70,9 @@ export async function judgeRuns(
   const runtime = {
     ...previous.runtime,
     judgeHash: await judgingFingerprint(),
+    verification: await verificationRuntime(definition.judge.verification),
   };
+  if (runtime.verification) definition.judge.verification = runtime.verification;
   const selected = new Set(candidates.map((candidate) => candidate.slotId));
   results.transaction(() => {
     if (results.benchmark?.state === "running")

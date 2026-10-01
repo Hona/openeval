@@ -2,7 +2,7 @@
 
 Use the [canonical terminology](https://openev.al/docs/terminology/): a criterion
 is a named graded requirement, a score is awarded credit, and a metric is a
-measurement such as token count or cost. OpenEval 0.3.0 supports code judges,
+measurement such as token count or cost. OpenEval supports code judges,
 LLM judges, and additive use of both against one recorded EvalRun.
 
 ## File conventions
@@ -36,6 +36,9 @@ Only the optional scores object has grading semantics. Each key is a criterion
 ID, using lowercase letters, digits, and underscores, starting with a letter.
 Values are booleans, finite numbers from 0 to 1, or null. The host converts true
 to 1 and false to 0. It rejects invalid values rather than clamping them.
+Optional `{ value, reason, evidence, measurements }` objects make code verdicts
+readable without changing their scoring semantics. Declared code criterion IDs
+must match the returned scores. See [artifact verification](VERIFICATION.md).
 response.text is always a string; missing text becomes an empty string. The
 original execution outcome is available separately on context.run.
 
@@ -69,6 +72,8 @@ a JudgeRun error. A hybrid judgment is selected only after both sources succeed.
 | recording.export(sessionID?) | Native OpenCode session export |
 | workspace.files/read/text/diff | Verified initial and final file snapshots |
 | workspace.materialize(revision?) | A disposable workspace copy for author-owned verification |
+| verification.run(request) | Bounded commands over a restored artifact in an isolated OCI container |
+| verification.read/text(result, path) | Hash-checked retained output from that verification |
 | native.database() | Read-only SQLite access to a verified database copy |
 | native.sdk() | The pinned OpenCode SDK/API over a separate disposable archive copy |
 | native.schema() | The pinned OpenCode schema module |

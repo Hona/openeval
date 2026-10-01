@@ -9,6 +9,8 @@ import { savedJudgeFingerprint } from "./input-fingerprints";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { compileCodeJudge } from "../infra/judging/code-source";
 import { gradeRecording } from "./grade-recording";
+import { readCodeCriteria } from "../infra/judging/code-criteria";
+import { verificationRuntime } from "../infra/verification/image";
 
 /** Inspect retained evidence without changing benchmark selections.
  * Useful for calibration and second opinions: https://arxiv.org/abs/2410.12784
@@ -28,6 +30,7 @@ export async function judgeEvidence(options: {
   if (options.rubric && !options.judge?.model)
     throw new Error("A Markdown rubric requires judge.model");
   const code = options.code ? await compileCodeJudge(options.code) : undefined;
+  const declared = options.code ? await readCodeCriteria(options.code) : undefined;
   const request: Omit<JudgeRunInput, "judgeHash"> = {
     evalRunId: "retained-evidence",
     evidence: {
@@ -37,6 +40,8 @@ export async function judgeEvidence(options: {
     rubric: options.rubric ?? "",
     kind: code ? (options.rubric ? "hybrid" : "code") : "llm",
     code,
+    codeCriteria: declared ? Object.entries(declared as Record<string, { name?: string }>).map(([id, value]) => ({ id, name: value.name ?? id })) : undefined,
+    verification: await verificationRuntime(options.judge?.verification),
     agent: options.rubric ? JUDGE_AGENT : undefined,
     model: options.rubric ? options.judge?.model : undefined,
     timeoutMs: options.judge?.timeoutMs ?? 600_000,
@@ -67,17 +72,18 @@ export async function recordEvidence(options: {
   prompt: string;
   response: string;
   tools?: ToolCall[];
+  workspace?: { initial?: string; final?: string };
 }): Promise<EvidenceRef> {
   const directory = resolve(options.directory);
   await mkdir(dirname(directory), { recursive: true });
   const workspace = await mkdtemp(resolve(dirname(directory), ".recording-"));
   try {
-    const capture = await EvidenceCapture.create(directory);
+    const capture = await EvidenceCapture.create(directory, options.workspace?.initial);
     const result = await capture.finish({
       prompt: options.prompt,
       response: { text: options.response },
       tools: options.tools ?? [],
-      workspace,
+      workspace: options.workspace?.final ?? workspace,
     });
     return { directory, hash: result.sha256 };
   } finally {

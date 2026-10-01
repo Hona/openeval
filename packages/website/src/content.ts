@@ -766,7 +766,15 @@ export const docs: Doc[] = [
               ],
               [
                 "workspace.materialize(revision?)",
-                "A disposable workspace copy for author-owned verification commands.",
+                "A disposable workspace copy. This is not a sandbox for untrusted execution.",
+              ],
+              [
+                "verification.run(request)",
+                "Run bounded argv commands over initial/final artifacts in a pinned OCI container. No credentials, host mounts, or network. Retain exit statuses, logs, and requested output files.",
+              ],
+              [
+                "verification.read/text(result, path)",
+                "Read a retained verification output after checking its hash. This verifies reconstructed artifacts, not the original runtime's live state.",
               ],
               [
                 "native.database()",
@@ -785,6 +793,14 @@ export const docs: Doc[] = [
           ),
           text(
             "The runner owns reader lifetimes and initializes native services only when requested. Native reads are bound to the recorded database, not your live OpenCode service. The SDK opens supported native schemas on disposable copies; recorded and reader versions remain distinct metadata.",
+          ),
+          code(
+            "Isolated artifact checks",
+            'const result = await context.verification.run({\n  revision: "final", timeoutMs: 60_000,\n  commands: [["bun", "/verification/check.mjs"]],\n  files: { "check.mjs": checkSource },\n  artifacts: ["checks.json", "screenshot.png"],\n});\n\nreturn { scores: { correct: {\n  value: result.state === "completed" && result.exitCode === 0,\n  reason: "Explain the verified outcome.",\n  evidence: [{ kind: "verification", id: result.id }],\n} } };',
+            "typescript",
+          ),
+          text(
+            "Set judge.verification.image in benchmark.ts, then build the standard image with openeval image --verification. The image includes Bun, Python, and Playwright with Chromium. Check inputs remain outside the candidate. Artifact tests and thresholds belong to your judge, not the SDK. Boolean and numeric scores still work; structured scores optionally add reasons, evidence, and measurements.",
           ),
         ],
       },

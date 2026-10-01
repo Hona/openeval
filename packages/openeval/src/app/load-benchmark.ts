@@ -292,11 +292,11 @@ export async function loadBenchmark(
       typeof definition.judge !== "object" ||
       Array.isArray(definition.judge) ||
       Object.keys(definition.judge).some(
-        (key) => !["model", "timeoutMs", "websearch"].includes(key),
+        (key) => !["model", "timeoutMs", "websearch", "verification"].includes(key),
       ))
   )
     throw new Error(
-      "judge must be an object with model, timeoutMs, or websearch settings",
+      "judge must be an object with model, timeoutMs, websearch, or verification settings",
     );
   if (new Set(models).size !== models.length)
     throw new Error("Benchmark contains duplicate models");
@@ -337,6 +337,13 @@ export async function loadBenchmark(
   const engine = definition.container?.engine ?? "docker";
   if (engine !== "docker" && engine !== "podman")
     throw new Error("Container engine must be docker or podman");
+  const verification = definition.judge?.verification;
+  if (verification && (
+    typeof verification !== "object" || Array.isArray(verification) ||
+    Object.keys(verification).some(key => !["image", "engine", "cpus", "memoryMiB"].includes(key)) ||
+    typeof verification.image !== "string" || !verification.image.trim() || /\s/.test(verification.image) ||
+    !["docker", "podman"].includes(verification.engine ?? engine)
+  )) throw new Error("judge.verification requires an image and valid container limits");
   for (const search of [
     definition.candidate?.websearch,
     definition.judge?.websearch,
@@ -367,6 +374,12 @@ export async function loadBenchmark(
         "Judge timeout",
       ),
       websearch: definition.judge?.websearch ?? "exa",
+      ...(verification ? { verification: {
+        image: verification.image,
+        engine: verification.engine ?? engine,
+        cpus: positive(verification.cpus, 2, "Verification CPU count"),
+        memoryMiB: positive(verification.memoryMiB, 4096, "Verification memory"),
+      } } : {}),
     },
     container: {
       engine,

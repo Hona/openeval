@@ -176,7 +176,8 @@ export async function runBenchmark(
   const selected = options.onlyModels?.map(modelRef);
   if (selected && !selected.length)
     throw new Error("Select at least one model");
-  const runtime = await runtimeFingerprint(definition.container);
+  const runtime = await runtimeFingerprint(definition.container, definition.judge.verification);
+  if (runtime.verification) definition.judge.verification = runtime.verification;
   let directory =
     options.directory ??
     (!options.fresh

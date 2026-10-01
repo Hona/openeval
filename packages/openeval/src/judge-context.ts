@@ -12,6 +12,8 @@ import type {
   ToolCall,
   Cost,
   Accounting,
+  Engine,
+  EvidenceCitation,
 } from "./types";
 
 export type JsonValue =
@@ -22,6 +24,62 @@ export type JsonValue =
   | JsonValue[]
   | { [key: string]: JsonValue };
 export type ScoreValue = boolean | number | null;
+
+/** Scalars remain sufficient. Add explanations only when they help a reader. */
+export type CodeScore = ScoreValue | {
+  value: ScoreValue;
+  reason: string;
+  evidence?: EvidenceCitation[];
+  measurements?: Record<string, JsonValue>;
+};
+
+export type VerificationEnvironment = {
+  engine?: Engine;
+  /** A locally available OCI image; resolved to an immutable ID before collection. */
+  image: string;
+  cpus?: number;
+  memoryMiB?: number;
+};
+export type VerificationRuntime = {
+  engine: Engine;
+  image: string;
+  imageId: string;
+  cpus: number;
+  memoryMiB: number;
+};
+export type VerificationRequest = {
+  revision?: Revision;
+  cwd?: string;
+  /** Commands run in order; a nonzero exit stops this verification. No implicit shell. */
+  commands: readonly (readonly string[])[];
+  /** Trusted, frozen judge inputs, copied to /verification; never to the candidate. */
+  files?: Record<string, string>;
+  /** Relative paths under the restored workspace; missing outputs are reported. */
+  artifacts?: readonly string[];
+  timeoutMs?: number;
+};
+export type VerificationArtifact = {
+  path: string;
+  bytes: number;
+  sha256: string;
+  /** Relative to the code-judge execution directory, not the candidate workspace. */
+  file: string;
+};
+export type VerificationResult = {
+  id: string;
+  state: "completed" | "timed_out";
+  revision: Revision;
+  environment: VerificationRuntime;
+  startedAt: string;
+  elapsedMs: number;
+  commands: Array<{ argv: string[]; exitCode: number | null; elapsedMs: number }>;
+  exitCode: number | null;
+  stdout: string;
+  stderr: string;
+  logsTruncated: boolean;
+  artifacts: VerificationArtifact[];
+  missingArtifacts: string[];
+};
 
 /** Code judges are ordinary functions. Only an optional scores map has grading semantics. */
 export type JudgeFunction = (
@@ -106,6 +164,13 @@ export interface JudgeContext {
     /** Restore a disposable snapshot for author-owned verification commands. */
     materialize(revision?: Revision): Promise<string>;
   };
+  readonly verification: {
+    /** Execute an artifact in a credential-free, network-isolated OCI container. */
+    run(request: VerificationRequest): Promise<VerificationResult>;
+    /** Read one retained output, checking its hash. No original runtime-state claim. */
+    read(result: VerificationResult, path: string): Promise<Uint8Array>;
+    text(result: VerificationResult, path: string): Promise<string>;
+  };
   readonly native: {
     readonly version: string | null;
     readonly readerVersion: string;
@@ -138,4 +203,5 @@ export type CodeJudgeExecution = {
   sourceHash: string;
   stdout: string;
   stderr: string;
+  verifications?: VerificationResult[];
 };

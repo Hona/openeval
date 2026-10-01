@@ -61,6 +61,7 @@ export function candidateFingerprint(
       timeoutMs: definition.candidate.timeoutMs,
       websearch: definition.candidate.websearch,
       provider: scope && { ...scope.settings, model: scope.override },
+      earlyStop: item.settings.earlyStop ?? false,
     },
     container: {
       engine: definition.container.engine,
@@ -76,12 +77,13 @@ export const judgeFingerprint = (
   fingerprint({
     rubric: definition.evals.find((item) => item.id === evalId)!.judge,
     code: definition.evals.find((item) => item.id === evalId)!.code?.hash,
+    codeIds: definition.evals.find((item) => item.id === evalId)!.codeCriteria?.map(item => item.id).sort(),
     agent: definition.evals.find((item) => item.id === evalId)!.judge
       ? JUDGE_AGENT
       : undefined,
     judge: definition.evals.find((item) => item.id === evalId)!.judge
       ? definition.judge
-      : { timeoutMs: definition.judge.timeoutMs },
+      : { timeoutMs: definition.judge.timeoutMs, verification: definition.judge.verification },
     protocol: JUDGE_PROTOCOL,
   });
 export const savedJudgeFingerprint = (
@@ -94,11 +96,14 @@ export const savedJudgeFingerprint = (
     | "timeoutMs"
     | "websearch"
     | "code"
+    | "codeCriteria"
+    | "verification"
   >,
 ) =>
   fingerprint({
     rubric: input.rubric,
     code: input.code?.hash,
+    codeIds: input.codeCriteria?.map(item => item.id).sort(),
     agent: input.agent,
     protocol: input.protocol,
     judge: input.rubric
@@ -106,6 +111,7 @@ export const savedJudgeFingerprint = (
           model: input.model,
           timeoutMs: input.timeoutMs,
           websearch: input.websearch,
+          verification: input.verification,
         }
-      : { timeoutMs: input.timeoutMs },
+      : { timeoutMs: input.timeoutMs, verification: input.verification },
   });

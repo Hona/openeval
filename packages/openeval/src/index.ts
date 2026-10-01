@@ -46,8 +46,16 @@ export type {
   RecordedEvent,
   RecordedMessage,
   RecordedFile,
+  CodeScore,
+  VerificationEnvironment,
+  VerificationRuntime,
+  VerificationRequest,
+  VerificationResult,
+  VerificationArtifact,
 } from "./judge-context";
+export { buildVerificationImage, VERIFICATION_IMAGE } from "./infra/verification/image";
 export { loadBenchmark } from "./app/load-benchmark";
+export { prepareInputs } from "./app/prepare-inputs";
 export {
   runBenchmark,
   currentBenchmarkRun,

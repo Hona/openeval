@@ -1,6 +1,6 @@
 {
   "name": "@hona/openeval",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Code and LLM evaluations with isolated agents, recorded OpenCode data, and a results viewer",
   "license": "MIT",
   "repository": {
@@ -10,7 +10,7 @@
   },
   "engines": { "bun": ">=1.4.2" },
   "bin": { "openeval": "src/cli.ts" },
-  "files": ["src", "viewer", "LICENSE", "README.md", "JUDGING.md", "!src/**/*.test.ts"],
+  "files": ["src", "viewer", "LICENSE", "README.md", "JUDGING.md", "VERIFICATION.md", "!src/**/*.test.ts"],
   "publishConfig": { "access": "public" },
   "type": "module",
   "exports": {

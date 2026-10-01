@@ -15,7 +15,9 @@ export async function compileCodeJudge(
   dependencies[sdkManifest] = await Bun.file(sdkManifest).text();
   const external = new Set<string>();
   const built = await Bun.build({
-    entrypoints: [file],
+    // Import only the judge function: unused reporting metadata is tree-shaken.
+    // If grading reads metadata, it remains executable and must affect the hash.
+    entrypoints: ["openeval:judge-entry"],
     root: dirname(file),
     target: "bun",
     format: "esm",
@@ -25,6 +27,11 @@ export async function compileCodeJudge(
       {
         name: "judge-dependencies",
         setup(build) {
+          build.onResolve({ filter: /^openeval:judge-entry$/ }, () => ({ path: "judge.js", namespace: "openeval-judge" }));
+          build.onLoad({ filter: /.*/, namespace: "openeval-judge" }, () => ({
+            contents: `export { default } from ${JSON.stringify(file.replaceAll("\\", "/"))};`,
+            loader: "js", resolveDir: dirname(file),
+          }));
           build.onResolve({ filter: /^[^./]/ }, (args) => {
             if (
               args.path.startsWith("node:") ||
@@ -91,6 +98,7 @@ export async function compileCodeJudge(
     source,
     sourceMap,
     dependencies,
-    hash: fingerprint({ source, sourceMap, dependencies }),
+    // Debug mappings and original-source metadata are retained, but not executable inputs.
+    hash: fingerprint({ source, dependencies }),
   };
 }

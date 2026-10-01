@@ -12,6 +12,9 @@ import {
   serveResults,
   mergeBenchmarkRuns,
   snapshotBenchmarkRun,
+  buildVerificationImage,
+  VERIFICATION_IMAGE,
+  prepareInputs,
 } from "./index";
 import type { ModelRef } from "./index";
 
@@ -35,6 +38,7 @@ try {
 Commands:
   image                 Build the candidate container image
   plan                  Show missing or changed work without executing it
+  prepare               Prepare and archive inputs without model calls
   run                   Execute missing or changed work in the current result
   view                  Serve the results viewer
   snapshot <run> <name>  Export a score snapshot
@@ -55,14 +59,29 @@ Options:
   --only-repetition <n>  Execute only this repetition (repeatable)
   --max-cost <usd>       Scheduling budget for this invocation
   --final-only          Judge only after candidates finish
+  --verification        Build only the standard verification image (image command)
+  --output <dir>         New prepared-input directory (prepare command)
   --port <port>         Viewer port (default: 4173)
 
 Requires Bun 1.4.2+, Docker, and an authenticated OpenCode installation.`);
   } else if (command === "--version") {
     console.log((await Bun.file(new URL("../package.json", import.meta.url)).json()).version);
   } else if (command === "image") {
-    await buildImage((await loadBenchmark(benchmark)).container);
-    console.log("Candidate image ready");
+    const definition = await loadBenchmark(benchmark);
+    if (!args.includes("--verification")) {
+      await buildImage(definition.container);
+      console.log("Candidate image ready");
+    }
+    const verification = definition.judge.verification ?? (args.includes("--verification")
+      ? { image: VERIFICATION_IMAGE, engine: definition.container.engine } : undefined);
+    if (verification) {
+      await buildVerificationImage(verification);
+      console.log("Verification image ready");
+    }
+  } else if (command === "prepare") {
+    if (!option("--output")) throw new Error("prepare requires --output with a new directory");
+    const onlyEvals = args.flatMap((arg, index) => arg === "--only-eval" ? [args[index + 1]] : []);
+    console.log(JSON.stringify(await prepareInputs(benchmark, { directory: option("--output")!, onlyEvals: onlyEvals.length ? onlyEvals : undefined }), null, 2));
   } else if (command === "view") {
     const viewer = await serveResults({
       resultsPath: resolve(benchmark, "results"),

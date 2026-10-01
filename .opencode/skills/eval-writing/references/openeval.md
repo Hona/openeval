@@ -1,7 +1,7 @@
 # Apply the workflow with OpenEval
 
-This reference describes the public `@hona/openeval` 0.3.0 contracts, reviewed
-2026-09-15. Check the installed version's documentation before using its APIs.
+This reference describes the public `@hona/openeval` 0.5.0 contracts, reviewed
+2026-10-01. Check the installed version's documentation before using its APIs.
 Follow the benchmark author's own repository rules, inventory, and collection
 policy. Repository-specific commands and approvals are not universal SDK features.
 
@@ -28,7 +28,8 @@ my-benchmark/
 - `prompt.md` is sent verbatim. Include the task and genuine constraints.
 - `judge.md` defines task-specific criteria, accepted alternatives, and domain facts.
 - `judge.ts` default-exports a function receiving JudgeContext and returning JSON.
-  Its optional scores map contains booleans, finite numbers from 0 to 1, or null.
+  Its optional scores map contains booleans, finite numbers from 0 to 1, or null,
+  optionally wrapped in `{ value, reason, evidence, measurements }`.
   Both files contribute distinct criteria; duplicate IDs are errors. Code-only
   benchmarks do not require a judge model. Code and hybrid evals use final grading.
 - `eval.ts` uses the public `Eval` declaration for preparation and early stopping.
@@ -91,11 +92,16 @@ export const criteria = {
 } satisfies CodeCriteria;
 ```
 
-Any string works; matching is case-insensitive. Categories never change judge
-input or fingerprints, so retagging never rejudges evidence. Prefer one category
-per criterion. When a rule mixes two behaviors, split it into two criteria, the
-way Artificial Analysis scores Omniscience accuracy and hallucination rate
-separately. Prefer published names so results are comparable:
+Any non-empty string works; matching is case-insensitive. Markdown category lines
+are removed from judge input and rubric fingerprints. In 0.5.0, unused code
+metadata is tree-shaken before executable fingerprinting. If the grading function
+reads metadata, that value remains executable behavior. Code, criterion IDs,
+imported inputs, dependencies, and verification environment changes still matter.
+
+A capability tag and a behavior tag can describe the same criterion from two
+perspectives. Multiple tags do not require duplicate criteria. Split independent
+graded behaviors, not labels. Prefer published names for readable groupings;
+sharing a category name does not make different benchmarks directly comparable:
 
 | Kind | Category | Measures |
 | --- | --- | --- |
@@ -108,8 +114,9 @@ separately. Prefer published names so results are comparable:
 | | `misalignment` | Fails to ask for clarification, derails, withholds information, acts against its reasoning (FM-2.x) |
 | | `verification` | Stops early, skips verification, or verifies incorrectly (FM-3.x) |
 
-A category with fewer than three criteria is flagged as low coverage; add
-coverage before drawing conclusions from it.
+A category with fewer than three criteria is flagged as low coverage. That is a
+viewer warning, not statistical certification above three. Count independent
+tasks and source families as well; grow useful coverage, not redundant checks.
 
 A completed judgment contains the full criterion-score map in `scores`.
 The SDK normalizes booleans and validates IDs,
@@ -129,6 +136,15 @@ archive copies. A disposable workspace can support author-owned verification;
 attribute new checks to the judge rather than claiming the candidate ran them.
 Keep task-specific rules in the benchmark's function. The SDK provides data and
 execution primitives, not built-in task-specific scorers or registration DSLs.
+Verification of a restored artifact is new judge evidence, not proof that a
+process was alive or that the candidate performed the check during its original
+execution. Runtime-state claims need recorded observations of that runtime.
+Materializing a disposable copy is not itself a security sandbox. Contain untrusted
+artifact execution, verify required dependencies, and bound verification resources.
+Use `verification.run()` with `judge.verification` configured for executable
+artifact checks. It restores a snapshot into an isolated OCI container and retains
+bounded commands, logs, and outputs. `verification.read/text()` checks output hashes.
+See the published [verification contract](https://github.com/Hona/openeval/blob/v0.5.0/packages/openeval/VERIFICATION.md).
 
 Useful public exports:
 
@@ -136,7 +152,7 @@ Useful public exports:
 | --- | --- |
 | `loadBenchmark` | Load and validate a benchmark declaration and its eval files |
 | `rubricCriteria` | Read criterion declarations from rubric text |
-| `recordEvidence` | Create a recording from supplied text and tool records |
+| `recordEvidence` | Create a recording from supplied text/tool records and optional initial/final artifact directories |
 | `judgeEvidence` | Judge evidence into a new standalone directory without selecting benchmark scores |
 | `judgeRuns` | Rejudge retained executions and update their active judgment selections |
 | `readRecording` | Open typed recorded data and lazy native readers; dispose after use |
@@ -208,7 +224,7 @@ not a guaranteed billing ceiling; active work can finish above the estimate.
 ## Public references
 
 - [OpenEval README](https://github.com/Hona/openeval#readme)
-- [0.3.0 judging contract](https://github.com/Hona/openeval/blob/v0.3.0/packages/openeval/JUDGING.md)
+- [0.5.0 judging contract](https://github.com/Hona/openeval/blob/v0.5.0/packages/openeval/JUDGING.md)
 - [Task prompts](https://openev.al/docs/prompts/)
 - [Judge rubrics](https://openev.al/docs/rubrics/)
 - [Workspace preparation](https://openev.al/docs/workspaces/)

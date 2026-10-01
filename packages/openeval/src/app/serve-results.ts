@@ -52,6 +52,20 @@ export async function serveResults(options: {
               url.searchParams.get("judge") ?? "",
             ),
           );
+        if (url.pathname === "/api/verification") {
+          const result = await reader.verificationEvidence(
+            url.searchParams.get("benchmark") ?? "", url.searchParams.get("judge") ?? "",
+            url.searchParams.get("id") ?? "", url.searchParams.get("path") ?? undefined,
+          );
+          if ("receipt" in result) return Response.json(result);
+          const mime = /\.png$/i.test(result.path) ? "image/png" : /\.jpe?g$/i.test(result.path) ? "image/jpeg" :
+            /\.webp$/i.test(result.path) ? "image/webp" : "text/plain; charset=utf-8";
+          return new Response(result.bytes, { headers: {
+            "Content-Type": mime, "X-Content-Type-Options": "nosniff",
+            "Content-Security-Policy": "default-src 'none'; sandbox",
+            "Cache-Control": "no-store",
+          } });
+        }
         if (url.pathname === "/api/check-evidence") {
           const query: EvidenceQuery = {
             action: (url.searchParams.get("action") ??
