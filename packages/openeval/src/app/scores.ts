@@ -14,6 +14,15 @@ export function benchmarkScores(
   const evals = definition.evals.filter(
     (item) => !evalId || item.id === evalId,
   );
+  // A code judgment counts only when it ran the eval's current judge.ts to completion.
+  const current = (item: (typeof evals)[number], slot: Slot) => {
+    const judge = slot.judgeRunId ? index.get(slot.judgeRunId) : undefined;
+    return !item.code ||
+      (judge?.code?.state === "completed" &&
+        judge.input.code?.hash === item.code.hash)
+      ? judge
+      : undefined;
+  };
   const keys = definition.categories?.map(categoryKey);
   const definitions = new Map(
     evals.map((item) => {
@@ -58,9 +67,7 @@ export function benchmarkScores(
           const values = selected
             .map(
               (slot) =>
-                (slot.judgeRunId
-                  ? index.get(slot.judgeRunId)?.judgment?.scores
-                  : undefined)?.[criterion.id]?.value,
+                current(item, slot)?.judgment?.scores?.[criterion.id]?.value,
             )
             .filter(isScored);
           const scoredSum = values.reduce<number>(
@@ -86,26 +93,19 @@ export function benchmarkScores(
         });
       }),
       evals.map((item) => item.id),
+      // Without a declared `criteria` export, judge.ts reveals its criteria only by running.
       evals
         .filter(
           (item) =>
             item.code &&
-            slots
-              .filter(
-                (slot) =>
-                  slot.active &&
-                  slot.evalId === item.id &&
-                  slot.model === model,
-              )
-              .some((slot) => {
-                const judge = slot.judgeRunId
-                  ? index.get(slot.judgeRunId)
-                  : undefined;
-                return (
-                  judge?.code?.state !== "completed" ||
-                  judge.input.code?.hash !== item.code!.hash
-                );
-              }),
+            !item.codeCriteria?.length &&
+            slots.some(
+              (slot) =>
+                slot.active &&
+                slot.evalId === item.id &&
+                slot.model === model &&
+                !current(item, slot),
+            ),
         )
         .map((item) => item.id),
     ),
