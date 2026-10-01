@@ -1,5 +1,5 @@
 import { createMemo, createSignal, For } from "solid-js";
-import { ProviderIcon } from "@opencode/ui/provider-icon";
+import { ProviderMark } from "./provider-mark";
 import {
   scoreBounds,
   selectCategories,
@@ -80,7 +80,7 @@ export function CategoryMatrix(props: {
                 <th scope="row">
                   <span class="model-identity">
                     <span class="provider-mark">
-                      <ProviderIcon id={provider(row.score.model)} />
+                      <ProviderMark id={provider(row.score.model)} />
                     </span>
                     <span>
                       <strong>{modelName(row.score.model)}</strong>

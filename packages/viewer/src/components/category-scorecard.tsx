@@ -1,5 +1,5 @@
 import { For, Show } from "solid-js";
-import { ProviderIcon } from "@opencode/ui/provider-icon";
+import { ProviderMark } from "./provider-mark";
 import { modelName, provider, reasoning } from "../model";
 import { isRange, scorecardValue, type Scorecard } from "../scorecard";
 import { criteriaCount, LOW_COVERAGE } from "./category-filter";
@@ -21,7 +21,7 @@ export function CategoryScorecard(props: {
               {(model) => (
                 <th scope="col" class="scorecard-model">
                   <span class="provider-mark">
-                    <ProviderIcon id={provider(model)} />
+                    <ProviderMark id={provider(model)} />
                   </span>
                   <strong>{modelName(model)}</strong>
                   <small>{reasoning(model)}</small>

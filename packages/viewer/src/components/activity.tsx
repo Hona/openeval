@@ -10,7 +10,7 @@ import {
 import { Badge } from "@opencode/ui/badge";
 import { Icon } from "@opencode/ui/icon";
 import { Select } from "@opencode/ui/select";
-import { ProviderIcon } from "@opencode/ui/provider-icon";
+import { ProviderMark } from "./provider-mark";
 import { Tooltip } from "@opencode/ui/tooltip";
 import { sumCosts, stageRuntime, runtimeClock } from "@hona/openeval/view";
 import type { ActivityRun, LiveEvalRun, StageState } from "../types";
@@ -319,7 +319,7 @@ export function Activity(props: {
                   progress().models.find((model) => model.key === key)!;
                 return (
                   <div class="model-race-row">
-                    <ProviderIcon id={provider(model().model)} />
+                    <ProviderMark id={provider(model().model)} />
                     <div class="model-race-lane">
                       <div class="model-race-label">
                         <span class="model-race-name">

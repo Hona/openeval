@@ -1,7 +1,5 @@
-import { For } from "solid-js";
-import { render } from "solid-js/web";
-import { ProviderIcon } from "@opencode/ui/provider-icon";
 import { formatNumber, modelName, provider, reasoning } from "./model";
+import { providerIconId, providerSprite } from "./components/provider-mark";
 import { scoreBounds, type ScoreBounds } from "@hona/openeval/view";
 import { isRange, scorecardValue, type Scorecard } from "./scorecard";
 import { criteriaCount, LOW_COVERAGE } from "./components/category-filter";
@@ -56,67 +54,34 @@ const mix = (
 
 /** Rasterize the published provider artwork, including its embedded definitions. */
 const providerImages = async (ids: string[], foreground: string) => {
-  const host = document.createElement("div");
-  host.hidden = true;
-  document.body.append(host);
-  const dispose = render(
-    () => <For each={ids}>{(id) => <ProviderIcon id={id} />}</For>,
-    host,
+  const sprite = await providerSprite();
+  return Promise.all(
+    ids.map(async (provider) => {
+      const id = providerIconId(provider);
+      const symbol = sprite.getElementById(id);
+      if (!symbol) throw new Error(`Missing model icon: ${id}`);
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+      svg.setAttribute("viewBox", symbol.getAttribute("viewBox") ?? "0 0 40 40");
+      svg.setAttribute("width", "128");
+      svg.setAttribute("height", "128");
+      svg.setAttribute("color", foreground);
+      for (const child of symbol.childNodes) svg.append(child.cloneNode(true));
+      const url = URL.createObjectURL(
+        new Blob([new XMLSerializer().serializeToString(svg)], {
+          type: "image/svg+xml",
+        }),
+      );
+      try {
+        const image = new Image();
+        image.src = url;
+        await image.decode();
+        return image;
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    }),
   );
-  const sprites = new Map<string, Promise<Document>>();
-  try {
-    return await Promise.all(
-      [...host.querySelectorAll("use")].map(async (use) => {
-        const href = new URL(use.getAttribute("href")!, location.href);
-        const id = href.hash.slice(1);
-        href.hash = "";
-        if (!sprites.has(href.href))
-          sprites.set(
-            href.href,
-            fetch(href).then(async (response) => {
-              if (!response.ok) throw new Error("Could not load model icons");
-              return new DOMParser().parseFromString(
-                await response.text(),
-                "image/svg+xml",
-              );
-            }),
-          );
-        const sprite = await sprites.get(href.href)!;
-        const symbol = sprite.getElementById(id);
-        if (!symbol) throw new Error(`Missing model icon: ${id}`);
-        const svg = document.createElementNS(
-          "http://www.w3.org/2000/svg",
-          "svg",
-        );
-        svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-        svg.setAttribute(
-          "viewBox",
-          symbol.getAttribute("viewBox") ?? "0 0 40 40",
-        );
-        svg.setAttribute("width", "128");
-        svg.setAttribute("height", "128");
-        svg.setAttribute("color", foreground);
-        for (const child of symbol.childNodes)
-          svg.append(child.cloneNode(true));
-        const url = URL.createObjectURL(
-          new Blob([new XMLSerializer().serializeToString(svg)], {
-            type: "image/svg+xml",
-          }),
-        );
-        try {
-          const image = new Image();
-          image.src = url;
-          await image.decode();
-          return image;
-        } finally {
-          URL.revokeObjectURL(url);
-        }
-      }),
-    );
-  } finally {
-    dispose();
-    host.remove();
-  }
 };
 
 /** Shrink-to-fit text: one canvas helper shared by both exports. */
