@@ -128,7 +128,14 @@ export function verificationSession(options: {
           await engineCommand(runtime.engine, verificationArgs(runtime, options.owner, name, timeoutMs));
           await engineCommand(runtime.engine, ["exec", "--interactive", "--user", "10001:10001", name,
             "tar", "--no-same-owner", "--no-overwrite-dir", "-xf", "-", "-C", "/workspace"], { input: archive, timeoutMs });
-          await engineCommand(runtime.engine, ["cp", `${trusted}/.`, `${name}:/verification`], { timeoutMs });
+          // docker cp rejects a read-only rootfs even when its target is tmpfs.
+          // Only this trusted upload runs as root; artifact commands remain non-root.
+          const trustedArchive = resolve(staging, "trusted.tar");
+          const packTrusted = Bun.spawn(["tar", "-cf", trustedArchive, "-C", trusted, "."], { stdout: "ignore", stderr: "pipe" });
+          const [trustedExit, trustedError] = await Promise.all([packTrusted.exited, new Response(packTrusted.stderr).text()]);
+          if (trustedExit) throw new Error(`Cannot transfer trusted check inputs: ${trustedError}`);
+          await engineCommand(runtime.engine, ["exec", "--interactive", "--user", "0:0", name,
+            "tar", "--no-same-owner", "--no-overwrite-dir", "-xf", "-", "-C", "/verification"], { input: trustedArchive, timeoutMs });
           for (const argv of request.commands) {
             const started = Date.now();
             const remaining = deadlineAt - started;
