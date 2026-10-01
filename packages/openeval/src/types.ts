@@ -47,7 +47,13 @@ export type Benchmark = {
     cpus?: number;
     memoryMiB?: number;
   };
+  /** Compose the benchmark from criteria in any of these categories. Omit for every criterion. */
+  categories?: readonly string[];
 };
+/** Optional `criteria` export from judge.ts: labels and categories for the scores it returns. */
+export type CodeCriteria = Readonly<
+  Record<string, { name?: string; categories?: readonly string[] }>
+>;
 export type PreparationStep = { cwd: string; argv: readonly string[] };
 export type MonitorPolicy = {
   minIntervalMs: number;
@@ -81,6 +87,10 @@ export type EvalDefinition = {
   judgeHash: string;
   /** Criteria declared in judge.md; code-defined IDs are discovered from results. */
   criteria: CriterionDefinition[];
+  /** Criteria labelled by judge.ts's `criteria` export. */
+  codeCriteria?: CriterionDefinition[];
+  /** Reporting categories by criterion ID; never part of judge input or fingerprints. */
+  categories?: Record<string, string[]>;
   /** A frozen, bundled code judge; never sent to the candidate. */
   code?: CodeJudgeDefinition;
   name: string;
@@ -98,6 +108,8 @@ export type BenchmarkDefinition = {
     providers?: ProviderDefinitions;
   };
   container: { engine: Engine; image: string; cpus: number; memoryMiB: number };
+  /** Selected categories; evals without a matching criterion are excluded. */
+  categories?: string[];
   evals: EvalDefinition[];
 };
 export type Cost = {

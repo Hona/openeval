@@ -1,4 +1,5 @@
 @import "./components/score-chart.css";
+@import "./components/categories.css";
 @source "../../node_modules/@opencode/session-ui/src";
 
 @font-face {

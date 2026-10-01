@@ -16,9 +16,11 @@ import type {
 } from "./types";
 import type { RunMetrics } from "./judge-context";
 import { runtimeMs, type RuntimeInterval } from "./runtime";
+import { categoryKey, inCategories } from "./criterion-categories";
 export { mergeRuntime, runtimeMs, runtimeClock } from "./runtime";
 export type { RuntimeInterval } from "./runtime";
 export type { ModelNames } from "./types";
+export { categoryKey, inCategories } from "./criterion-categories";
 
 export type ScoreBounds = { lower: number; upper: number; coverage: number };
 export type ModelScore = {
@@ -32,6 +34,7 @@ export type ModelScore = {
     eval: string;
     criterion: string;
     name: string;
+    categories?: string[];
     value: number | null;
     scored: number;
     expected: number;
@@ -83,6 +86,61 @@ export function modelScore(
 }
 export const scoreBounds = (score: Pick<ModelScore, "bounds">): ScoreBounds =>
   score.bounds;
+
+/** Rescore only criteria in the selected categories, keeping unresolved evals unresolved. */
+export function selectCategories(
+  score: ModelScore,
+  keys: readonly string[],
+): ModelScore {
+  const components = score.components.filter((part) =>
+    inCategories(part, keys),
+  );
+  const evals = [...new Set(components.map((part) => part.eval))];
+  return modelScore(
+    score.model,
+    components,
+    evals,
+    score.unscoredEvals.filter((id) => evals.includes(id)),
+  );
+}
+
+export type CategorySummary = {
+  /** Case-insensitive identity used in URLs and filters. */
+  key: string;
+  /** First declared spelling. */
+  name: string;
+  criteria: number;
+  evals: number;
+};
+/** Categories in first-declared order, with how many criteria and evals measure each. */
+export function categoryCatalog(
+  components: readonly Pick<
+    ModelScore["components"][number],
+    "eval" | "criterion" | "categories"
+  >[],
+): CategorySummary[] {
+  const catalog = new Map<
+    string,
+    { name: string; criteria: Set<string>; evals: Set<string> }
+  >();
+  for (const part of components)
+    for (const name of part.categories ?? []) {
+      const entry = catalog.get(categoryKey(name)) ?? {
+        name,
+        criteria: new Set<string>(),
+        evals: new Set<string>(),
+      };
+      entry.criteria.add(`${part.eval}/${part.criterion}`);
+      entry.evals.add(part.eval);
+      catalog.set(categoryKey(name), entry);
+    }
+  return [...catalog].map(([key, entry]) => ({
+    key,
+    name: entry.name,
+    criteria: entry.criteria.size,
+    evals: entry.evals.size,
+  }));
+}
 
 function componentBounds(
   components: ModelScore["components"],
@@ -147,6 +205,7 @@ export type Overview = {
   evals: string[];
   evalNames: Record<string, string>;
   modelNames: ModelNames;
+  categories: CategorySummary[];
   cost: Cost;
   evalCosts: Record<string, Cost>;
   runtime: RuntimeInterval[];

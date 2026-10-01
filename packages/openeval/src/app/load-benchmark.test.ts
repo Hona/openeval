@@ -42,6 +42,66 @@ test("loads namespaced model IDs and preserves them for OpenCode", async () => {
   }
 });
 
+test("criteria declare categories in judge.md and judge.ts without changing judge inputs", async () => {
+  const root = await mkdtemp(
+    resolve(
+      process.platform === "win32" ? "C:/tmp/opencode" : tmpdir(),
+      "openeval-categories-",
+    ),
+  );
+  const rubric =
+    "## Criterion: asks - Asks for the version\nReturn 1 when it asks.";
+  const write = (path: string, content: string) =>
+    Bun.write(resolve(root, path), content);
+  try {
+    await write(
+      "benchmark.ts",
+      'export default { models: ["example/model"], judge: { model: "example/judge" } };',
+    );
+    for (const id of ["ask", "code", "plain"])
+      await write(`evals/${id}/prompt.md`, "Answer the question.");
+    await write("evals/ask/judge.md", rubric);
+    await write(
+      "evals/code/judge.ts",
+      'export const criteria = { correct: { name: "Correct answer", categories: ["General", "general"] }, unlabeled: {} };\nexport default () => ({ scores: { correct: true } });',
+    );
+    await write("evals/plain/judge.md", rubric);
+    const before = await loadBenchmark(root);
+
+    await write(
+      "evals/ask/judge.md",
+      rubric.replace("version\n", "version\nCategories: misalignment, General\n"),
+    );
+    const after = await loadBenchmark(root);
+    const [ask, code] = after.evals;
+    expect(ask!.judgeHash).toBe(before.evals[0]!.judgeHash);
+    expect(ask!.judge).toBe(rubric);
+    expect(ask!.categories).toEqual({ asks: ["misalignment", "General"] });
+    expect(code!.codeCriteria).toEqual([
+      { id: "correct", name: "Correct answer" },
+      { id: "unlabeled", name: "unlabeled" },
+    ]);
+    expect(code!.categories).toEqual({ correct: ["General"] });
+
+    await write(
+      "benchmark.ts",
+      'export default { models: ["example/model"], judge: { model: "example/judge" }, categories: ["MISALIGNMENT"] };',
+    );
+    const composed = await loadBenchmark(root);
+    expect(composed.evals.map((item) => item.id)).toEqual(["ask"]);
+    expect(composed.categories).toEqual(["MISALIGNMENT"]);
+
+    await write(
+      "evals/code/judge.ts",
+      'export const criteria = { asks: { categories: ["general"] } };\nexport default () => ({ scores: {} });',
+    );
+    await write("evals/code/judge.md", rubric);
+    await expect(loadBenchmark(root)).rejects.toThrow("not both");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("accepts existing unqualified IDs and namespaced IDs without variants", () => {
   expect(parseModel(modelRef("example/checkpoint"))).toEqual({
     providerID: "example",

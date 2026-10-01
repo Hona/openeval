@@ -560,6 +560,41 @@ export const docs: Doc[] = [
         ],
       },
       {
+        id: "categories",
+        title: "Group criteria into categories",
+        blocks: [
+          code(
+            "judge.md",
+            "## Criterion: asked_dialect — Asks for the SQL dialect\nCategories: misalignment",
+            "markdown",
+          ),
+          code(
+            "judge.ts",
+            'export const criteria = {\n  correct_answer: { name: "Correct answer", categories: ["general"] },\n} satisfies CodeCriteria;',
+            "typescript",
+          ),
+          text(
+            "A category is any string. Put the optional Categories: line directly below a heading, or export criteria from judge.ts. OpenEval removes category lines before the judge reads the rubric, so adding or changing categories never rejudges recorded evidence.",
+          ),
+          text(
+            "The viewer adds a Categories tab with a radar chart and a models-by-categories heatmap, and a filter that rescores any view to the selected categories. Set categories in benchmark.ts to compose a benchmark from them, or pass --only-category to run a subset.",
+          ),
+          table(
+            ["Kind", "Published set"],
+            [
+              [
+                "Capability (Artificial Analysis)",
+                "agents · coding · general · scientific-reasoning",
+              ],
+              [
+                "Agent failure (MAST, NeurIPS 2025)",
+                "specification · misalignment · verification",
+              ],
+            ],
+          ),
+        ],
+      },
+      {
         id: "outcomes",
         title: "Decide what counts",
         blocks: [

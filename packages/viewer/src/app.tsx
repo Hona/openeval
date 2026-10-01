@@ -23,6 +23,9 @@ import { EvalRunTrace } from "./components/trace";
 import { SessionDrawer } from "./components/session-drawer";
 import { Activity } from "./components/activity";
 import { ModelFilter } from "./components/model-filter";
+import { CategoryFilter } from "./components/category-filter";
+import { CategoryRadar } from "./components/category-radar";
+import { CategoryMatrix } from "./components/category-matrix";
 import { downloadResultsImage } from "./results-image";
 import { EvalName, SecretToggle, topSecret, SECRET_MODE_KEY } from "./privacy";
 import {
@@ -45,19 +48,23 @@ import {
   modelScore,
   runtimeMs,
   runtimeClock,
+  inCategories,
+  selectCategories,
 } from "@hona/openeval/view";
 
 type Route = {
   id: string;
-  view: "results" | "evals" | "activity";
+  view: "results" | "evals" | "categories" | "activity";
   eval: string;
   run: string;
   evalRun: string;
   stage: "eval" | "judge";
   models: string;
+  categories: string;
 };
 const readRoute = (): Route => {
-  if (history.state?.openevalRoute) return history.state.openevalRoute as Route;
+  if (history.state?.openevalRoute)
+    return { categories: "", ...history.state.openevalRoute } as Route;
   const q = new URLSearchParams(location.search);
   return {
     id: q.get("result") ?? "",
@@ -66,7 +73,7 @@ const readRoute = (): Route => {
         ? q.get("eval")
           ? "evals"
           : "results"
-        : ["evals", "activity"].includes(q.get("view") ?? "")
+        : ["evals", "categories", "activity"].includes(q.get("view") ?? "")
           ? (q.get("view") as Route["view"])
           : "results",
     eval: q.get("eval") ?? "",
@@ -74,6 +81,7 @@ const readRoute = (): Route => {
     evalRun: q.get("evalRun") ?? "",
     stage: q.get("stage") === "judge" ? "judge" : "eval",
     models: q.get("models") ?? "",
+    categories: q.get("categories") ?? "",
   };
 };
 const get = async <T,>(path: string): Promise<T> => {
@@ -115,6 +123,7 @@ const getResult = <T extends ResultSummary | EvalRunIndex>(
 
 function ResultTabs(props: {
   value: string;
+  categories: boolean;
   onChange: (value: string) => void;
 }) {
   let ready = false;
@@ -132,7 +141,7 @@ function ResultTabs(props: {
       onChange={(value) => {
         if (
           ready &&
-          ["results", "evals"].includes(props.value) &&
+          ["results", "evals", "categories"].includes(props.value) &&
           value !== props.value
         )
           props.onChange(value);
@@ -141,6 +150,9 @@ function ResultTabs(props: {
       <Tabs.List>
         <Tabs.Trigger value="results">Benchmark results</Tabs.Trigger>
         <Tabs.Trigger value="evals">Eval breakdown</Tabs.Trigger>
+        <Show when={props.categories}>
+          <Tabs.Trigger value="categories">Categories</Tabs.Trigger>
+        </Show>
       </Tabs.List>
     </Tabs>
   );
@@ -194,7 +206,37 @@ export function App() {
   createEffect(() => setModelNames(data()?.modelNames));
   const traceRun = () =>
     traceDocument()?.entry.id === route().run ? traceDocument() : undefined;
-  const selectedEval = createMemo(() => route().eval || data()?.evals[0] || "");
+  const categories = createMemo(() => data()?.categories ?? []);
+  const categoryFilters = createMemo(() =>
+    route()
+      .categories.split(",")
+      .filter((key) => categories().some((category) => category.key === key)),
+  );
+  const shownCategories = createMemo(() =>
+    categoryFilters().length
+      ? categories().filter((category) =>
+          categoryFilters().includes(category.key),
+        )
+      : categories(),
+  );
+  const visibleEvals = createMemo(() =>
+    (data()?.evals ?? []).filter(
+      (id) =>
+        !categoryFilters().length ||
+        data()!.scores[0]?.components.some(
+          (part) => part.eval === id && inCategories(part, categoryFilters()),
+        ),
+    ),
+  );
+  const selectedEval = createMemo(() =>
+    visibleEvals().includes(route().eval)
+      ? route().eval
+      : visibleEvals()[0] || route().eval || data()?.evals[0] || "",
+  );
+  createEffect(() => {
+    if (data() && route().view === "categories" && !categories().length)
+      navigate({ view: "results" }, true);
+  });
   const navigate = (next: Partial<Route>, replace = false) => {
     const value = { ...route(), ...next };
     setRoute(value);
@@ -208,6 +250,7 @@ export function App() {
       stage:
         !topSecret() && value.evalRun && value.stage === "judge" ? "judge" : "",
       models: value.models,
+      categories: value.categories,
     }))
       if (content) q.set(key, content);
     history[replace ? "replaceState" : "pushState"](
@@ -326,16 +369,31 @@ export function App() {
     () =>
       data()?.scores.map((score) => {
         const components = score.components.filter(
-          (part) => part.eval === selectedEval(),
+          (part) =>
+            part.eval === selectedEval() &&
+            (!categoryFilters().length ||
+              inCategories(part, categoryFilters())),
         );
         return modelScore(score.model, components);
       }) ?? [],
   );
+  const benchmarkScores = createMemo(() =>
+    (data()?.scores ?? []).map((score) =>
+      categoryFilters().length
+        ? selectCategories(score, categoryFilters())
+        : score,
+    ),
+  );
   const displayedScores = createMemo(() =>
-    (route().view === "evals" ? evalScores() : (data()?.scores ?? [])).filter(
+    (route().view === "evals" ? evalScores() : benchmarkScores()).filter(
       (score) => matchesModelFilters(score.model, modelFilters()),
     ),
   );
+  const criteriaInScope = () => displayedScores()[0]?.components.length ?? 0;
+  const criteriaTotal = () =>
+    (data()?.scores[0]?.components ?? []).filter(
+      (part) => route().view !== "evals" || part.eval === selectedEval(),
+    ).length;
   const inspect = async (model: string) => {
     const origin = route();
     const current = document();
@@ -380,6 +438,9 @@ export function App() {
                 : current.name,
             startedAt: current.startedAt,
             filters: modelFilters(),
+            categories: shownCategories()
+              .filter((category) => categoryFilters().includes(category.key))
+              .map((category) => category.name),
             scores: displayedScores().map((score) => ({
               model: score.model,
               percentage: score.percentage,
@@ -650,6 +711,7 @@ export function App() {
                   <Show when={!isPublic() && data()!.kind === "benchmark"}>
                     <ResultTabs
                       value={route().view}
+                      categories={categories().length > 0}
                       onChange={(view) =>
                         navigate({
                           view: view as Route["view"],
@@ -658,20 +720,31 @@ export function App() {
                       }
                     />
                   </Show>
-                  <ModelFilter
-                    models={data()!.scores.map((score) => score.model)}
-                    selected={modelFilters()}
-                    onChange={(selected) =>
-                      navigate({ models: selected.join(",") })
-                    }
-                  />
+                  <div class="toolbar-filters">
+                    <Show when={categories().length}>
+                      <CategoryFilter
+                        categories={categories()}
+                        selected={categoryFilters()}
+                        onChange={(selected) =>
+                          navigate({ categories: selected.join(",") })
+                        }
+                      />
+                    </Show>
+                    <ModelFilter
+                      models={data()!.scores.map((score) => score.model)}
+                      selected={modelFilters()}
+                      onChange={(selected) =>
+                        navigate({ models: selected.join(",") })
+                      }
+                    />
+                  </div>
                 </div>
                 <Show when={route().view === "evals" && !isPublic()}>
                   <div class="eval-selector">
                     <span id="eval-label">Evaluation</span>
                     <Select
                       aria-labelledby="eval-label"
-                      options={data()!.evals}
+                      options={visibleEvals()}
                       current={selectedEval()}
                       valueClass={
                         topSecret() ? "eval-name is-secret" : "eval-name"
@@ -693,20 +766,84 @@ export function App() {
                     </Select>
                   </div>
                 </Show>
-                <section class="chart-panel">
+                <Show when={route().view === "categories" && !isPublic()}>
+                  <section class="chart-panel">
+                    <div class="panel-heading">
+                      <div>
+                        <h2>Category profile</h2>
+                        <p>
+                          Each axis rescores only that category's criteria,
+                          weighting evals equally.
+                        </p>
+                      </div>
+                    </div>
+                    <Show
+                      when={displayedScores().length}
+                      fallback={
+                        <div class="model-filter-empty">
+                          <p>No models match these filters.</p>
+                        </div>
+                      }
+                    >
+                      <CategoryRadar
+                        categories={shownCategories()}
+                        scores={displayedScores()}
+                      />
+                    </Show>
+                  </section>
+                  <section class="chart-panel">
+                    <div class="panel-heading">
+                      <div>
+                        <h2>Models × categories</h2>
+                        <p>
+                          Sort by any column. Select a score to rank models in
+                          that category.
+                        </p>
+                      </div>
+                    </div>
+                    <CategoryMatrix
+                      categories={shownCategories()}
+                      scores={displayedScores()}
+                      onCategory={(key) =>
+                        navigate({ view: "results", categories: key })
+                      }
+                    />
+                  </section>
+                </Show>
+                <section
+                  class="chart-panel"
+                  classList={{
+                    hidden: route().view === "categories" && !isPublic(),
+                  }}
+                >
                   <div class="panel-heading">
-                    <h2>
-                      <EvalName
-                        sensitive={
-                          route().view === "evals" || data()!.kind === "eval"
-                        }
-                      >
-                        {route().view === "evals" && !isPublic()
-                          ? (data()?.evalNames?.[selectedEval()] ??
-                            selectedEval())
-                          : data()!.name}
-                      </EvalName>
-                    </h2>
+                    <div>
+                      <h2>
+                        <EvalName
+                          sensitive={
+                            route().view === "evals" || data()!.kind === "eval"
+                          }
+                        >
+                          {route().view === "evals" && !isPublic()
+                            ? (data()?.evalNames?.[selectedEval()] ??
+                              selectedEval())
+                            : data()!.name}
+                        </EvalName>
+                      </h2>
+                      <Show when={categoryFilters().length}>
+                        <div class="category-chips" aria-label="Category filter">
+                          <For each={shownCategories()}>
+                            {(category) => (
+                              <span class="category-chip">{category.name}</span>
+                            )}
+                          </For>
+                        </div>
+                        <p class="category-scope">
+                          Scores use {criteriaInScope()} of {criteriaTotal()}{" "}
+                          criteria.
+                        </p>
+                      </Show>
+                    </div>
                   </div>
                   <Show
                     when={displayedScores().length}

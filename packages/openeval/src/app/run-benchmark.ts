@@ -23,6 +23,11 @@ import { canJudgeEval } from "./eval-state";
 import { isScored } from "../judgment";
 import { benchmarkScores } from "./scores";
 import { CostBudget, estimateWork } from "./cost-plan";
+import {
+  categoryKey,
+  categoryList,
+  inCategories,
+} from "../criterion-categories";
 
 export type RunBenchmarkOptions = {
   directory?: string;
@@ -32,12 +37,37 @@ export type RunBenchmarkOptions = {
   /** Execute work only for these models while retaining the full aggregate. */
   onlyModels?: readonly ModelRef[];
   onlyEvals?: readonly string[];
+  /** Execute only evals with a criterion in any of these categories. */
+  onlyCategories?: readonly string[];
   onlyRepetitions?: readonly number[];
   /** Stop admitting work when reported spend plus reservations reaches this amount. */
   maxCostUSD?: number;
   finalOnly?: boolean;
   onEvent?: ExecutionObserver;
 };
+
+/** Intersect --only-eval with evals that have a criterion in any --only-category. */
+function scopedEvals(
+  definition: BenchmarkDefinition,
+  options: Pick<RunBenchmarkOptions, "onlyEvals" | "onlyCategories">,
+) {
+  if (!options.onlyCategories) return options.onlyEvals;
+  const keys = categoryList(options.onlyCategories, "--only-category").map(
+    categoryKey,
+  );
+  if (!keys.length) throw new Error("Select at least one category");
+  const matching = definition.evals
+    .filter((item) =>
+      Object.values(item.categories ?? {}).some((names) =>
+        inCategories({ categories: names }, keys),
+      ),
+    )
+    .map((item) => item.id)
+    .filter((id) => !options.onlyEvals || options.onlyEvals.includes(id));
+  if (!matching.length)
+    throw new Error("No selected evals have criteria in these categories");
+  return matching;
+}
 
 export async function currentBenchmarkRun(directory: string) {
   const root = resolve(directory, "results");
@@ -141,6 +171,7 @@ export async function runBenchmark(
       ))
   )
     throw new Error("Select configured eval IDs with --only-eval");
+  const onlyEvals = scopedEvals(definition, options);
   new CostBudget(options.maxCostUSD, () => 0);
   const selected = options.onlyModels?.map(modelRef);
   if (selected && !selected.length)
@@ -192,11 +223,11 @@ export async function runBenchmark(
     results.slots().map((slot) => [slot.id, slot]),
   );
   let plan = planBenchmark(definition, runtime, results);
-  if (selected || options.onlyEvals || options.onlyRepetitions) {
+  if (selected || onlyEvals || options.onlyRepetitions) {
     const retained = new Map(results.slots().map((slot) => [slot.id, slot]));
     plan = plan.map((item) =>
       ((!selected || selected.includes(item.slot.model)) &&
-        (!options.onlyEvals || options.onlyEvals.includes(item.slot.evalId)) &&
+        (!onlyEvals || onlyEvals.includes(item.slot.evalId)) &&
         (!options.onlyRepetitions ||
           options.onlyRepetitions.includes(item.slot.repetition))) ||
       item.action === "reuse"
@@ -244,7 +275,7 @@ export async function runBenchmark(
     execution: {
       startedAt: now,
       onlyModels: selected,
-      onlyEvals: options.onlyEvals,
+      onlyEvals,
       onlyRepetitions: options.onlyRepetitions,
       budgetUSD: options.maxCostUSD,
       estimatedUSD: estimate.estimatedUSD,

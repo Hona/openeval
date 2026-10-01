@@ -14,7 +14,7 @@ import type {
   StageStatus,
   JudgeAudit,
 } from "../view";
-import { sumCosts } from "../view";
+import { categoryCatalog, sumCosts } from "../view";
 import { benchmarkScores } from "./scores";
 import { executionRuntime } from "./execution-runtime";
 import {
@@ -316,6 +316,7 @@ export class ResultReader {
           evals.map((item) => [item.id, item.name]),
         ),
         modelNames: run.modelNames ?? {},
+        categories: categoryCatalog(scores[0]?.components ?? []),
         cost: evalId ? evalCosts[evalId] : sumCosts(Object.values(evalCosts)),
         evalCosts,
         runtime,

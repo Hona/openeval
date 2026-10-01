@@ -62,7 +62,18 @@ export function ScoreChart(props: {
           </span>
           <ol aria-label="Criteria in bar order">
             <For each={criteria()}>
-              {(part) => <li>{part.name ?? part.criterion}</li>}
+              {(part) => (
+                <li>
+                  {part.name ?? part.criterion}
+                  <Show when={part.categories?.length}>
+                    <span class="category-chips">
+                      <For each={part.categories}>
+                        {(name) => <span class="category-chip">{name}</span>}
+                      </For>
+                    </span>
+                  </Show>
+                </li>
+              )}
             </For>
           </ol>
         </div>
