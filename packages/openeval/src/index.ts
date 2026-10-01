@@ -9,6 +9,7 @@ export type {
   JudgeRun,
   Judgment,
   CriterionDefinition,
+  CodeCriteria,
   CriterionScore,
   EvidenceCitation,
   ToolCall,
@@ -31,6 +32,10 @@ export type {
 } from "./evidence";
 export { CANDIDATE_TIMEOUT_MS } from "./types";
 export { rubricCriteria, criterionMean, isScored } from "./judgment";
+export {
+  categoryKey,
+  rubricCategories,
+} from "./criterion-categories";
 export type {
   JudgeContext,
   JudgeFunction,

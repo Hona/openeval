@@ -1,6 +1,7 @@
 import type { BenchmarkDefinition, JudgeRun, Slot } from "../types";
 import { modelScore } from "../view";
 import { isScored } from "../judgment";
+import { categoryKey, inCategories } from "../criterion-categories";
 
 /** Scores are derived from a single selection snapshot; every eval has equal weight. */
 export function benchmarkScores(
@@ -13,10 +14,14 @@ export function benchmarkScores(
   const evals = definition.evals.filter(
     (item) => !evalId || item.id === evalId,
   );
+  const keys = definition.categories?.map(categoryKey);
   const definitions = new Map(
     evals.map((item) => {
       const criteria = new Map(
-        item.criteria.map((criterion) => [criterion.id, criterion]),
+        [...item.criteria, ...(item.codeCriteria ?? [])].map((criterion) => [
+          criterion.id,
+          criterion,
+        ]),
       );
       for (const slot of slots.filter(
         (slot) => slot.active && slot.evalId === item.id,
@@ -28,7 +33,16 @@ export function benchmarkScores(
           if (!criteria.has(id))
             criteria.set(id, { id, name: id.replaceAll("_", " ") });
       }
-      return [item.id, [...criteria.values()]];
+      const categorized = [...criteria.values()].map((criterion) => ({
+        ...criterion,
+        categories: item.categories?.[criterion.id] ?? [],
+      }));
+      return [
+        item.id,
+        keys
+          ? categorized.filter((criterion) => inCategories(criterion, keys))
+          : categorized,
+      ];
     }),
   );
   return definition.models.map((model) =>
@@ -57,6 +71,9 @@ export function benchmarkScores(
             eval: item.id,
             criterion: criterion.id,
             name: criterion.name,
+            ...(criterion.categories.length
+              ? { categories: criterion.categories }
+              : {}),
             value:
               values.length === definition.repetitions
                 ? scoredSum / definition.repetitions

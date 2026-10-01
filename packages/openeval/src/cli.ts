@@ -51,6 +51,7 @@ Options:
   --model <provider/id>  Model to add or remove (repeatable)
   --only-model <ref>     Execute only this model (repeatable)
   --only-eval <id>       Execute only this eval (repeatable)
+  --only-category <name> Execute only evals with criteria in this category (repeatable)
   --only-repetition <n>  Execute only this repetition (repeatable)
   --max-cost <usd>       Scheduling budget for this invocation
   --final-only          Judge only after candidates finish
@@ -82,6 +83,11 @@ Requires Bun 1.4.2+, Docker, and an authenticated OpenCode installation.`);
       ).length
         ? args.flatMap((arg, index) =>
             arg === "--only-eval" ? [args[index + 1]] : [],
+          )
+        : undefined,
+      onlyCategories: args.includes("--only-category")
+        ? args.flatMap((arg, index) =>
+            arg === "--only-category" ? [args[index + 1]] : [],
           )
         : undefined,
       maxCostUSD: args.includes("--max-cost")

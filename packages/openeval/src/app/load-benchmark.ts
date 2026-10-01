@@ -10,12 +10,17 @@ import type {
 } from "../types";
 import { CANDIDATE_TIMEOUT_MS } from "../types";
 import { rubricCriteria } from "../judgment";
+import {
+  categoryKey,
+  categoryList,
+  rubricCategories,
+} from "../criterion-categories";
 import { compileCodeJudge } from "../infra/judging/code-source";
+import { readCodeCriteria } from "../infra/judging/code-criteria";
 import { RUNTIME_IMAGE } from "../infra/opencode/version";
 import { monitorPolicy } from "./monitor-policy";
 import {
   fingerprint,
-  hash,
   relativePath,
   treeHash,
   contained,
@@ -35,10 +40,13 @@ export const modelRef = (value: unknown): ModelRef => {
     throw new Error(`Invalid model reference: ${String(value)}`);
   return value as ModelRef;
 };
+/** Bun caches modules by path, ignoring URL queries; clear the entry so edits load. */
+async function freshModule(path: string): Promise<Record<string, unknown>> {
+  delete require.cache[path];
+  return import(pathToFileURL(path).href);
+}
 async function declaration<T>(path: string): Promise<T> {
-  const url = pathToFileURL(path);
-  url.searchParams.set("version", hash(await Bun.file(path).bytes()));
-  return (await import(url.href)).default;
+  return (await freshModule(path)).default as T;
 }
 async function loadEval(directory: string): Promise<EvalDefinition> {
   const id = basename(directory),
@@ -168,10 +176,23 @@ async function loadEval(directory: string): Promise<EvalDefinition> {
       throw new Error(`${id}: preparation requires argv`);
   }
   const promptText = await prompt.text(),
-    judgeText = hasMarkdown ? await judge.text() : "";
+    rubric = rubricCategories(hasMarkdown ? await judge.text() : ""),
+    judgeText = rubric.rubric;
   if (!promptText.trim() || (hasMarkdown && !judgeText.trim()))
     throw new Error(`${id}: prompt and judge must not be empty`);
   const code = hasCode ? await compileCodeJudge(codeFile) : undefined;
+  const criteria = hasMarkdown ? rubricCriteria(judgeText) : [];
+  const declared = hasCode ? await codeCriteria(id, codeFile) : [];
+  if (declared.some((item) => criteria.some(({ id }) => id === item.id)))
+    throw new Error(
+      `${id}: declare each criterion in either judge.md or judge.ts, not both`,
+    );
+  const categories = Object.fromEntries(
+    [
+      ...Object.entries(rubric.categories),
+      ...declared.map((item) => [item.id, item.categories] as const),
+    ].filter(([, names]) => names.length),
+  );
   return {
     id,
     directory,
@@ -183,10 +204,47 @@ async function loadEval(directory: string): Promise<EvalDefinition> {
       source,
     }),
     judgeHash: fingerprint({ rubric: judgeText, code: code?.hash }),
-    criteria: hasMarkdown ? rubricCriteria(judgeText) : [],
+    criteria,
+    ...(declared.length
+      ? { codeCriteria: declared.map(({ id, name }) => ({ id, name })) }
+      : {}),
+    ...(Object.keys(categories).length ? { categories } : {}),
     ...(code ? { code } : {}),
     name: /^# (.+)$/m.exec(judgeText)?.[1] ?? id,
   };
+}
+
+/** Reads judge.ts's optional `criteria` export as data; planning never executes judge code. */
+async function codeCriteria(id: string, path: string) {
+  const declared = await readCodeCriteria(path);
+  if (declared === undefined) return [];
+  if (!declared || typeof declared !== "object" || Array.isArray(declared))
+    throw new Error(`${id}/judge.ts criteria must be an object`);
+  return Object.entries(declared).map(([criterion, value]) => {
+    const where = `${id}/judge.ts criterion ${criterion}`;
+    if (!/^[a-z][a-z0-9_]*$/.test(criterion))
+      throw new Error(`${where}: use a lowercase snake_case ID`);
+    if (
+      !value ||
+      typeof value !== "object" ||
+      Array.isArray(value) ||
+      Object.keys(value).some((key) => !["name", "categories"].includes(key))
+    )
+      throw new Error(`${where}: declare only name and categories`);
+    const { name, categories = [] } = value as {
+      name?: unknown;
+      categories?: unknown;
+    };
+    if (name !== undefined && (typeof name !== "string" || !name.trim()))
+      throw new Error(`${where}: name must be a non-empty string`);
+    if (!Array.isArray(categories))
+      throw new Error(`${where}: categories must be an array`);
+    return {
+      id: criterion,
+      name: (name as string | undefined)?.trim() ?? criterion.replaceAll("_", " "),
+      categories: categoryList(categories, where),
+    };
+  });
 }
 
 export async function loadBenchmark(
@@ -214,10 +272,19 @@ export async function loadBenchmark(
           "concurrency",
           "candidate",
           "container",
+          "categories",
         ].includes(key),
     )
   )
     throw new Error("benchmark.ts contains unsupported settings");
+  if (
+    definition.categories !== undefined &&
+    (!Array.isArray(definition.categories) || !definition.categories.length)
+  )
+    throw new Error("benchmark.ts categories must be a non-empty array");
+  const categories = definition.categories
+    ? categoryList(definition.categories, "benchmark.ts")
+    : undefined;
   const models = definition.models.map(modelRef);
   if (
     definition.judge !== undefined &&
@@ -245,9 +312,21 @@ export async function loadBenchmark(
     .filter((entry) => entry.isDirectory() && !entry.name.startsWith("."))
     .sort((a, b) => a.name.localeCompare(b.name));
   if (!directories.length) throw new Error("Benchmark has no eval folders");
-  const evals = await Promise.all(
+  const declared = await Promise.all(
     directories.map((entry) => loadEval(resolve(evalRoot, entry.name))),
   );
+  const keys = categories?.map(categoryKey);
+  const evals = keys
+    ? declared.filter((item) =>
+        Object.values(item.categories ?? {}).some((names) =>
+          names.some((name) => keys.includes(categoryKey(name))),
+        ),
+      )
+    : declared;
+  if (!evals.length)
+    throw new Error(
+      `No criteria match the benchmark categories: ${categories!.join(", ")}`,
+    );
   if (evals.some((item) => item.judge) && !definition.judge?.model)
     throw new Error("A benchmark containing judge.md requires judge.model");
   const concurrency = positive(definition.concurrency, 10, "Concurrency");
@@ -295,5 +374,6 @@ export async function loadBenchmark(
       cpus: positive(definition.container?.cpus, 2, "CPU count"),
       memoryMiB: positive(definition.container?.memoryMiB, 4096, "Memory"),
     },
+    ...(categories ? { categories } : {}),
   };
 }

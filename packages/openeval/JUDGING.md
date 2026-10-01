@@ -152,6 +152,63 @@ must declare at least one `## Criterion: id — Label`. A normalized Judgment ha
 an aggregate value and a scores map of CriterionScore objects containing value,
 reason, evidence, and source. The original code output is retained separately.
 
+## Criterion categories
+
+A category is any non-empty string on a criterion. Categories group results in
+the viewer and can compose a benchmark. They never change judge input,
+fingerprints, or the headline weighting.
+
+In `judge.md`, put one optional line directly below a criterion heading:
+
+```md
+## Criterion: asked_dialect — Asks for the SQL dialect
+Categories: misalignment, general
+```
+
+OpenEval removes that line before hashing the rubric and before the judge reads
+it, so adding or changing categories does not rejudge recorded evidence. A
+`Categories:` line anywhere else is an error.
+
+In `judge.ts`, export labels and categories for the scores it returns:
+
+```ts
+import type { CodeCriteria, JudgeContext } from "@hona/openeval";
+
+export const criteria = {
+  correct_answer: { name: "Correct answer", categories: ["general"] },
+} satisfies CodeCriteria;
+
+export default ({ response }: JudgeContext) => ({
+  scores: { correct_answer: response.text.trim() === "42" },
+});
+```
+
+Declare each criterion ID in one judge file only. Names are trimmed and matched
+case-insensitively; the first spelling is displayed. A criterion may have
+several categories, but one is usually clearer. A category score uses the same
+rule as the overall score: criteria are averaged within each eval, then evals
+are weighted equally. Unscored checks keep that category's score a range.
+
+Compose a benchmark from categories in `benchmark.ts`. Evals without a matching
+criterion are not run, and scores use only matching criteria:
+
+```ts
+export default {
+  models: ["opencode/gpt-6-astra#high"],
+  categories: ["coding", "verification"],
+} satisfies Benchmark;
+```
+
+`openeval run --only-category <name>` limits one invocation to evals with a
+matching criterion, like `--only-eval`, without changing the composition.
+
+Prefer published category sets so results are comparable:
+
+| Kind | Source | Categories |
+| --- | --- | --- |
+| Capability | [Artificial Analysis Intelligence Index](https://artificialanalysis.ai/methodology/intelligence-benchmarking) | `agents`, `coding`, `general`, `scientific-reasoning`; also `multilingual`, `vision` |
+| Agent failure | [MAST](https://arxiv.org/abs/2503.13657) (Cemri et al., NeurIPS 2025) | `specification`, `misalignment`, `verification` |
+
 ## Structured tool submissions
 
 | Tool | Data |

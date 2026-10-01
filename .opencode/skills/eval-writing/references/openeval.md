@@ -74,6 +74,43 @@ Each declared criterion receives normalized credit from 0 to 1, or null:
 | `null` | Necessary evidence or a decisive reference fact cannot resolve the criterion |
 | JudgeRun error | Submission or judging failed; this is not a candidate zero |
 
+### Categories
+
+Tag each criterion with what it measures, so a benchmark can be read and
+composed by category. Put one line directly below the heading, or export
+`criteria` from `judge.ts`:
+
+```md
+## Criterion: asked_version — Asks which game version
+Categories: general, misalignment
+```
+
+```ts
+export const criteria = {
+  correct_answer: { name: "Correct answer", categories: ["general"] },
+} satisfies CodeCriteria;
+```
+
+Any string works; matching is case-insensitive. Categories never change judge
+input or fingerprints, so retagging never rejudges evidence. Prefer one category
+per criterion. When a rule mixes two behaviors, split it into two criteria, the
+way Artificial Analysis scores Omniscience accuracy and hallucination rate
+separately. Prefer published names so results are comparable:
+
+| Kind | Category | Measures |
+| --- | --- | --- |
+| Capability ([Artificial Analysis](https://artificialanalysis.ai/methodology/intelligence-benchmarking)) | `agents` | Multi-step knowledge-work and tool tasks |
+| | `coding` | Code and terminal work that passes verifiers |
+| | `general` | Knowledge, hallucination, long context, document grounding |
+| | `scientific-reasoning` | Research-level science and hard reasoning |
+| | `multilingual`, `vision` | Non-English and image-input performance |
+| Agent failure ([MAST](https://arxiv.org/abs/2503.13657)) | `specification` | Disobeys task or role specs, repeats steps, misses when to stop (FM-1.x) |
+| | `misalignment` | Fails to ask for clarification, derails, withholds information, acts against its reasoning (FM-2.x) |
+| | `verification` | Stops early, skips verification, or verifies incorrectly (FM-3.x) |
+
+A category with fewer than three criteria is flagged as low coverage; add
+coverage before drawing conclusions from it.
+
 A completed judgment contains the full criterion-score map in `scores`.
 The SDK normalizes booleans and validates IDs,
 values, recorded citations, and exact optional quotes; the judge interprets the
