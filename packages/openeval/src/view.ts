@@ -183,6 +183,8 @@ export type ResultEntry = {
   id: string;
   kind: "benchmark" | "eval";
   name: string;
+  /** The benchmark's suite label, such as "Frontier". */
+  suite?: string;
   status: string;
   startedAt: string;
   updatedAt: number;
@@ -197,6 +199,7 @@ export type ResultIndex = {
 };
 export type Overview = {
   name: string;
+  suite?: string;
   kind: "benchmark" | "eval";
   status: string;
   startedAt: string;
@@ -318,6 +321,8 @@ export type ActivityRun = {
     id: string;
     eval: string;
     benchmark: string;
+    name: string;
+    suite?: string;
     startedAt: string;
     heartbeatAt: string;
     status: string;
@@ -325,6 +330,8 @@ export type ActivityRun = {
     evalOrder: number;
     runs: LiveEvalRun[];
     runtime: RuntimeInterval[];
+    /** The latest run invocation: when it started and what it has reported spending. */
+    invocation?: { startedAt: string; spentUSD: number };
   };
 };
 

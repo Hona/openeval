@@ -381,6 +381,14 @@
   color: var(--app-text);
   overflow-wrap: anywhere;
 }
+.scorecard-benchmark small {
+  display: block;
+  margin-top: 3px;
+  font-family: var(--font-family-mono);
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--app-faint);
+}
 .scorecard-category {
   padding: 0 14px 0 6px;
   text-align: left;

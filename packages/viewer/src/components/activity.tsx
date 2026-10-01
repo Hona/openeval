@@ -10,7 +10,7 @@ import {
 import { Badge } from "@opencode/ui/badge";
 import { Icon } from "@opencode/ui/icon";
 import { Select } from "@opencode/ui/select";
-import { ProviderIcon } from "@opencode/ui/provider-icon";
+import { ProviderMark } from "./provider-mark";
 import { Tooltip } from "@opencode/ui/tooltip";
 import { sumCosts, stageRuntime, runtimeClock } from "@hona/openeval/view";
 import type { ActivityRun, LiveEvalRun, StageState } from "../types";
@@ -208,9 +208,12 @@ export function Activity(props: {
             aria-label="Benchmark run"
             options={groups()}
             current={group()}
-            label={(id) =>
-              `Benchmark · ${formatDate(props.runs.find((run) => run.benchmarkId === id)!.state.startedAt)}`
-            }
+            label={(id) => {
+              const state = props.runs.find((run) => run.benchmarkId === id)!.state;
+              return [state.name, state.suite, formatDate(state.startedAt)]
+                .filter(Boolean)
+                .join(" · ");
+            }}
             onSelect={(id) => {
               if (id && id !== group()) {
                 props.onSelect("", "");
@@ -259,14 +262,21 @@ export function Activity(props: {
               </strong>
             </span>
           </Show>
-          <Tooltip value="Recorded eval and judge wall-clock runtime across all executions. Overlapping workers count once; idle gaps and passive monitoring are excluded.">
+          <Tooltip
+            value={`Eval and judge runtime since this run started${progress().since ? ` (${formatDate(new Date(progress().since!).toISOString())})` : ""}. Overlapping workers count once; idle gaps and passive monitoring are excluded. All executions in this result: ${duration(progress().totalElapsedMs)}.`}
+          >
             <span>
               Elapsed <strong>{duration(progress().elapsedMs)}</strong>
             </span>
           </Tooltip>
-          <Tooltip value="Reported eval and judge cost, including active-session usage and previous executions.">
+          <Tooltip
+            value={`Reported eval and judge cost since this run started, including active sessions. All active selections in this result: ${formatCost(cost().reportedUSD)}.`}
+          >
             <span>
-              Cost so far <strong>{formatCost(cost().reportedUSD)}</strong>
+              Cost so far{" "}
+              <strong>
+                {formatCost(progress().invocationUSD ?? cost().reportedUSD)}
+              </strong>
             </span>
           </Tooltip>
         </div>
@@ -309,7 +319,7 @@ export function Activity(props: {
                   progress().models.find((model) => model.key === key)!;
                 return (
                   <div class="model-race-row">
-                    <ProviderIcon id={provider(model().model)} />
+                    <ProviderMark id={provider(model().model)} />
                     <div class="model-race-lane">
                       <div class="model-race-label">
                         <span class="model-race-name">

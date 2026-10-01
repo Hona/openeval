@@ -457,6 +457,7 @@ export function App() {
               topSecret() && current.kind === "eval"
                 ? "Evaluation results"
                 : current.name,
+            ...(current.suite ? { suite: current.suite } : {}),
             startedAt: current.startedAt,
             filters: modelFilters(),
             categories: shownCategories()
@@ -489,6 +490,7 @@ export function App() {
       if (kind === "categories") {
         await downloadScorecardImage({
           name: current.name,
+          suite: current.suite,
           startedAt: current.startedAt,
           card: card(),
         });
@@ -502,6 +504,7 @@ export function App() {
               : route().view === "evals"
                 ? selectedEval()
                 : current.name,
+          suite: route().view === "evals" ? undefined : current.suite,
           scores: displayedScores().map((score) => ({
             model: score.model,
             percentage: score.percentage,
@@ -538,7 +541,13 @@ export function App() {
         </strong>
       </div>
       <small>
-        {formatDate(props.item.startedAt)}
+        <span>
+          <Show when={props.item.suite}>
+            <span class="suite-label">{props.item.suite}</span>
+            {" · "}
+          </Show>
+          {formatDate(props.item.startedAt)}
+        </span>
         <span>{props.item.models} models</span>
       </small>
     </button>
@@ -695,6 +704,10 @@ export function App() {
                       <EvalName sensitive={data()!.kind === "eval"}>
                         {data()!.name}
                       </EvalName>
+                      <Show when={data()!.suite}>
+                        <Icon name="chevron-right" />
+                        {data()!.suite}
+                      </Show>
                     </div>
                     <h1>
                       <EvalName sensitive={data()!.kind === "eval"}>
@@ -702,6 +715,10 @@ export function App() {
                       </EvalName>
                     </h1>
                     <p>
+                      <Show when={data()!.suite}>
+                        <span class="suite-label">{data()!.suite}</span>
+                        <span>·</span>
+                      </Show>
                       {formatDate(data()!.startedAt)}
                       <span>·</span>
                       <Badge>{data()!.status}</Badge>
@@ -1002,7 +1019,11 @@ export function App() {
                         </p>
                       </div>
                     </div>
-                    <CategoryScorecard benchmark={data()!.name} card={card()} />
+                    <CategoryScorecard
+                      benchmark={data()!.name}
+                      suite={data()!.suite}
+                      card={card()}
+                    />
                   </section>
                 </Show>
                 <Show when={busy()}>

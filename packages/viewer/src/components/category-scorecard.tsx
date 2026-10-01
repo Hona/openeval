@@ -1,11 +1,15 @@
 import { For, Show } from "solid-js";
-import { ProviderIcon } from "@opencode/ui/provider-icon";
+import { ProviderMark } from "./provider-mark";
 import { modelName, provider, reasoning } from "../model";
 import { isRange, scorecardValue, type Scorecard } from "../scorecard";
 import { criteriaCount, LOW_COVERAGE } from "./category-filter";
 
 /** One benchmark down the left, its categories as rows, and models as columns. */
-export function CategoryScorecard(props: { benchmark: string; card: Scorecard }) {
+export function CategoryScorecard(props: {
+  benchmark: string;
+  suite?: string;
+  card: Scorecard;
+}) {
   return (
     <div class="category-matrix-scroll">
       <table class="category-scorecard">
@@ -17,7 +21,7 @@ export function CategoryScorecard(props: { benchmark: string; card: Scorecard })
               {(model) => (
                 <th scope="col" class="scorecard-model">
                   <span class="provider-mark">
-                    <ProviderIcon id={provider(model)} />
+                    <ProviderMark id={provider(model)} />
                   </span>
                   <strong>{modelName(model)}</strong>
                   <small>{reasoning(model)}</small>
@@ -37,6 +41,9 @@ export function CategoryScorecard(props: { benchmark: string; card: Scorecard })
                     class="scorecard-benchmark"
                   >
                     {props.benchmark}
+                    <Show when={props.suite}>
+                      <small>{props.suite}</small>
+                    </Show>
                   </th>
                 </Show>
                 <th scope="row" class="scorecard-category">

@@ -236,11 +236,16 @@ export async function serveResults(options: {
           if (path !== assets && !path.startsWith(assets + sep))
             return new Response("Not found", { status: 404 });
           const file = Bun.file(path);
-          return new Response(
-            url.pathname !== "/" && (await file.exists())
-              ? file
-              : Bun.file(resolve(assets, "index.html")),
-          );
+          const found = url.pathname !== "/" && (await file.exists());
+          return new Response(found ? file : Bun.file(resolve(assets, "index.html")), {
+            // Built assets have content-hashed names; the page itself must revalidate.
+            headers: {
+              "Cache-Control":
+                found && url.pathname.startsWith("/assets/")
+                  ? "public, max-age=31536000, immutable"
+                  : "no-cache",
+            },
+          });
         }
         return new Response("Not found", { status: 404 });
       } catch (error) {

@@ -13,6 +13,7 @@ credit. A score is the credit awarded.
 | Term | Meaning | Example |
 | --- | --- | --- |
 | Benchmark | A collection of evals and their run configuration. | A set of agent tasks evaluated across models. |
+| Suite | An optional display label for one benchmark among several that share a name. It never changes scoring. | Frontier and Regressions, both named sql-bench. |
 | Eval | A task, its input and environment, and its grading specification. | Produce a parameterized SQL query. |
 | Criterion | A named requirement being graded. Plural: criteria. | safe_parameters |
 | Score | Credit awarded to a criterion, normalized from 0 to 1, or an aggregate of that credit. | 1 for full credit; 0 for no credit. |

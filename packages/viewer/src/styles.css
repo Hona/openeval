@@ -389,6 +389,14 @@ h3 {
   font-size: 11px;
   margin-top: 10px;
 }
+/* A benchmark's suite, such as Frontier, beside its shared name. */
+.suite-label {
+  color: var(--app-muted);
+  font-weight: 550;
+}
+.page-heading .suite-label {
+  color: var(--app-text);
+}
 .level-tabs {
   margin-bottom: 26px;
 }

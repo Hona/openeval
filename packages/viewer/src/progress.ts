@@ -86,20 +86,31 @@ export function activityProgress(groups: ActivityRun[], now: number) {
   );
   const scoped = rows.filter(({ run }) => run.scheduled);
   const queued = scoped.filter(({ run }) => run.eval.status === "queued");
-  const elapsedMs = runtimeMs(
+  // Elapsed and cost describe the latest run invocation, not earlier resumes of this result.
+  const since = Math.max(
+    0,
+    ...groups.map((group) =>
+      Date.parse(group.state.invocation?.startedAt ?? "") || 0,
+    ),
+  );
+  const intervals = (clip: number) =>
     groups.flatMap((group) => {
       const clock = runtimeClock(
         now,
         group.state.heartbeatAt,
         group.state.status === "running",
       );
-      return group.state.runtime.map((interval) => ({
-        ...interval,
-        end: interval.end ?? clock,
-      }));
-    }),
-    now,
-  );
+      return group.state.runtime.flatMap((interval) => {
+        const end = interval.end ?? clock;
+        return end > clip
+          ? [{ start: Math.max(interval.start, clip), end }]
+          : [];
+      });
+    });
+  const elapsedMs = runtimeMs(intervals(since), now);
+  const totalElapsedMs = runtimeMs(intervals(0), now);
+  const invocationUSD = groups.find((group) => group.state.invocation)?.state
+    .invocation?.spentUSD;
   let remainingMs: number | null = null;
   if (running && samples.length) {
     const comparable = (row: (typeof rows)[number], kind: Kind) => {
@@ -221,6 +232,9 @@ export function activityProgress(groups: ActivityRun[], now: number) {
     samples: samples.length,
     concurrency,
     elapsedMs,
+    totalElapsedMs,
+    invocationUSD,
+    since: since || null,
     remainingMs,
     finishAt: remainingMs === null ? null : now + remainingMs,
   };

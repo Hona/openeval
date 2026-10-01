@@ -266,6 +266,7 @@ export async function loadBenchmark(
       (key) =>
         ![
           "name",
+          "suite",
           "models",
           "judge",
           "repetitions",
@@ -277,6 +278,13 @@ export async function loadBenchmark(
     )
   )
     throw new Error("benchmark.ts contains unsupported settings");
+  if (
+    definition.suite !== undefined &&
+    (typeof definition.suite !== "string" ||
+      !definition.suite.trim() ||
+      definition.suite.length > 80)
+  )
+    throw new Error("benchmark.ts suite must be a label of 1 to 80 characters");
   if (
     definition.categories !== undefined &&
     (!Array.isArray(definition.categories) || !definition.categories.length)
@@ -352,6 +360,7 @@ export async function loadBenchmark(
       throw new Error("Websearch must be exa or false");
   return {
     name: definition.name ?? basename(directory),
+    ...(definition.suite ? { suite: definition.suite.trim() } : {}),
     directory,
     models,
     evals,

@@ -1,5 +1,5 @@
 import { createMemo, For, Show } from "solid-js";
-import { ProviderIcon } from "@opencode/ui/provider-icon";
+import { ProviderMark } from "./provider-mark";
 import { Icon } from "@opencode/ui/icon";
 import { modelScore, scoreBounds, type ModelScore } from "@hona/openeval/view";
 import {
@@ -101,7 +101,7 @@ export function ScoreChart(props: {
             >
               <div class="model-identity">
                 <span class="provider-mark">
-                  <ProviderIcon id={provider(score.model)} />
+                  <ProviderMark id={provider(score.model)} />
                 </span>
                 <div>
                   <strong>{modelName(score.model)}</strong>

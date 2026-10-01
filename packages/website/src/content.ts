@@ -291,6 +291,11 @@ export const docs: Doc[] = [
                 "A set of agent tasks evaluated across models.",
               ],
               [
+                "Suite",
+                "An optional display label for one benchmark among several that share a name. It never changes scoring.",
+                "Frontier and Regressions, both named sql-bench.",
+              ],
+              [
                 "Eval",
                 "A task, its input and environment, and its grading specification.",
                 "Produce a parameterized SQL query.",
@@ -1323,6 +1328,16 @@ export const docs: Doc[] = [
           table(
             ["Setting", "Default", "Meaning"],
             [
+              [
+                "name",
+                "Directory name",
+                "Benchmark name in viewer headings and exported images",
+              ],
+              [
+                "suite",
+                "None",
+                "Label for one benchmark.ts among several that share a name, such as Frontier",
+              ],
               [
                 "models",
                 "Required",
