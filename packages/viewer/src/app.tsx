@@ -18,6 +18,7 @@ import { Tooltip } from "@opencode/ui/tooltip";
 import { TextInput } from "@opencode/ui/text-input";
 import { Tabs } from "@opencode/ui/tabs";
 import { Select } from "@opencode/ui/select";
+import { Menu } from "@opencode/ui/menu";
 import { ScoreChart } from "./components/score-chart";
 import { EvalRunTrace } from "./components/trace";
 import { SessionDrawer } from "./components/session-drawer";
@@ -26,7 +27,9 @@ import { ModelFilter } from "./components/model-filter";
 import { CategoryFilter } from "./components/category-filter";
 import { CategoryRadar } from "./components/category-radar";
 import { CategoryMatrix } from "./components/category-matrix";
-import { downloadResultsImage } from "./results-image";
+import { CategoryScorecard } from "./components/category-scorecard";
+import { scorecard } from "./scorecard";
+import { downloadResultsImage, downloadScorecardImage } from "./results-image";
 import { EvalName, SecretToggle, topSecret, SECRET_MODE_KEY } from "./privacy";
 import {
   duration,
@@ -389,6 +392,24 @@ export function App() {
       (score) => matchesModelFilters(score.model, modelFilters()),
     ),
   );
+  // The scorecard always describes the benchmark, even from the eval breakdown.
+  const scorecardScores = createMemo(() =>
+    benchmarkScores().filter((score) =>
+      matchesModelFilters(score.model, modelFilters()),
+    ),
+  );
+  const card = createMemo(() =>
+    scorecard(
+      scorecardScores(),
+      shownCategories(),
+      categoryFilters().length ? "Selected categories" : "Overall",
+    ),
+  );
+  const scorecardAvailable = () =>
+    !isPublic() &&
+    data()?.kind === "benchmark" &&
+    shownCategories().length > 0 &&
+    scorecardScores().length > 0;
   const criteriaInScope = () => displayedScores()[0]?.components.length ?? 0;
   const criteriaTotal = () =>
     (data()?.scores[0]?.components ?? []).filter(
@@ -460,11 +481,19 @@ export function App() {
     anchor.click();
     URL.revokeObjectURL(url);
   };
-  const exportImage = async () => {
+  const exportImage = async (kind: "totals" | "categories") => {
     const current = data();
     if (!current || exportingImage()) return;
     setExportingImage(true);
     try {
+      if (kind === "categories") {
+        await downloadScorecardImage({
+          name: current.name,
+          startedAt: current.startedAt,
+          card: card(),
+        });
+        return;
+      }
       await downloadResultsImage(
         {
           name:
@@ -685,15 +714,51 @@ export function App() {
                           exportingImage() ? "Exporting image…" : "Export image"
                         }
                       >
-                        <IconButton
-                          variant="neutral"
-                          size="small"
-                          icon={<Icon name="photo" />}
-                          aria-label="Export image"
-                          aria-busy={exportingImage()}
-                          onClick={exportImage}
-                          disabled={exportingImage() || !data()!.scores.length}
-                        />
+                        <Show
+                          when={scorecardAvailable()}
+                          fallback={
+                            <IconButton
+                              variant="neutral"
+                              size="small"
+                              icon={<Icon name="photo" />}
+                              aria-label="Export image"
+                              aria-busy={exportingImage()}
+                              onClick={() => void exportImage("totals")}
+                              disabled={
+                                exportingImage() || !data()!.scores.length
+                              }
+                            />
+                          }
+                        >
+                          <Menu>
+                            <Menu.Trigger
+                              data-component="icon-button-v2"
+                              data-size="small"
+                              data-variant="neutral"
+                              aria-label="Export image"
+                              aria-busy={exportingImage()}
+                              disabled={exportingImage()}
+                            >
+                              <Icon name="photo" />
+                            </Menu.Trigger>
+                            <Menu.Portal>
+                              <Menu.Content>
+                                <Menu.Item
+                                  onSelect={() => void exportImage("totals")}
+                                >
+                                  Totals chart
+                                </Menu.Item>
+                                <Menu.Item
+                                  onSelect={() =>
+                                    void exportImage("categories")
+                                  }
+                                >
+                                  Category table
+                                </Menu.Item>
+                              </Menu.Content>
+                            </Menu.Portal>
+                          </Menu>
+                        </Show>
                       </Tooltip>
                     </Show>
                     <Tooltip value="Export totals">
@@ -921,6 +986,24 @@ export function App() {
                         : "Whiskers show the possible range for unscored checks; graded failures remain known zeros."}
                     </p>
                   </div>
+                </Show>
+                <Show when={route().view === "results" && scorecardAvailable()}>
+                  <section
+                    class="chart-panel scorecard-panel"
+                    aria-labelledby="category-scorecard-title"
+                  >
+                    <div class="panel-heading">
+                      <div>
+                        <h2 id="category-scorecard-title">Scores by category</h2>
+                        <p>
+                          Each row rescores only that category's criteria,
+                          weighting evals equally. Bold marks a lead that
+                          unresolved checks cannot change.
+                        </p>
+                      </div>
+                    </div>
+                    <CategoryScorecard benchmark={data()!.name} card={card()} />
+                  </section>
                 </Show>
                 <Show when={busy()}>
                   <p class="section-caption">Opening eval run…</p>

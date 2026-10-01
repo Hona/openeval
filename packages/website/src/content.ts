@@ -580,7 +580,7 @@ export const docs: Doc[] = [
             "A category is any string. Put the optional Categories: line directly below a heading, or export criteria from judge.ts. OpenEval removes category lines before the judge reads the rubric, so adding or changing categories never rejudges recorded evidence.",
           ),
           text(
-            "The viewer adds a Categories tab with a radar chart and a models-by-categories heatmap, and a filter that rescores any view to the selected categories. Set categories in benchmark.ts to compose a benchmark from them, or pass --only-category to run a subset.",
+            "The viewer adds a Categories tab with a radar chart and a models-by-categories heatmap, and a filter that rescores any view to the selected categories. Benchmark results also show a scorecard: the benchmark on the left, one row per category, and one column per model. Export image saves that table or the totals chart as a PNG. Set categories in benchmark.ts to compose a benchmark from them, or pass --only-category to run a subset.",
           ),
           table(
             ["Kind", "Published set"],
