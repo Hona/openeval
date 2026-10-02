@@ -185,9 +185,11 @@ export interface JudgeContext {
 /** Frozen judging source and dependency identity, kept in host-side run records. */
 export type CodeJudgeDefinition = {
   file: string;
+  /** Executable identity: bundled code and imported package versions, without host paths or comments. */
   hash: string;
   source: string;
   sourceMap: string;
+  /** Packages imported at run time, as `name@version/path`, with the file each resolved to. */
   dependencies: Record<string, string>;
 };
 export type CodeJudgeExecution = {

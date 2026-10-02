@@ -1,7 +1,8 @@
 import { expect, test } from "bun:test";
-import { mkdtemp, rm } from "node:fs/promises";
+import { cp, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { loadBenchmark } from "./load-benchmark";
 import { judgeEvidence, recordEvidence } from "./judge-evidence";
 import { gradeRecording } from "./grade-recording";
@@ -138,6 +139,83 @@ test("planning compiles code without executing it and fingerprints imported refe
     );
   } finally {
     await rm(item.root, { recursive: true, force: true });
+  }
+});
+
+// Bun names bundled modules relative to the process working directory, so compile in a separate process.
+const codeHash = async (root: string, cwd: string) => {
+  const loader = pathToFileURL(resolve(import.meta.dir, "load-benchmark.ts")).href;
+  const child = Bun.spawn(
+    [
+      process.execPath,
+      "-e",
+      `const { loadBenchmark } = await import(${JSON.stringify(loader)});
+console.log((await loadBenchmark(${JSON.stringify(root)})).evals[0].code.hash);`,
+    ],
+    { cwd, stdout: "pipe", stderr: "pipe" },
+  );
+  const [output, error, exit] = await Promise.all([
+    new Response(child.stdout).text(),
+    new Response(child.stderr).text(),
+    child.exited,
+  ]);
+  if (exit !== 0) throw new Error(error);
+  return output.trim();
+};
+
+test("code identity ignores the checkout path, working directory, and lockfiles", async () => {
+  const item = await fixture(`import { expected, here } from "./helper";
+import checks from "./checks.txt" with { type: "text" };
+import { same } from "fakepkg";
+import { sep } from "path";
+export default ({ response }) => ({ scores: { answer: same(response.text, expected) }, checks, here: here.split(sep) });`);
+  const elsewhere = await temporary();
+  const files = {
+    "evals/answer/helper.ts": 'export const expected = "READY";\nexport const here = __dirname;',
+    "evals/answer/checks.txt": "// A check script line, not a bundle comment\n",
+    "node_modules/fakepkg/package.json": '{ "name": "fakepkg", "version": "1.0.0", "type": "module", "main": "index.js" }',
+    "node_modules/fakepkg/index.js": "export const same = (a, b) => a === b;",
+    "package.json": '{ "name": "fixture", "scripts": { "check": "bun test" } }',
+    "bun.lock": '{ "lockfileVersion": 1 }',
+  };
+  try {
+    for (const [path, text] of Object.entries(files))
+      await Bun.write(resolve(item.root, path), text);
+    const copy = resolve(elsewhere, "nested", "checkout");
+    await cp(item.root, copy, { recursive: true });
+    const hash = await codeHash(item.root, item.root);
+    expect(await codeHash(copy, elsewhere)).toBe(hash);
+    const definition = await loadBenchmark(item.root);
+    expect(definition.evals[0].code?.hash).toBe(hash);
+    expect(Object.keys(definition.evals[0].code!.dependencies)).toEqual([
+      "fakepkg@1.0.0/index.js",
+    ]);
+
+    const result = await judgeEvidence({
+      evidence: item.evidence,
+      code: resolve(item.directory, "judge.ts"),
+      directory: resolve(item.root, "judged"),
+    });
+    expect(result.judgment?.value).toBe(1);
+
+    const current = async () => (await loadBenchmark(item.root)).evals[0].code?.hash;
+    await Bun.write(resolve(item.root, "package.json"), '{ "name": "fixture", "scripts": { "check": "bun test --watch" } }');
+    await Bun.write(resolve(item.root, "bun.lock"), '{ "lockfileVersion": 1, "workspaces": {} }');
+    expect(await current()).toBe(hash);
+    await Bun.write(resolve(item.root, "evals/answer/checks.txt"), "// Another check script line\n");
+    const checks = await current();
+    expect(checks).not.toBe(hash);
+    await Bun.write(resolve(item.root, "evals/answer/helper.ts"), 'export const expected = "DONE";\nexport const here = __dirname;');
+    const helper = await current();
+    expect(helper).not.toBe(checks);
+    await Bun.write(resolve(item.root, "node_modules/fakepkg/package.json"), files["node_modules/fakepkg/package.json"].replace("1.0.0", "1.0.1"));
+    const upgraded = await current();
+    expect(upgraded).not.toBe(helper);
+    await Bun.write(resolve(item.directory, "judge.ts"), (await Bun.file(resolve(item.directory, "judge.ts")).text()).replace("split(sep)", "length"));
+    expect(await current()).not.toBe(upgraded);
+  } finally {
+    await rm(item.root, { recursive: true, force: true });
+    await rm(elsewhere, { recursive: true, force: true });
   }
 });
 

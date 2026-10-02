@@ -1,18 +1,34 @@
-import { dirname, isAbsolute, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import type { CodeJudgeDefinition } from "../../judge-context";
 import { fingerprint } from "../files";
+
+/** Raise when a release changes what judge.ts receives or how it runs; every code judge then runs again. */
+const CODE_JUDGE_PROTOCOL = 1;
+const printer = new Bun.Transpiler({
+  loader: "js",
+  target: "bun",
+  deadCodeElimination: false,
+});
+
+/** The package that provides an external import, as `name@version/path`. */
+async function packageSpecifier(path: string, from: string) {
+  for (let directory = dirname(path); ; directory = dirname(directory)) {
+    const manifest = Bun.file(resolve(directory, "package.json"));
+    const { name, version } = (await manifest.exists())
+      ? await manifest.json().catch(() => ({}))
+      : {};
+    if (typeof name === "string" && name)
+      return `${name}@${version ?? ""}/${relative(directory, path).split(sep).join("/")}`;
+    if (dirname(directory) === directory)
+      return relative(from, path).split(sep).join("/");
+  }
+}
 
 /** Bundle local imports without executing author code during planning. */
 export async function compileCodeJudge(
   file: string,
 ): Promise<CodeJudgeDefinition> {
   file = resolve(file);
-  const dependencies: Record<string, string> = {};
-  const sdkManifest = fileURLToPath(
-    new URL("../../../package.json", import.meta.url),
-  );
-  dependencies[sdkManifest] = await Bun.file(sdkManifest).text();
   const external = new Set<string>();
   const built = await Bun.build({
     // Import only the judge function: unused reporting metadata is tree-shaken.
@@ -65,40 +81,32 @@ export async function compileCodeJudge(
     (await built.outputs
       .find((output) => output.kind === "sourcemap")
       ?.text()) ?? "";
-  const collect = async (directory: string, stopAtPackage: boolean) => {
-    for (;;) {
-      let found = false;
-      for (const name of [
-        "package.json",
-        "bun.lock",
-        "bun.lockb",
-        "package-lock.json",
-        "pnpm-lock.yaml",
-        "yarn.lock",
-      ]) {
-        const path = resolve(directory, name);
-        if (await Bun.file(path).exists()) {
-          dependencies[path] =
-            name === "bun.lockb"
-              ? Buffer.from(await Bun.file(path).bytes()).toString("base64")
-              : await Bun.file(path).text();
-          found ||= name === "package.json";
-        }
-      }
-      if (found && stopAtPackage) return;
-      const parent = dirname(directory);
-      if (parent === directory) return;
-      directory = parent;
-    }
-  };
-  await collect(dirname(file), false);
-  for (const path of external) await collect(dirname(path), true);
+  // The executable keeps absolute import paths; identity uses the package name and version.
+  const dependencies: Record<string, string> = {};
+  let portable = source;
+  for (const path of external) {
+    const specifier = await packageSpecifier(path, dirname(file));
+    dependencies[specifier] = path;
+    portable = portable.replaceAll(
+      JSON.stringify(path),
+      JSON.stringify(specifier),
+    );
+  }
+  // Bun writes __dirname and __filename as absolute paths. Like other runtime file inputs, they are not identity.
+  portable = portable.replace(
+    /^\s*var __(?:dirname|filename) = .*$/gm,
+    (line) => line.replace(/"(?:[^"\\]|\\.)*"/g, '""'),
+  );
   return {
     file,
     source,
     sourceMap,
     dependencies,
-    // Debug mappings and original-source metadata are retained, but not executable inputs.
-    hash: fingerprint({ source, dependencies }),
+    // Reprinting drops comments: module comments name files relative to the working
+    // directory, and the debug ID depends on them. Source maps are retained, not hashed.
+    hash: fingerprint({
+      protocol: CODE_JUDGE_PROTOCOL,
+      source: printer.transformSync(portable),
+    }),
   };
 }

@@ -866,7 +866,7 @@ export const docs: Doc[] = [
               "Illustrative label-reading task. The code judge ran on constructed responses; no candidate model was called.",
           },
           text(
-            "The host bundles local imports without executing the judge during planning. Source maps and dependency manifests/lockfiles are recorded with its fingerprint. Code and reference changes schedule rejudging; the candidate recording is reused.",
+            "The host bundles local imports without executing the judge during planning. Its fingerprint covers the bundled code and the versions of imported packages, not the checkout location or lockfiles. Code and reference changes schedule rejudging; the candidate recording is reused.",
           ),
           text(
             "judge.ts runs in a separate Bun process under judge.timeoutMs, so the host can stop synchronous loops. Code and hybrid evals grade finalized recordings; earlyStop is supported for Markdown-only evals. The viewer shows returned JSON, frozen source, process logs, and candidate metrics.",
