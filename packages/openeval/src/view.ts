@@ -171,13 +171,33 @@ function componentBounds(
     coverage: coverage * scale,
   };
 }
-export const sumCosts = (costs: readonly (Cost | undefined)[]): Cost => {
+/** A cost summed over executions. `unaccounted` counts executions without a final cost. */
+export type CostTotal = Cost & { unaccounted: number };
+/** Sum execution costs or totals; a single execution without a final cost counts once. */
+export const sumCosts = (
+  costs: readonly (Cost | CostTotal | undefined)[],
+): CostTotal => {
   const reportedUSD = costs.reduce(
     (sum, cost) => sum + (cost?.reportedUSD ?? 0),
     0,
   );
   const complete = costs.every((cost) => cost?.complete === true);
-  return { reportedUSD, complete, usd: complete ? reportedUSD : null };
+  const unaccounted = costs.reduce(
+    (sum, cost) =>
+      sum +
+      (cost && "unaccounted" in cost
+        ? cost.unaccounted
+        : cost?.complete
+          ? 0
+          : 1),
+    0,
+  );
+  return {
+    reportedUSD,
+    complete,
+    usd: complete ? reportedUSD : null,
+    unaccounted,
+  };
 };
 export type ResultEntry = {
   id: string;
@@ -209,8 +229,8 @@ export type Overview = {
   evalNames: Record<string, string>;
   modelNames: ModelNames;
   categories: CategorySummary[];
-  cost: Cost;
-  evalCosts: Record<string, Cost>;
+  cost: CostTotal;
+  evalCosts: Record<string, CostTotal>;
   runtime: RuntimeInterval[];
 };
 export type ResultSummary = {
@@ -305,7 +325,10 @@ export type JudgeAudit = {
     Pick<JudgeRun, "id" | "state" | "startedAt"> & { mode: "monitor" | "final" }
   >;
 };
-export type EvalRunSummary = LiveEvalRun & { cost: Cost; elapsedMs: number };
+export type EvalRunSummary = LiveEvalRun & {
+  cost: CostTotal;
+  elapsedMs: number;
+};
 export type EvalRunIndex = {
   entry: ResultEntry;
   eval: string;
@@ -316,7 +339,7 @@ export type ActivityRun = {
   id: string;
   benchmarkId: string;
   resultId: string;
-  cost: Cost;
+  cost: CostTotal;
   state: {
     id: string;
     eval: string;

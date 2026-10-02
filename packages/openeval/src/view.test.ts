@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { modelScore } from "./view";
+import { modelScore, sumCosts } from "./view";
 
 const part = (evalId: string, criterion: string, value: number | null) => ({
   eval: evalId,
@@ -32,6 +32,26 @@ test("an eval without criterion scores cannot disappear from the denominator", (
   expect(score.maximum).toBe(2);
   expect(score.unscoredEvals).toEqual(["unscored"]);
   expect(score.bounds).toEqual({ lower: 50, upper: 100, coverage: 50 });
+});
+
+test("cost totals count every execution without a final cost", () => {
+  const accounted = { usd: 2, reportedUSD: 2, complete: true };
+  const unaccounted = { usd: null, reportedUSD: 0.5, complete: false };
+  const first = sumCosts([accounted, unaccounted]);
+  const second = sumCosts([unaccounted, unaccounted, accounted]);
+
+  expect(sumCosts([accounted, accounted])).toEqual({
+    usd: 4,
+    reportedUSD: 4,
+    complete: true,
+    unaccounted: 0,
+  });
+  expect(sumCosts([first, second])).toEqual({
+    usd: null,
+    reportedUSD: 5.5,
+    complete: false,
+    unaccounted: 3,
+  });
 });
 
 test("pending code grading cannot expose a completed Markdown-only percentage", () => {
