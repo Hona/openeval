@@ -1022,7 +1022,10 @@ export const docs: Doc[] = [
                 "--max-cost",
                 "Admission budget using reported spend and reservations",
               ],
-              ["Candidate timeout", "At most 45 minutes per candidate"],
+              [
+                "candidate.timeoutMs",
+                "Agent session limit: 45 minutes by default, at most 12 hours. Set it in benchmark.ts, or in eval.ts for one eval",
+              ],
               ["--final-only", "Judge after the candidate finishes"],
             ],
           ),
@@ -1353,7 +1356,7 @@ export const docs: Doc[] = [
               [
                 "candidate.timeoutMs",
                 "45 minutes",
-                "Candidate limit; cannot exceed 45 minutes",
+                "Agent session limit, at most 12 hours; eval.ts candidate.timeoutMs overrides it for one eval",
               ],
               ["judge.timeoutMs", "10 minutes", "Judge execution timeout"],
               [

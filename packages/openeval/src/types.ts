@@ -15,6 +15,7 @@ import type {
 export type OpenCodeStreamEvent = OpenCodeEvent | SessionLogItem;
 
 export const CANDIDATE_TIMEOUT_MS = 45 * 60 * 1000;
+export const MAX_CANDIDATE_TIMEOUT_MS = 12 * 60 * 60 * 1000;
 export type ModelRef = `${string}/${string}`;
 export type Engine = "docker" | "podman";
 export type ProviderDefinitions = NonNullable<
@@ -34,6 +35,11 @@ export type Judge = {
   websearch?: "exa" | false;
   verification?: VerificationEnvironment;
 };
+/** Execution controls for one candidate attempt. Eval values override benchmark values. */
+export type CandidateLimits = {
+  /** Agent session limit, after preparation; default 45 minutes, at most 12 hours. */
+  timeoutMs?: number;
+};
 export type Benchmark = {
   name?: string;
   /** Display label for one benchmark.ts among several that share `name`, such as "Frontier". */
@@ -42,8 +48,7 @@ export type Benchmark = {
   judge?: Judge;
   repetitions?: number;
   concurrency?: number;
-  candidate?: {
-    timeoutMs?: number;
+  candidate?: CandidateLimits & {
     websearch?: "exa" | false;
     providers?: ProviderDefinitions;
   };
@@ -82,6 +87,8 @@ export type Eval = {
     overlay?: string;
   };
   prepare?: readonly PreparationStep[];
+  /** Overrides benchmark.candidate for this eval. */
+  candidate?: CandidateLimits;
 };
 export type EvalDefinition = {
   id: string;

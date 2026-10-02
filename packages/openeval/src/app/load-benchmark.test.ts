@@ -3,7 +3,9 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { loadBenchmark, modelRef } from "./load-benchmark";
+import { candidateTimeout } from "./input-fingerprints";
 import { parseModel } from "../infra/opencode/session";
+import { CANDIDATE_TIMEOUT_MS, MAX_CANDIDATE_TIMEOUT_MS } from "../types";
 
 test("loads namespaced model IDs and preserves them for OpenCode", async () => {
   const root = await mkdtemp(
@@ -129,6 +131,61 @@ test("criteria declare categories in judge.md and judge.ts without changing judg
     );
     await write("evals/code/judge.md", rubric);
     await expect(loadBenchmark(root)).rejects.toThrow("not both");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("candidate time limits default to 45 minutes; an eval can set its own up to 12 hours", async () => {
+  const root = await mkdtemp(
+    resolve(
+      process.platform === "win32" ? "C:/tmp/opencode" : tmpdir(),
+      "openeval-time-limits-",
+    ),
+  );
+  const write = (path: string, content: string) =>
+    Bun.write(resolve(root, path), content);
+  const benchmark = (candidate = "") =>
+    write(
+      "benchmark.ts",
+      `export default { models: ["example/model"], judge: { model: "example/judge" }, ${candidate} };`,
+    );
+  try {
+    await benchmark();
+    for (const id of ["long", "short"]) {
+      await write(`evals/${id}/prompt.md`, "Answer the question.");
+      await write(
+        `evals/${id}/judge.md`,
+        "## Criterion: correct — Correct answer\nPass when the answer is correct.",
+      );
+    }
+    await write(
+      "evals/long/eval.ts",
+      "export default { candidate: { timeoutMs: 12 * 60 * 60_000 } };",
+    );
+    const loaded = await loadBenchmark(root);
+    expect(loaded.candidate.timeoutMs).toBe(CANDIDATE_TIMEOUT_MS);
+    expect(candidateTimeout(loaded, "long")).toBe(MAX_CANDIDATE_TIMEOUT_MS);
+    expect(candidateTimeout(loaded, "short")).toBe(CANDIDATE_TIMEOUT_MS);
+
+    for (const [settings, error] of [
+      ["{ timeoutMs: 12 * 60 * 60_000 + 1 }", "long: candidate timeout cannot exceed 12 hours"],
+      ["{ timeoutMs: 1.5 }", "long: candidate timeout must be a positive integer"],
+      ["{ maxCostUSD: 5 }", "long: candidate contains unsupported settings"],
+    ]) {
+      await write("evals/long/eval.ts", `export default { candidate: ${settings} };`);
+      await expect(loadBenchmark(root)).rejects.toThrow(error);
+    }
+
+    await write("evals/long/eval.ts", "export default {};");
+    await benchmark("candidate: { timeoutMs: 12 * 60 * 60_000 }");
+    expect((await loadBenchmark(root)).candidate.timeoutMs).toBe(
+      MAX_CANDIDATE_TIMEOUT_MS,
+    );
+    await benchmark("candidate: { timeoutMs: 12 * 60 * 60_000 + 1 }");
+    await expect(loadBenchmark(root)).rejects.toThrow(
+      "Candidate timeout cannot exceed 12 hours",
+    );
   } finally {
     await rm(root, { recursive: true, force: true });
   }

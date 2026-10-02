@@ -1,5 +1,6 @@
 export type {
   Benchmark,
+  CandidateLimits,
   Eval,
   ModelRef,
   ProviderDefinitions,
@@ -30,7 +31,7 @@ export type {
   EvidenceQuery,
   JudgeSession,
 } from "./evidence";
-export { CANDIDATE_TIMEOUT_MS } from "./types";
+export { CANDIDATE_TIMEOUT_MS, MAX_CANDIDATE_TIMEOUT_MS } from "./types";
 export { rubricCriteria, criterionMean, isScored } from "./judgment";
 export {
   categoryKey,

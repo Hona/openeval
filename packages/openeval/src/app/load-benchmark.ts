@@ -8,7 +8,7 @@ import type {
   EvalDefinition,
   ModelRef,
 } from "../types";
-import { CANDIDATE_TIMEOUT_MS } from "../types";
+import { CANDIDATE_TIMEOUT_MS, MAX_CANDIDATE_TIMEOUT_MS } from "../types";
 import { rubricCriteria } from "../judgment";
 import {
   categoryKey,
@@ -31,6 +31,12 @@ const positive = (value: unknown, fallback: number, label: string) => {
   if (typeof result !== "number" || !Number.isInteger(result) || result < 1)
     throw new Error(`${label} must be a positive integer`);
   return result;
+};
+const timeLimit = (value: unknown, label: string) => {
+  const timeoutMs = positive(value, CANDIDATE_TIMEOUT_MS, label);
+  if (timeoutMs > MAX_CANDIDATE_TIMEOUT_MS)
+    throw new Error(`${label} cannot exceed 12 hours`);
+  return timeoutMs;
 };
 export const modelRef = (value: unknown): ModelRef => {
   if (
@@ -66,10 +72,23 @@ async function loadEval(directory: string): Promise<EvalDefinition> {
     throw new Error(`${id}/eval.ts must export a declaration`);
   if (
     Object.keys(settings).some(
-      (key) => !["workspace", "prepare", "earlyStop"].includes(key),
+      (key) =>
+        !["workspace", "prepare", "earlyStop", "candidate"].includes(key),
     )
   )
     throw new Error(`${id}/eval.ts has unsupported settings`);
+  if (settings.candidate !== undefined) {
+    const candidate: unknown = settings.candidate;
+    if (
+      !candidate ||
+      typeof candidate !== "object" ||
+      Array.isArray(candidate) ||
+      Object.keys(candidate).some((key) => key !== "timeoutMs")
+    )
+      throw new Error(`${id}: candidate contains unsupported settings`);
+    if (settings.candidate.timeoutMs !== undefined)
+      timeLimit(settings.candidate.timeoutMs, `${id}: candidate timeout`);
+  }
   monitorPolicy(settings.earlyStop);
   if (hasCode && settings.earlyStop)
     throw new Error(
@@ -308,13 +327,10 @@ export async function loadBenchmark(
     );
   if (new Set(models).size !== models.length)
     throw new Error("Benchmark contains duplicate models");
-  const timeoutMs = positive(
+  const timeoutMs = timeLimit(
     definition.candidate?.timeoutMs,
-    CANDIDATE_TIMEOUT_MS,
     "Candidate timeout",
   );
-  if (timeoutMs > CANDIDATE_TIMEOUT_MS)
-    throw new Error("Candidate timeout cannot exceed 45 minutes");
   const evalRoot = resolve(directory, "evals");
   const directories = (await readdir(evalRoot, { withFileTypes: true }))
     .filter((entry) => entry.isDirectory() && !entry.name.startsWith("."))

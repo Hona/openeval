@@ -198,9 +198,10 @@ not a guaranteed billing ceiling; active work can finish above the estimate.
 
 ## Stopping, revision, and aggregation
 
-- Candidates normally finish naturally, with a maximum of 45 minutes. Early
-  stopping is opt-in and host-controlled. Every criterion score must be non-null and
-  irreversible before an early decision can stop execution.
+- Candidates normally finish naturally, within a default limit of 45 minutes.
+  `candidate.timeoutMs` in benchmark.ts, or in eval.ts for one eval, can raise
+  it to 12 hours. Early stopping is opt-in and host-controlled. Every criterion
+  score must be non-null and irreversible before an early decision can stop execution.
 - Missing work so far usually calls for continuing. A completed qualifying event
   can establish an irreversible pass; a final-state property may still change.
 - Timeout or interruption alone is not a failed criterion. Grade what the archive

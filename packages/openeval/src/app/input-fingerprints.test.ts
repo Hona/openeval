@@ -5,6 +5,7 @@ import { JUDGE_AGENT } from "../infra/judging/agent";
 import {
   candidateFingerprint,
   candidateProviders,
+  candidateTimeout,
   judgeFingerprint,
   savedJudgeFingerprint,
 } from "./input-fingerprints";
@@ -163,6 +164,32 @@ test("unchanged evals keep their released identities after an upgrade", () => {
   expect(hash(upgraded, "listed")).toBe(RELEASED.candidate);
   expect(judgeFingerprint(markdown, "answer")).toBe(RELEASED.judge);
   expect(judgeFingerprint(upgraded, "answer")).toBe(RELEASED.judge);
+});
+
+test("an eval time limit changes only that eval's candidate identity", () => {
+  const limited = (timeoutMs?: number): BenchmarkDefinition => ({
+    ...definition,
+    evals: [
+      {
+        ...definition.evals[0],
+        settings: timeoutMs ? { candidate: { timeoutMs } } : {},
+      },
+      { ...definition.evals[0], id: "explain" },
+    ],
+  });
+  const identity = (value: BenchmarkDefinition, evalId: string) =>
+    candidateFingerprint(value, evalId, "gateway/listed#high", runtime);
+  const eightHours = 8 * 60 * 60_000;
+
+  // No override, or one equal to benchmark.candidate.timeoutMs, keeps the released identity.
+  expect(identity(limited(), "answer")).toBe(RELEASED.candidate);
+  expect(identity(limited(1000), "answer")).toBe(RELEASED.candidate);
+  expect(candidateTimeout(limited(eightHours), "answer")).toBe(eightHours);
+  expect(candidateTimeout(limited(eightHours), "explain")).toBe(1000);
+  expect(identity(limited(eightHours), "answer")).not.toBe(RELEASED.candidate);
+  expect(identity(limited(eightHours), "explain")).toBe(
+    identity(limited(), "explain"),
+  );
 });
 
 test("the verification runtime changes code judgments only", () => {

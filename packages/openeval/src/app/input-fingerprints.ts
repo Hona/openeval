@@ -43,6 +43,14 @@ export function candidateProviders(
     : undefined;
 }
 
+/** The candidate session limit for one eval: its eval.ts override, else the benchmark value. */
+export const candidateTimeout = (
+  definition: BenchmarkDefinition,
+  evalId: string,
+) =>
+  definition.evals.find((item) => item.id === evalId)?.settings.candidate
+    ?.timeoutMs ?? definition.candidate.timeoutMs;
+
 /** Declared, candidate-visible inputs. Harness implementation hashes are provenance.
  * Early stopping is a judge-side policy; the planner re-collects sessions it cut short. */
 export function candidateFingerprint(
@@ -59,7 +67,7 @@ export function candidateFingerprint(
     model,
     image: runtime.imageId,
     candidate: {
-      timeoutMs: definition.candidate.timeoutMs,
+      timeoutMs: candidateTimeout(definition, evalId),
       websearch: definition.candidate.websearch,
       provider: scope && { ...scope.settings, model: scope.override },
     },
