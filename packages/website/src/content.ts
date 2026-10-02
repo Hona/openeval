@@ -1108,7 +1108,10 @@ export const docs: Doc[] = [
                 "ETA",
                 "Estimate for scheduled work using candidate and judge stage timings",
               ],
-              ["Cost", "Reported candidate and judge spend"],
+              [
+                "Cost",
+                "Reported candidate and judge spend; ≥ marks a lower bound when some runs have no final cost",
+              ],
             ],
           ),
           {

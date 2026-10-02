@@ -1,5 +1,5 @@
 import { createSignal } from "solid-js";
-import type { ModelNames } from "@hona/openeval/view";
+import type { CostTotal, ModelNames } from "@hona/openeval/view";
 
 const [catalogNames, setCatalogNames] = createSignal<ModelNames>({});
 /** Use the OpenCode catalog names recorded with the displayed result. */
@@ -96,6 +96,29 @@ export const formatCost = (value: number | null | undefined) =>
         minimumFractionDigits: 2,
         maximumFractionDigits: Math.abs(value) >= 1 ? 2 : 4,
       }).format(value);
+/** A cost total with a note when some runs have no final cost, so the total is a lower bound. */
+export const formatCostTotal = (
+  cost: CostTotal | undefined,
+  running: boolean,
+): { label: string; note?: string } => {
+  if (!cost) return { label: "—" };
+  if (cost.complete) return { label: formatCost(cost.usd) };
+  const runs =
+    cost.unaccounted === 1
+      ? "1 run has"
+      : cost.unaccounted
+        ? `${cost.unaccounted} runs have`
+        : "Some runs have";
+  return running
+    ? {
+        label: formatCost(cost.reportedUSD),
+        note: `Recorded spend so far. ${runs} no final cost yet.`,
+      }
+    : {
+        label: `≥ ${formatCost(cost.reportedUSD)}`,
+        note: `Recorded spend. ${runs} no final cost, so the total can be higher.`,
+      };
+};
 export const formatDate = (value: string) =>
   new Date(value).toLocaleString(undefined, {
     month: "short",

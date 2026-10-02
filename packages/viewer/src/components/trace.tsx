@@ -3,7 +3,7 @@ import { Button } from "@opencode/ui/button";
 import { Badge } from "@opencode/ui/badge";
 import { Select } from "@opencode/ui/select";
 import type { EvalRunIndex, EvalRunSummary } from "../types";
-import { duration, formatCost, modelName } from "../model";
+import { duration, formatCostTotal, modelName } from "../model";
 import { SessionTabs } from "./session-tabs";
 
 export function EvalRunTrace(props: {
@@ -12,6 +12,11 @@ export function EvalRunTrace(props: {
   onRun: (id: string) => void;
   onBack: () => void;
 }) {
+  const cost = () =>
+    formatCostTotal(
+      props.selected.cost,
+      props.selected.status === "in_progress",
+    );
   return (
     <section class="trace-view">
       <div class="trace-heading">
@@ -31,7 +36,8 @@ export function EvalRunTrace(props: {
             {props.selected.reasoning}
             <span>·</span>
             {duration(props.selected.elapsedMs)}
-            <span>·</span>Cost {formatCost(props.selected.cost.usd)}
+            <span>·</span>
+            <span title={cost().note}>Cost {cost().label}</span>
           </p>
         </div>
         <div class="trace-actions">

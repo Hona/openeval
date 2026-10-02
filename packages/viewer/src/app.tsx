@@ -33,7 +33,7 @@ import { downloadResultsImage, downloadScorecardImage } from "./results-image";
 import { EvalName, SecretToggle, topSecret, SECRET_MODE_KEY } from "./privacy";
 import {
   duration,
-  formatCost,
+  formatCostTotal,
   formatDate,
   formatNumber,
   matchesModelFilters,
@@ -358,16 +358,13 @@ export function App() {
       : undefined;
     return value === undefined ? "—" : duration(value);
   };
-  const scopedCost = () => {
-    const value =
+  const scopedCost = () =>
+    formatCostTotal(
       route().view === "evals"
         ? data()?.evalCosts?.[selectedEval()]
-        : data()?.cost;
-    return (
-      value?.usd ??
-      (data()?.status === "running" ? value?.reportedUSD : undefined)
+        : data()?.cost,
+      data()?.status === "running",
     );
-  };
   const evalScores = createMemo(
     () =>
       data()?.scores.map((score) => {
@@ -815,7 +812,12 @@ export function App() {
                     </div>
                     <div>
                       <span>{modelFilters().length ? "Run cost" : "Cost"}</span>
-                      <strong>{formatCost(scopedCost())}</strong>
+                      <Tooltip
+                        value={scopedCost().note}
+                        inactive={!scopedCost().note}
+                      >
+                        <strong>{scopedCost().label}</strong>
+                      </Tooltip>
                     </div>
                   </div>
                 </Show>
