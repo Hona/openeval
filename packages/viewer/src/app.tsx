@@ -789,6 +789,36 @@ export function App() {
                     </Tooltip>
                   </div>
                 </div>
+                <Show when={!isPublic()}>
+                  <div class="run-facts">
+                    <div>
+                      <span>Models</span>
+                      <strong>{displayedScores().length}</strong>
+                    </div>
+                    <div>
+                      <span>Evaluations</span>
+                      <strong>
+                        {route().view === "evals" ? 1 : data()!.evals.length}
+                      </strong>
+                    </div>
+                    <div>
+                      <span>Scored checks</span>
+                      <strong>
+                        {completeChecks()} <small>/ {expectedChecks()}</small>
+                      </strong>
+                    </div>
+                    <div>
+                      <span>
+                        {modelFilters().length ? "Run duration" : "Duration"}
+                      </span>
+                      <strong>{elapsed()}</strong>
+                    </div>
+                    <div>
+                      <span>{modelFilters().length ? "Run cost" : "Cost"}</span>
+                      <strong>{formatCost(scopedCost())}</strong>
+                    </div>
+                  </div>
+                </Show>
                 <div class="results-toolbar">
                   <Show when={!isPublic() && data()!.kind === "benchmark"}>
                     <ResultTabs
@@ -960,36 +990,6 @@ export function App() {
                     />
                   </Show>
                 </section>
-                <Show when={!isPublic()}>
-                  <div class="run-facts">
-                    <div>
-                      <span>Models</span>
-                      <strong>{displayedScores().length}</strong>
-                    </div>
-                    <div>
-                      <span>Evaluations</span>
-                      <strong>
-                        {route().view === "evals" ? 1 : data()!.evals.length}
-                      </strong>
-                    </div>
-                    <div>
-                      <span>Scored checks</span>
-                      <strong>
-                        {completeChecks()} <small>/ {expectedChecks()}</small>
-                      </strong>
-                    </div>
-                    <div>
-                      <span>
-                        {modelFilters().length ? "Run duration" : "Duration"}
-                      </span>
-                      <strong>{elapsed()}</strong>
-                    </div>
-                    <div>
-                      <span>{modelFilters().length ? "Run cost" : "Cost"}</span>
-                      <strong>{formatCost(scopedCost())}</strong>
-                    </div>
-                  </div>
-                </Show>
                 <Show
                   when={displayedScores().some(
                     (score) => score.percentage === null,
