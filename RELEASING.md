@@ -17,6 +17,12 @@ private benchmark content and its history belong to the separate private client 
 5. For the first release, use `npm publish ./artifacts/hona-openeval-VERSION.tgz --access public`.
 6. Tag the release `vVERSION`. Later tags use the publishing workflow.
 
+Code-judge identity covers the bundled judge code and the versions of packages
+it imports, not the SDK version. When a release changes what judge.ts receives
+or how it runs, raise `CODE_JUDGE_PROTOCOL` in
+`packages/openeval/src/infra/judging/code-source.ts` so every code judge runs
+again.
+
 `release:verify` installs the actual tarball in an independent consumer, checks
 all public exports and TypeScript use, exercises the built viewer, checks CLI
 help/version, and checks the package asset boundary. No live models are called.

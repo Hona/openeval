@@ -47,11 +47,13 @@ cannot silently disappear from the benchmark denominator. Use consistent score
 IDs across models and repetitions; a missing required score stays unresolved.
 There are no built-in task-specific scorers, registration steps, or builder APIs.
 
-The host bundles local imports before execution, captures source maps and
-dependency manifests/lockfiles, and records their fingerprint. Code, imported
-references, or dependency changes schedule rejudging rather than candidate
-execution. Use static imports for reference data; make runtime network and file
-inputs reproducible when an author-owned judge uses them.
+The host bundles local imports before execution, captures source maps, and
+fingerprints the bundled code with the name and version of each imported
+package. Code, imported references, or package version changes schedule
+rejudging rather than candidate execution. The checkout location, working
+directory, install layout, lockfiles, and SDK version do not. Use static imports
+for reference data; make runtime network and file inputs reproducible when an
+author-owned judge uses them.
 
 The viewer shows normalized criterion scores, original returned JSON, frozen
 source, process logs, and recorded candidate metrics. A synchronous loop can be
