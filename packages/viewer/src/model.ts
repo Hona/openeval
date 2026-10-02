@@ -94,7 +94,7 @@ export const formatCost = (value: number | null | undefined) =>
         style: "currency",
         currency: "USD",
         minimumFractionDigits: 2,
-        maximumFractionDigits: 4,
+        maximumFractionDigits: Math.abs(value) >= 1 ? 2 : 4,
       }).format(value);
 export const formatDate = (value: string) =>
   new Date(value).toLocaleString(undefined, {

@@ -86,7 +86,7 @@ export function activityProgress(groups: ActivityRun[], now: number) {
   );
   const scoped = rows.filter(({ run }) => run.scheduled);
   const queued = scoped.filter(({ run }) => run.eval.status === "queued");
-  // Elapsed and cost describe the latest run invocation, not earlier resumes of this result.
+  // elapsedMs and invocationUSD cover the latest run invocation; totalElapsedMs covers every execution.
   const since = Math.max(
     0,
     ...groups.map((group) =>
