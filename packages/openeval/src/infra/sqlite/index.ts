@@ -166,6 +166,13 @@ export class Results {
       .all()
       .map((row) => row.value);
   }
+  /** IDs and states in judgeRuns() order. Triggers keep finalized runs immutable, so readers can cache them. */
+  judgeRunStates() {
+    return this.sqlite.query("SELECT id, state FROM judge_runs").all() as Array<{
+      id: string;
+      state: JudgeRun["state"];
+    }>;
+  }
   evalRun(id: string) {
     return this.db
       .select()

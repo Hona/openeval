@@ -16,6 +16,16 @@ export async function serveResults(options: {
   await mkdir(root, { recursive: true });
   const reader = new ResultReader(root),
     encoder = new TextEncoder();
+  // Open tabs refresh on every change. Share one recent read so polling cannot saturate the server.
+  const recent = new Map<string, { at: number; value: Promise<unknown> }>();
+  const shared = <T>(key: string, read: () => Promise<T>): Promise<T> => {
+    const hit = recent.get(key);
+    if (hit && Date.now() - hit.at < 2000) return hit.value as Promise<T>;
+    const value = read();
+    recent.set(key, { at: Date.now(), value });
+    value.catch(() => recent.delete(key));
+    return value;
+  };
   const clients = new Set<ReadableStreamDefaultController<Uint8Array>>(),
     streams = new Set<() => void>();
   let changed: ReturnType<typeof setTimeout> | undefined;
@@ -44,7 +54,7 @@ export async function serveResults(options: {
         if (url.pathname === "/api/results")
           return Response.json(await reader.index());
         if (url.pathname === "/api/activity")
-          return Response.json(await reader.activity());
+          return Response.json(await shared("activity", () => reader.activity()));
         if (url.pathname === "/api/judge-checks")
           return Response.json(
             await reader.judgeAudit(
@@ -93,12 +103,14 @@ export async function serveResults(options: {
             ),
           );
         }
-        if (url.pathname === "/api/result")
+        if (url.pathname === "/api/result") {
+          const id = url.searchParams.get("id") ?? "";
           return Response.json(
             url.searchParams.get("format") === "runs"
-              ? await reader.evalRuns(url.searchParams.get("id") ?? "")
-              : await reader.summary(url.searchParams.get("id") ?? ""),
+              ? await shared(`runs:${id}`, () => reader.evalRuns(id))
+              : await shared(`summary:${id}`, () => reader.summary(id)),
           );
+        }
         if (url.pathname === "/api/events") {
           let owner: ReadableStreamDefaultController<Uint8Array>;
           return new Response(
