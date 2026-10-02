@@ -263,20 +263,34 @@ export function Activity(props: {
             </span>
           </Show>
           <Tooltip
-            value={`Eval and judge runtime since this run started${progress().since ? ` (${formatDate(new Date(progress().since!).toISOString())})` : ""}. Overlapping workers count once; idle gaps and passive monitoring are excluded. All executions in this result: ${duration(progress().totalElapsedMs)}.`}
+            value={`Eval and judge runtime across every execution in this result. Overlapping workers count once; idle gaps and passive monitoring are excluded.${progress().since ? ` Latest run (started ${formatDate(new Date(progress().since!).toISOString())}): ${duration(progress().elapsedMs)}.` : ""}`}
           >
             <span>
-              Elapsed <strong>{duration(progress().elapsedMs)}</strong>
+              Elapsed <strong>{duration(progress().totalElapsedMs)}</strong>
+              <Show
+                when={
+                  progress().running &&
+                  progress().elapsedMs < progress().totalElapsedMs
+                }
+              >
+                {" "}
+                · this run {duration(progress().elapsedMs)}
+              </Show>
             </span>
           </Tooltip>
           <Tooltip
-            value={`Reported eval and judge cost since this run started, including active sessions. All active selections in this result: ${formatCost(cost().reportedUSD)}.`}
+            value={`Reported eval and judge cost of every active selection in this result, including active sessions.${progress().invocationUSD !== undefined ? ` Latest run: ${formatCost(progress().invocationUSD!)}.` : ""}`}
           >
             <span>
-              Cost so far{" "}
-              <strong>
-                {formatCost(progress().invocationUSD ?? cost().reportedUSD)}
-              </strong>
+              Cost <strong>{formatCost(cost().reportedUSD)}</strong>
+              <Show
+                when={
+                  progress().running && progress().invocationUSD !== undefined
+                }
+              >
+                {" "}
+                · this run {formatCost(progress().invocationUSD!)}
+              </Show>
             </span>
           </Tooltip>
         </div>
