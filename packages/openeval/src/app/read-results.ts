@@ -72,7 +72,22 @@ export const evalResultId = (benchmarkId: string, evalId: string) =>
 export class ResultReader {
   private paths = new Map<string, string>();
   private runtimes = new Map<string, RuntimeInterval[]>();
+  private finishedJudges = new Map<string, Map<string, JudgeRun>>();
   constructor(readonly root: string) {}
+  /** Every judge run; parses only running or unseen records, since finalized runs never change. */
+  private judgeRunsOf(results: Results) {
+    const cache =
+      this.finishedJudges.get(results.path) ?? new Map<string, JudgeRun>();
+    this.finishedJudges.set(results.path, cache);
+    return results.judgeRunStates().flatMap(({ id }) => {
+      const cached = cache.get(id);
+      if (cached) return [cached];
+      const run = results.judgeRun(id);
+      if (!run) return [];
+      if (run.state !== "running") cache.set(id, run);
+      return [run];
+    });
+  }
   private runtime(
     run: EvalRun | JudgeRun,
     results: Results,
@@ -93,7 +108,7 @@ export class ResultReader {
         scheduled(slot, benchmark, now);
       if (current && "evalRunId" in run.input)
         current =
-          (judges ?? results.judgeRuns())
+          (judges ?? this.judgeRunsOf(results))
             .filter(
               (judge) =>
                 judge.input.evalRunId === candidate!.id &&
@@ -272,25 +287,17 @@ export class ResultReader {
       (item) => !evalId || item.id === evalId,
     );
     if (!evals.length) throw new Error("Unknown eval");
-    const scores = results.readSnapshot(() =>
-      benchmarkScores(
-        run.definition,
-        results.slots(),
-        results.judgeRuns(),
-        evalId,
-      ),
+    const [slots, allJudges] = results.readSnapshot(
+      () => [results.slots(), this.judgeRunsOf(results)] as const,
     );
+    const scores = benchmarkScores(run.definition, slots, allJudges, evalId);
     // Runtime and cost describe the work behind the active selections, not retired history.
     const active = new Set(
-      results
-        .slots()
-        .filter((slot) => slot.active)
-        .map((slot) => slot.id),
+      slots.filter((slot) => slot.active).map((slot) => slot.id),
     );
     const candidates = results
-        .evalRuns()
-        .filter((candidate) => active.has(candidate.slotId)),
-      allJudges = results.judgeRuns();
+      .evalRuns()
+      .filter((candidate) => active.has(candidate.slotId));
     const now = Date.now(),
       candidateIndex = new Map(candidates.map((run) => [run.id, run]));
     const evalRuntime = new Map<string, RuntimeInterval[]>();
@@ -380,7 +387,7 @@ export class ResultReader {
   private liveRuns(results: Results, evalIds: readonly string[]) {
     const benchmark = results.benchmark!,
       executions = results.evalRuns(),
-      judges = results.judgeRuns(),
+      judges = this.judgeRunsOf(results),
       now = Date.now();
     const byId = new Map(executions.map((run) => [run.id, run]));
     const bySlot = Map.groupBy(executions, (run) => run.slotId);
