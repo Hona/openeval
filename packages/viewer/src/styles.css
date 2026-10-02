@@ -589,8 +589,9 @@ h3 {
 .run-facts {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  margin-top: 18px;
-  padding: 20px 0;
+  margin-bottom: 24px;
+  padding: 16px 0;
+  border-top: 1px solid var(--app-border);
   border-bottom: 1px solid var(--app-border);
 }
 .run-facts > div {
