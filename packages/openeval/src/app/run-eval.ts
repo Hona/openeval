@@ -5,7 +5,7 @@ import { executeCandidate } from "../infra/containers/candidate";
 import type { EvidenceFeed } from "../evidence";
 import { CandidateEvidence } from "../infra/evidence";
 import { measureRecording } from "../infra/recording/metrics";
-import { candidateProviders } from "./input-fingerprints";
+import { candidateProviders, candidateTimeout } from "./input-fingerprints";
 
 /** The normal candidate use case: record its inputs, execute, finalize its evidence. */
 export async function runEval(
@@ -20,6 +20,7 @@ export async function runEval(
   const definition = context.definition.evals.find(
     (item) => item.id === slot.evalId,
   )!;
+  const timeoutMs = candidateTimeout(context.definition, slot.evalId);
   const run = context.results.startEval(slot, {
     evalId: slot.evalId,
     model: slot.model,
@@ -28,7 +29,7 @@ export async function runEval(
     candidateHash: slot.candidateHash,
     sourceHash: definition.sourceHash,
     imageId: context.runtime.imageId,
-    timeoutMs: context.definition.candidate.timeoutMs,
+    timeoutMs,
     earlyStop: !!controls.onEvidence,
     runtime: context.runtime,
   });
@@ -39,7 +40,7 @@ export async function runEval(
       prompt: definition.prompt,
       workspace,
       prepare: definition.settings.prepare ?? [],
-      timeoutMs: context.definition.candidate.timeoutMs,
+      timeoutMs,
       websearch: context.definition.candidate.websearch,
       container: context.definition.container,
       imageId: context.runtime.imageId,
