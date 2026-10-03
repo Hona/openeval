@@ -364,10 +364,14 @@ export async function loadBenchmark(
   const verification = definition.judge?.verification;
   if (verification && (
     typeof verification !== "object" || Array.isArray(verification) ||
-    Object.keys(verification).some(key => !["image", "engine", "cpus", "memoryMiB"].includes(key)) ||
+    Object.keys(verification).some(key => !["image", "engine", "cpus", "memoryMiB", "workspaceMiB"].includes(key)) ||
     typeof verification.image !== "string" || !verification.image.trim() || /\s/.test(verification.image) ||
     !["docker", "podman"].includes(verification.engine ?? engine)
   )) throw new Error("judge.verification requires an image and valid container limits");
+  const verificationMemory = positive(verification?.memoryMiB, 4096, "Verification memory");
+  if (verification?.workspaceMiB !== undefined &&
+    (!Number.isSafeInteger(verification.workspaceMiB) || verification.workspaceMiB < 1 || verification.workspaceMiB > verificationMemory))
+    throw new Error("Verification workspaceMiB must be a positive integer within memoryMiB");
   for (const search of [
     definition.candidate?.websearch,
     definition.judge?.websearch,
@@ -403,7 +407,8 @@ export async function loadBenchmark(
         image: verification.image,
         engine: verification.engine ?? engine,
         cpus: positive(verification.cpus, 2, "Verification CPU count"),
-        memoryMiB: positive(verification.memoryMiB, 4096, "Verification memory"),
+        memoryMiB: verificationMemory,
+        ...(verification.workspaceMiB === undefined ? {} : { workspaceMiB: verification.workspaceMiB }),
       } } : {}),
     },
     container: {

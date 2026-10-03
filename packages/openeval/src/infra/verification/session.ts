@@ -26,7 +26,7 @@ export function verificationArgs(runtime: VerificationRuntime, owner: string, na
     "--network=none", "--cap-drop=ALL", "--security-opt=no-new-privileges", "--read-only",
     "--pids-limit", "128", "--cpus", String(runtime.cpus), "--memory", `${runtime.memoryMiB}m`,
     "--memory-swap", `${runtime.memoryMiB}m`, "--user", "10001:10001",
-    "--tmpfs", "/workspace:rw,exec,nosuid,nodev,mode=1777,size=512m",
+    "--tmpfs", `/workspace:rw,exec,nosuid,nodev,mode=1777,size=${runtime.workspaceMiB ?? 512}m`,
     "--tmpfs", "/verification:rw,exec,nosuid,nodev,mode=0755,size=64m",
     "--tmpfs", "/tmp:rw,exec,nosuid,nodev,mode=1777,size=256m",
     "--env", "HOME=/tmp/home", "--env", "CI=1",

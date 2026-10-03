@@ -113,7 +113,7 @@ export type BenchmarkDefinition = {
   suite?: string;
   directory: string;
   models: ModelRef[];
-  judge: { model?: ModelRef; timeoutMs: number; websearch: "exa" | false; verification?: VerificationRuntime | Required<VerificationEnvironment> };
+  judge: { model?: ModelRef; timeoutMs: number; websearch: "exa" | false; verification?: VerificationRuntime | Omit<VerificationRuntime, "imageId"> };
   repetitions: number;
   concurrency: number;
   candidate: {

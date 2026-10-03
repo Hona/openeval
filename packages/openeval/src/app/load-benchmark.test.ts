@@ -7,6 +7,23 @@ import { candidateTimeout } from "./input-fingerprints";
 import { parseModel } from "../infra/opencode/session";
 import { CANDIDATE_TIMEOUT_MS, MAX_CANDIDATE_TIMEOUT_MS } from "../types";
 
+test("verification workspace capacity is preserved only when explicitly configured", async () => {
+  const root = await mkdtemp(resolve(tmpdir(), "openeval-workspace-capacity-"));
+  try {
+    await Bun.write(resolve(root, "evals/answer/prompt.md"), "Answer.");
+    await Bun.write(resolve(root, "evals/answer/judge.md"), "## Criterion: answer — Answer\nPass when correct.");
+    const declare = (extra: string) => Bun.write(resolve(root, "benchmark.ts"),
+      `export default { models: ["example/model"], judge: { model: "example/judge", verification: { image: "fixture", memoryMiB: 4096, ${extra} } } };`);
+    await declare("");
+    const original = await loadBenchmark(root);
+    expect(Object.hasOwn(original.judge.verification!, "workspaceMiB")).toBe(false);
+    await declare("workspaceMiB: 2048,");
+    expect((await loadBenchmark(root)).judge.verification?.workspaceMiB).toBe(2048);
+    await declare("workspaceMiB: 4097,");
+    await expect(loadBenchmark(root)).rejects.toThrow("workspaceMiB");
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
 test("loads namespaced model IDs and preserves them for OpenCode", async () => {
   const root = await mkdtemp(
     resolve(

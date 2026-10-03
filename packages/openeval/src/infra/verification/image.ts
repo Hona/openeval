@@ -21,6 +21,10 @@ export async function verificationRuntime(environment?: VerificationEnvironment)
   if (!["docker", "podman"].includes(engine) || !environment.image || /\s/.test(environment.image) ||
     [environment.cpus ?? 2, environment.memoryMiB ?? 4096].some(value => !Number.isSafeInteger(value) || value < 1))
     throw new Error("Verification requires a valid image, engine, and positive integer resource limits");
+  if (environment.workspaceMiB !== undefined &&
+    (!Number.isSafeInteger(environment.workspaceMiB) || environment.workspaceMiB < 1 ||
+      environment.workspaceMiB > (environment.memoryMiB ?? 4096)))
+    throw new Error("Verification workspaceMiB must be a positive integer within memoryMiB");
   const output = await engineCommand(engine, [
     "image", "inspect", environment.image, "--format",
     '{{.Id}}|{{index .Config.Labels "openeval.verification"}}',
@@ -29,5 +33,9 @@ export async function verificationRuntime(environment?: VerificationEnvironment)
   if (!/^sha256:[a-f0-9]{64}$/.test(imageId)) throw new Error("Verification image has no immutable image ID");
   if (environment.image === VERIFICATION_IMAGE && label !== await treeHash(directory))
     throw new Error("Verification runtime changed. Run image --verification first.");
-  return { engine, image: environment.image, imageId, cpus: environment.cpus ?? 2, memoryMiB: environment.memoryMiB ?? 4096 };
+  return {
+    engine, image: environment.image, imageId,
+    cpus: environment.cpus ?? 2, memoryMiB: environment.memoryMiB ?? 4096,
+    ...(environment.workspaceMiB === undefined ? {} : { workspaceMiB: environment.workspaceMiB }),
+  };
 }
