@@ -18,6 +18,7 @@ import {
 import { compileCodeJudge } from "../infra/judging/code-source";
 import { readCodeCriteria } from "../infra/judging/code-criteria";
 import { RUNTIME_IMAGE } from "../infra/opencode/version";
+import { DEFAULT_INPUT_MIB, verificationInputMiB } from "../infra/verification/limits";
 import { monitorPolicy } from "./monitor-policy";
 import {
   fingerprint,
@@ -364,7 +365,7 @@ export async function loadBenchmark(
   const verification = definition.judge?.verification;
   if (verification && (
     typeof verification !== "object" || Array.isArray(verification) ||
-    Object.keys(verification).some(key => !["image", "engine", "cpus", "memoryMiB", "workspaceMiB"].includes(key)) ||
+    Object.keys(verification).some(key => !["image", "engine", "cpus", "memoryMiB", "workspaceMiB", "inputMiB"].includes(key)) ||
     typeof verification.image !== "string" || !verification.image.trim() || /\s/.test(verification.image) ||
     !["docker", "podman"].includes(verification.engine ?? engine)
   )) throw new Error("judge.verification requires an image and valid container limits");
@@ -372,6 +373,7 @@ export async function loadBenchmark(
   if (verification?.workspaceMiB !== undefined &&
     (!Number.isSafeInteger(verification.workspaceMiB) || verification.workspaceMiB < 1 || verification.workspaceMiB > verificationMemory))
     throw new Error("Verification workspaceMiB must be a positive integer within memoryMiB");
+  const inputMiB = verificationInputMiB(verification?.inputMiB);
   for (const search of [
     definition.candidate?.websearch,
     definition.judge?.websearch,
@@ -409,6 +411,7 @@ export async function loadBenchmark(
         cpus: positive(verification.cpus, 2, "Verification CPU count"),
         memoryMiB: verificationMemory,
         ...(verification.workspaceMiB === undefined ? {} : { workspaceMiB: verification.workspaceMiB }),
+        ...(inputMiB === DEFAULT_INPUT_MIB ? {} : { inputMiB }),
       } } : {}),
     },
     container: {

@@ -39,6 +39,32 @@ export default async ctx => {
   } finally { await rm(root, { recursive: true, force: true }); }
 }, 60000);
 
+test.skipIf(process.env.OPENEVAL_VERIFY_INTEGRATION !== "1")("transfer limits reject oversized archives and retain opted-in capacity", async () => {
+  const root = await mkdtemp(resolve(tmpdir(), "openeval-transfer-capacity-"));
+  try {
+    const workspace = resolve(root, "workspace");
+    for (const path of ["first/payload.txt", "second/payload.txt"])
+      await Bun.write(resolve(workspace, path), "x".repeat(768 * 1024));
+    const evidence = await recordEvidence({ directory: resolve(root, "evidence"), prompt: "Inspect the supplied files.",
+      response: "Constructed control; no candidate or live model ran.", workspace: { initial: workspace, final: workspace } });
+    const file = resolve(root, "judge.ts");
+    await Bun.write(file, `export const criteria = { transferred: { name: "Transferred", categories: ["verification"] } };
+export default async ctx => {
+  const result = await ctx.verification.run({ commands: [["bun", "-e", "import {statSync} from 'node:fs'; if(statSync('/workspace/first/payload.txt').size !== 786432 || statSync('/workspace/second/payload.txt').size !== 786432) process.exit(1)"]], timeoutMs: 20000 });
+  return { scores: { transferred: { value: result.exitCode === 0, reason: "Verified both restored files.", evidence: [{kind:"verification",id:result.id}] } } };
+};`);
+    const small = await judgeEvidence({ evidence, code: file, directory: resolve(root, "small"),
+      judge: { timeoutMs: 30000, verification: { image: VERIFICATION_IMAGE, inputMiB: 1 } } });
+    expect(small.state).toBe("failed");
+    expect(small.error).toContain("exceeds 1 MiB");
+    const large = await judgeEvidence({ evidence, code: file, directory: resolve(root, "large"),
+      judge: { timeoutMs: 30000, verification: { image: VERIFICATION_IMAGE, inputMiB: 2 } } });
+    expect(large.error).toBeUndefined();
+    expect(large.judgment?.scores.transferred.value).toBe(1);
+    expect(large.code?.verifications?.[0].environment.inputMiB).toBe(2);
+  } finally { await rm(root, { recursive: true, force: true }); }
+}, 90000);
+
 test.skipIf(process.env.OPENEVAL_VERIFY_INTEGRATION !== "1")("prepare actual inputs without candidate/judge executions or credentials", async () => {
   const root = await mkdtemp(resolve(tmpdir(), "openeval-inputs-"));
   try {

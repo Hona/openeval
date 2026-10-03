@@ -8,7 +8,7 @@ run it in a disposable OCI container rather than on the runner host.
 import { VERIFICATION_IMAGE, type Benchmark } from "@hona/openeval";
 export default {
   models: ["example/model"],
-  judge: { verification: { image: VERIFICATION_IMAGE, cpus: 2, memoryMiB: 4096, workspaceMiB: 2048 } },
+  judge: { verification: { image: VERIFICATION_IMAGE, cpus: 2, memoryMiB: 4096, workspaceMiB: 2048, inputMiB: 256 } },
 } satisfies Benchmark;
 ```
 
@@ -56,7 +56,7 @@ prefix does not necessarily establish final-task failure.
 - Commands, exit statuses, image/resource identity, logs, and requested regular
   output files are retained with the JudgeRun. Viewer previews never execute HTML
   or SVG from the delivered artifact.
-- Workspace transfer is limited to 128 MiB; each output archive is limited to
+- Workspace transfer defaults to 128 MiB; each output archive is limited to
   32 MiB; logs are limited to 1 MiB per stream and are marked when truncated.
 - Containers self-expire. The parent also removes containers bearing only its
   unique execution label after worker interruption. No shared/broad cleanup.
@@ -67,6 +67,15 @@ positive integer no larger than `memoryMiB` (which defaults to 4096). It is
 retained in verification receipts and code-judge identity. Omitting it preserves
 existing identities and limits. Network, credentials, privileges, transfer caps,
 and the read-only image filesystem are unchanged.
+
+For larger source snapshots, set `judge.verification.inputMiB` to a positive
+integer archive limit. This is separate from `workspaceMiB`: increasing storage
+alone does not increase the transfer limit. The configured byte count must be a
+safe integer. Non-default limits are retained in receipts and code-judge identity;
+omitting the field or setting it to 128 preserves existing identities. Output and
+log caps, filesystem permissions, network access, and container isolation stay
+unchanged. Provision enough workspace storage for the actual restored files and
+any verification-generated data.
 
 The standard image includes Bun 1.4.2, Python, Git, Node, and Playwright 1.63.0
 with Chromium. Import Playwright from

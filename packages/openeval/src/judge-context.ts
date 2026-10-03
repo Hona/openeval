@@ -41,6 +41,8 @@ export type VerificationEnvironment = {
   memoryMiB?: number;
   /** Workspace tmpfs capacity in MiB; default 512. A custom value must fit within memoryMiB. */
   workspaceMiB?: number;
+  /** Maximum restored workspace archive size in MiB; default 128. */
+  inputMiB?: number;
 };
 export type VerificationRuntime = {
   engine: Engine;
@@ -49,6 +51,7 @@ export type VerificationRuntime = {
   cpus: number;
   memoryMiB: number;
   workspaceMiB?: number;
+  inputMiB?: number;
 };
 export type VerificationRequest = {
   revision?: Revision;

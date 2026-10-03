@@ -6,10 +6,10 @@ import type { Engine } from "../../types";
 import { engineCommand } from "../containers/docker";
 import { extractWorkspaceArchive } from "../containers/transfer";
 import { contained, hash, relativePath, writeJson } from "../files";
+import { verificationInputBytes, verificationInputMiB } from "./limits";
 
 const LOG_BYTES = 1024 * 1024;
 const OUTPUT_BYTES = 32 * 1024 * 1024;
-const INPUT_BYTES = 128 * 1024 * 1024;
 
 export function verificationPath(value: string): string {
   relativePath(value, "Verification path");
@@ -116,8 +116,8 @@ export function verificationSession(options: {
         const archive = resolve(staging, "workspace.tar");
         const pack = Bun.spawn(["tar", "-cf", archive, "-C", workspace, "."], { stdout: "ignore", stderr: "pipe" });
         const [packed, packError] = await Promise.all([pack.exited, new Response(pack.stderr).text()]);
-        if (packed || (await lstat(archive)).size > INPUT_BYTES)
-          throw new Error(packed ? `Verification transfer failed: ${packError}` : "Restored verification workspace exceeds 128 MiB");
+        if (packed || (await lstat(archive)).size > verificationInputBytes(runtime.inputMiB))
+          throw new Error(packed ? `Verification transfer failed: ${packError}` : `Restored verification workspace exceeds ${verificationInputMiB(runtime.inputMiB)} MiB`);
         const name = `openeval-verify-${randomUUID()}`;
         const startedAt = new Date().toISOString();
         const deadlineAt = Date.now() + timeoutMs;
