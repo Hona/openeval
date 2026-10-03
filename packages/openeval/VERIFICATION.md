@@ -8,7 +8,7 @@ run it in a disposable OCI container rather than on the runner host.
 import { VERIFICATION_IMAGE, type Benchmark } from "@hona/openeval";
 export default {
   models: ["example/model"],
-  judge: { verification: { image: VERIFICATION_IMAGE, cpus: 2, memoryMiB: 4096 } },
+  judge: { verification: { image: VERIFICATION_IMAGE, cpus: 2, memoryMiB: 4096, workspaceMiB: 2048 } },
 } satisfies Benchmark;
 ```
 
@@ -60,6 +60,13 @@ prefix does not necessarily establish final-task failure.
   32 MiB; logs are limited to 1 MiB per stream and are marked when truncated.
 - Containers self-expire. The parent also removes containers bearing only its
   unique execution label after worker interruption. No shared/broad cleanup.
+
+The workspace tmpfs defaults to 512 MiB. Set `judge.verification.workspaceMiB`
+for a larger restored project or prepared dependency tree. The value must be a
+positive integer no larger than `memoryMiB` (which defaults to 4096). It is
+retained in verification receipts and code-judge identity. Omitting it preserves
+existing identities and limits. Network, credentials, privileges, transfer caps,
+and the read-only image filesystem are unchanged.
 
 The standard image includes Bun 1.4.2, Python, Git, Node, and Playwright 1.63.0
 with Chromium. Import Playwright from

@@ -39,6 +39,8 @@ export type VerificationEnvironment = {
   image: string;
   cpus?: number;
   memoryMiB?: number;
+  /** Workspace tmpfs capacity in MiB; default 512. A custom value must fit within memoryMiB. */
+  workspaceMiB?: number;
 };
 export type VerificationRuntime = {
   engine: Engine;
@@ -46,6 +48,7 @@ export type VerificationRuntime = {
   imageId: string;
   cpus: number;
   memoryMiB: number;
+  workspaceMiB?: number;
 };
 export type VerificationRequest = {
   revision?: Revision;
