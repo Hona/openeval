@@ -156,6 +156,17 @@ test("verification capacity changes code judgments, not candidate or Markdown id
   expect(judgeFingerprint(coded(enlarged), "answer")).not.toBe(judgeFingerprint(coded(original), "answer"));
 });
 
+test("verification input capacity changes only code-judge identity", () => {
+  const original = verified(markdown, "a");
+  const enlarged = {
+    ...original,
+    judge: { ...original.judge, verification: { ...verifier("a"), inputMiB: 256 } },
+  };
+  expect(hash(enlarged, "listed")).toBe(hash(original, "listed"));
+  expect(judgeFingerprint(enlarged, "answer")).toBe(judgeFingerprint(original, "answer"));
+  expect(judgeFingerprint(coded(enlarged), "answer")).not.toBe(judgeFingerprint(coded(original), "answer"));
+});
+
 // Recorded with the released 0.4.0 package. Upgrading must not reschedule unchanged work.
 const RELEASED = {
   candidate: "ecd1b6f52dab74671b6349d28f93ead4dde48ac31fbca8bd3201516a6fbf7e4e",

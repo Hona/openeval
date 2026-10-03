@@ -2,6 +2,7 @@ import { fileURLToPath } from "node:url";
 import type { VerificationEnvironment, VerificationRuntime } from "../../judge-context";
 import { engineCommand } from "../containers/docker";
 import { treeHash } from "../files";
+import { DEFAULT_INPUT_MIB, verificationInputMiB } from "./limits";
 
 export const VERIFICATION_IMAGE = "openeval-verification:0.5.0";
 const directory = fileURLToPath(new URL("./runtime/", import.meta.url));
@@ -25,6 +26,7 @@ export async function verificationRuntime(environment?: VerificationEnvironment)
     (!Number.isSafeInteger(environment.workspaceMiB) || environment.workspaceMiB < 1 ||
       environment.workspaceMiB > (environment.memoryMiB ?? 4096)))
     throw new Error("Verification workspaceMiB must be a positive integer within memoryMiB");
+  const inputMiB = verificationInputMiB(environment.inputMiB);
   const output = await engineCommand(engine, [
     "image", "inspect", environment.image, "--format",
     '{{.Id}}|{{index .Config.Labels "openeval.verification"}}',
@@ -37,5 +39,6 @@ export async function verificationRuntime(environment?: VerificationEnvironment)
     engine, image: environment.image, imageId,
     cpus: environment.cpus ?? 2, memoryMiB: environment.memoryMiB ?? 4096,
     ...(environment.workspaceMiB === undefined ? {} : { workspaceMiB: environment.workspaceMiB }),
+    ...(inputMiB === DEFAULT_INPUT_MIB ? {} : { inputMiB }),
   };
 }

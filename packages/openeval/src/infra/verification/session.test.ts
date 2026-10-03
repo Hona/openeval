@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { verificationArgs, verificationPath } from "./session";
 import { verificationRuntime } from "./image";
+import { verificationInputBytes, verificationInputMiB } from "./limits";
 
 test("verification has no host mounts, credentials, network, or privileged capabilities", () => {
   const args = verificationArgs({ engine: "docker", image: "example", imageId: `sha256:${"a".repeat(64)}`, cpus: 2, memoryMiB: 1024 }, "owner", "container", 1000);
@@ -25,6 +26,20 @@ test("a larger verification workspace changes only its bounded tmpfs capacity", 
 test.each([0, -1, 1.5, NaN, Infinity, 4097])("invalid workspace capacity is rejected before image inspection: %s", async value => {
   await expect(verificationRuntime({ image: "example", workspaceMiB: value, memoryMiB: 4096 }))
     .rejects.toThrow("workspaceMiB");
+});
+
+test("input capacity defaults to the released limit and does not relax container isolation", () => {
+  expect(verificationInputMiB()).toBe(128);
+  expect(verificationInputBytes()).toBe(128 * 1024 * 1024);
+  expect(verificationInputBytes(256)).toBe(256 * 1024 * 1024);
+  const runtime = { engine: "docker" as const, image: "example", imageId: `sha256:${"a".repeat(64)}`, cpus: 2, memoryMiB: 4096 };
+  expect(verificationArgs({ ...runtime, inputMiB: 256 }, "owner", "container", 1000))
+    .toEqual(verificationArgs(runtime, "owner", "container", 1000));
+});
+
+test.each([0, -1, 1.5, NaN, Infinity, Number.MAX_SAFE_INTEGER])("invalid transfer capacity is rejected before image inspection: %s", async value => {
+  expect(() => verificationInputBytes(value)).toThrow("inputMiB");
+  await expect(verificationRuntime({ image: "example", inputMiB: value })).rejects.toThrow("inputMiB");
 });
 
 test.each(["../host", "/host", "C:/host", "a\\b", "x\0y"])("rejects a path outside verification: %s", value => {

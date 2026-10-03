@@ -24,6 +24,26 @@ test("verification workspace capacity is preserved only when explicitly configur
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 
+test("verification transfer capacity defaults preserve identity and overrides remain explicit", async () => {
+  const root = await mkdtemp(resolve(tmpdir(), "openeval-input-capacity-"));
+  try {
+    await Bun.write(resolve(root, "evals/answer/prompt.md"), "Answer.");
+    await Bun.write(resolve(root, "evals/answer/judge.md"), "## Criterion: answer — Answer\nPass when correct.");
+    const declare = (extra: string) => Bun.write(resolve(root, "benchmark.ts"),
+      `export default { models: ["example/model"], judge: { model: "example/judge", verification: { image: "fixture", ${extra} } } };`);
+    await declare("");
+    expect(Object.hasOwn((await loadBenchmark(root)).judge.verification!, "inputMiB")).toBe(false);
+    await declare("inputMiB: 128,");
+    expect(Object.hasOwn((await loadBenchmark(root)).judge.verification!, "inputMiB")).toBe(false);
+    await declare("inputMiB: 256,");
+    expect((await loadBenchmark(root)).judge.verification?.inputMiB).toBe(256);
+    for (const value of ["0", "-1", "1.5", "NaN", "Infinity", "null", '"256"', "Number.MAX_SAFE_INTEGER"]) {
+      await declare(`inputMiB: ${value},`);
+      await expect(loadBenchmark(root)).rejects.toThrow("inputMiB");
+    }
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
 test("loads namespaced model IDs and preserves them for OpenCode", async () => {
   const root = await mkdtemp(
     resolve(
