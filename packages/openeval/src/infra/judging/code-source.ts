@@ -18,7 +18,8 @@ function portableDirectories(source: string) {
 }
 
 /** An unchanged self-contained executable can retain judgments whose older
- * identity included host package manifests and lockfiles. This is a read-only
+ * identity included host package manifests and lockfiles. Generated comments
+ * and debug IDs are not executable input. This is a read-only
  * identity check, not a rewrite of recorded code or a changed scoring rule.
  * External packages still require their exact executable identity. */
 export function recordedCodeMatches(
@@ -27,7 +28,8 @@ export function recordedCodeMatches(
 ) {
   if (!recorded) return false;
   if (recorded.hash === expected.hash) return true;
-  if (!expected.source.trim() || expected.source !== recorded.source ||
+  if (!expected.source.trim() ||
+      printer.transformSync(expected.source) !== printer.transformSync(recorded.source) ||
       Object.keys(expected.dependencies).length !== 0) return false;
   const imports = new Bun.Transpiler({ loader: "js" }).scan(expected.source).imports;
   if (imports.some(item => !item.path.startsWith("node:") && !item.path.startsWith("bun:"))) return false;

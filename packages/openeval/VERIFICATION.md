@@ -93,7 +93,9 @@ evidence. Do not put evaluator scripts in candidate workspaces.
 ## Readable judgments and controls
 
 Retained code judgments stay scored when a metadata-only identity change leaves
-the exact self-contained executable unchanged. The reader verifies both recorded
+the comment-free self-contained executable unchanged. Generated bundle comments
+and debug IDs are excluded; string literals remain executable input.
+The reader verifies both recorded
 identities and rejects changed source, external package imports, unknown metadata,
 or a different execution protocol. This check makes no model calls and rewrites
 no evidence. A completed code verification is still required. Package/lockfile
