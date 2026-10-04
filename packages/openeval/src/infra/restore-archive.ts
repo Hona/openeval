@@ -61,7 +61,8 @@ export async function restoreArchivedCandidate(
     const events: OpenCodeStreamEvent[] = [];
     const archived = await readArchivedSession(database, sessionId, event => events.push(event));
     verifyArchivedInput(input, sessionId, archived);
-    const creation = events.find(event => event.type === "session.created" && event.data.sessionID === sessionId);
+    const creation = events.find((event): event is Extract<OpenCodeStreamEvent, { type: "session.created" }> =>
+      event.type === "session.created" && event.data.sessionID === sessionId);
     if (!creation) throw new Error("The native backup has no root creation event");
     const completedAt = archived.result.sessions.find(session => session.info.id === sessionId)!.info.time.idle;
     if (typeof completedAt !== "number" || !Number.isFinite(completedAt))

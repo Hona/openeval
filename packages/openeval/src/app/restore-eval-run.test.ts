@@ -68,7 +68,8 @@ async function fixture() {
   {
     using results = new Results(resolve(root, "runner.db"));
     results.saveBenchmark({ id: "benchmark_fixture", name: "SDK fixture", source: root, definition, runtime,
-      createdAt: new Date(now).toISOString(), updatedAt: new Date(now).toISOString(), state: "failed", scheduledSlotIds: [] });
+      createdAt: new Date(now).toISOString(), updatedAt: new Date(now).toISOString(), state: "failed", scheduledSlotIds: [],
+      execution: { startedAt: new Date(now).toISOString(), estimatedUSD: 0, spentUSD: 0, deferred: 0 } });
     const run = results.startEval(slot, { evalId: "answer", model: slot.model, repetition: 1, prompt,
       candidateHash: "candidate", sourceHash: "source", imageId: "fixture", timeoutMs: 1000, earlyStop: false, runtime });
     results.finishEval({ ...run, state: "failed", interrupted: true, error: "Runner stopped",
