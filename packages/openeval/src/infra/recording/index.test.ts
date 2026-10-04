@@ -143,7 +143,7 @@ test("native access reads paginated history before compaction and preserves the 
       expect((await context.recording.messages(sessionID)).length).toBe(107);
       expect((await sdk.session.context({ sessionID })).length).toBe(2);
       expect((await context.recording.export()).messages).toHaveLength(107);
-      await sdk.session.rename({ sessionID, title: "Disposable copy" });
+      await sdk.session.update({ sessionID, title: "Disposable copy" });
       expect(await context.workspace.text("answer.txt", "initial")).toBe(
         "initial",
       );

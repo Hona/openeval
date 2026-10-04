@@ -64,7 +64,7 @@ negotiated responses include `Vary: Accept` and Markdown's `Content-Location`.
 HTML pages link to their alternate and to the index. Direct Markdown URLs remain
 static assets with `Content-Type: text/markdown; charset=utf-8`.
 
-Verified against the installed **OpenCode 2.0.3** webfetch implementation and the
+Verified against the installed **OpenCode 2.0.22** webfetch implementation and the
 [V2 tools guide](https://opencode.ai/v2/docs/tools/): Markdown and text requests
 prefer Markdown; HTML requests still prefer HTML even though their Accept header
 also lists Markdown. OpenCode does not automatically crawl llms.txt or follow

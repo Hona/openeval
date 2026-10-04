@@ -2,7 +2,7 @@
   "commit": "22111e4b3bf461311f9204b653bab1faf6462321",
   "package": "packages/session-ui",
   "namespaceRewrite": "@opencode-ai/ → @opencode/",
-  "publishedDependencies": "2.0.3",
+  "publishedDependencies": "2.0.22",
   "patches": [
     {
       "source": "d44b52ca66b6bf69626c0384626d1a9cd9555977",

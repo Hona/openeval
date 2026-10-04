@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { prefersMarkdown, serveDocumentation } from "./negotiation";
 
-// Accept values verified in the released @opencode/core 2.0.3 webfetch tool.
+// Accept values verified in the released @opencode/core 2.0.22 webfetch tool.
 const opencode = {
   markdown:
     "text/markdown;q=1.0, text/x-markdown;q=0.9, text/plain;q=0.8, text/html;q=0.7, */*;q=0.1",

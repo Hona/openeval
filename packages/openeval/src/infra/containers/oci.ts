@@ -250,7 +250,7 @@ export class CandidateContainer {
       try {
         if (
           (
-            await fetch(`${url}/api/health`, {
+            await fetch(`${url}/api/info`, {
               headers: {
                 authorization: `Basic ${Buffer.from(`opencode:${this.password}`).toString("base64")}`,
               },
