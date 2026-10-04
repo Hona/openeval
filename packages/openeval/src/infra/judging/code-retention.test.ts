@@ -17,6 +17,18 @@ test("unchanged standalone code retains a judgment across metadata-only identity
   expect(recordedCodeMatches(current(), windows)).toBe(true);
 });
 
+test("generated bundle comments and debug IDs do not hide retained scores", () => {
+  const before = '// generated module path: /old/location\n' + source + '\n//# debugId=old\n';
+  const after = '// generated module path: /new/location\n' + source + '\n//# debugId=new\n';
+  expect(recordedCodeMatches(current(after), recorded(before))).toBe(true);
+});
+
+test("comment-like text in executable strings still changes identity", () => {
+  const before = 'export default () => ({ value: "//# debugId=old" });';
+  const after = 'export default () => ({ value: "//# debugId=new" });';
+  expect(recordedCodeMatches(current(after), recorded(before))).toBe(false);
+});
+
 test("changed executable source remains incompatible", () => {
   expect(recordedCodeMatches(current(), recorded(source.replace("true", "false")))).toBe(false);
 });
