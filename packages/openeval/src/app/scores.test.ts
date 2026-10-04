@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import type { BenchmarkDefinition, JudgeRun, Slot } from "../types";
 import { benchmarkScores } from "./scores";
+import { fingerprint } from "../infra/files";
 
 const code = (hash: string) => ({ file: "judge.ts", hash, source: "", sourceMap: "", dependencies: {} });
 const definition: BenchmarkDefinition = {
@@ -77,4 +78,33 @@ test("undeclared code criteria keep the eval unresolved until every repetition i
   expect(benchmarkScores(undeclared, slots, judged("current"))[0].unscoredEvals).toEqual([
     "delivery",
   ]);
+});
+
+test("metadata-only code identities cannot mask an otherwise completed scorecard", () => {
+  const source = 'export default () => ({ scores: { first: true, second: true } });';
+  const printer = new Bun.Transpiler({ loader: "js", target: "bun", deadCodeElimination: false });
+  const dependencies = { "/fixture/package.json": '{"name":"fixture"}', "/fixture/bun.lock": "old host metadata" };
+  const current = { ...code(""), source, hash: fingerprint({ protocol: 1, source: printer.transformSync(source) }) };
+  const previous = { ...code(""), source, dependencies, hash: fingerprint({ source, dependencies }) };
+  // A synthetic mixed code/Markdown suite with 35 requirements across 19 evals.
+  const evals = Array.from({ length: 19 }, (_, index) => ({ ...definition.evals[0],
+    id: `fixture-${index}`, name: `Fixture ${index}`, code: index < 17 ? current : undefined,
+    criteria: index >= 17 ? [{ id: "first", name: "First" }, ...(index === 17 ? [{ id: "second", name: "Second" }] : [])] : [],
+    codeCriteria: index < 17 ? [{ id: "first", name: "First" }, ...(index < 15 ? [{ id: "second", name: "Second" }] : [])] : undefined,
+  }));
+  const allSlots = evals.flatMap(item => [1, 2, 3].map(repetition => ({ ...slots[0], id: `${item.id}:local/model:${repetition}`,
+    evalId: item.id, repetition, evalRunId: `eval_${item.id}_${repetition}`, judgeRunId: `judge_${item.id}_${repetition}` })));
+  const allJudges = allSlots.map(slot => ({ ...judged("current")[0], id: slot.judgeRunId!,
+    input: { ...judged("current")[0].input, code: slot.evalId === "fixture-17" || slot.evalId === "fixture-18" ? undefined : previous },
+    judgment: { value: 1, reason: "Synthetic completed judgment.", scores: {
+      first: { value: 1, reason: "Pass", evidence: [], source: "judge.ts" },
+      ...(Number(slot.evalId.slice("fixture-".length)) < 15 || slot.evalId === "fixture-17"
+        ? { second: { value: 1, reason: "Pass", evidence: [], source: "judge.ts" } } : {}),
+    } },
+  })) as unknown as JudgeRun[];
+  const [score] = benchmarkScores({ ...definition, evals }, allSlots, allJudges);
+  expect(score.components.reduce((total, criterion) => total + criterion.scored, 0)).toBe(105);
+  expect(score.percentage).toBe(100);
+  const incomplete = allJudges.map((judge, index) => index === 0 ? { ...judge, code: { ...judge.code!, state: "failed" as const } } : judge);
+  expect(benchmarkScores({ ...definition, evals }, allSlots, incomplete)[0].percentage).toBeNull();
 });

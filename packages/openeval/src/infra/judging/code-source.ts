@@ -10,6 +10,37 @@ const printer = new Bun.Transpiler({
   deadCodeElimination: false,
 });
 
+function portableDirectories(source: string) {
+  return source.replace(
+    /^\s*var __(?:dirname|filename) = .*$/gm,
+    (line) => line.replace(/"(?:[^"\\]|\\.)*"/g, '""'),
+  );
+}
+
+/** An unchanged self-contained executable can retain judgments whose older
+ * identity included host package manifests and lockfiles. This is a read-only
+ * identity check, not a rewrite of recorded code or a changed scoring rule.
+ * External packages still require their exact executable identity. */
+export function recordedCodeMatches(
+  expected: CodeJudgeDefinition,
+  recorded: CodeJudgeDefinition | undefined,
+) {
+  if (!recorded) return false;
+  if (recorded.hash === expected.hash) return true;
+  if (!expected.source.trim() || expected.source !== recorded.source ||
+      Object.keys(expected.dependencies).length !== 0) return false;
+  const imports = new Bun.Transpiler({ loader: "js" }).scan(expected.source).imports;
+  if (imports.some(item => !item.path.startsWith("node:") && !item.path.startsWith("bun:"))) return false;
+  const metadata = Object.keys(recorded.dependencies);
+  if (!metadata.length || metadata.some(path =>
+    !/(?:^|[\\/])(?:package\.json|bun\.lockb?|package-lock\.json|pnpm-lock\.yaml|yarn\.lock)$/.test(path))) return false;
+  // Verify both identities rather than accepting an arbitrary mismatched hash.
+  return CODE_JUDGE_PROTOCOL === 1 &&
+    recorded.hash === fingerprint({ source: recorded.source, dependencies: recorded.dependencies }) &&
+    expected.hash === fingerprint({ protocol: CODE_JUDGE_PROTOCOL,
+      source: printer.transformSync(portableDirectories(expected.source)) });
+}
+
 /** The package that provides an external import, as `name@version/path`. */
 async function packageSpecifier(path: string, from: string) {
   for (let directory = dirname(path); ; directory = dirname(directory)) {
@@ -93,10 +124,7 @@ export async function compileCodeJudge(
     );
   }
   // Bun writes __dirname and __filename as absolute paths. Like other runtime file inputs, they are not identity.
-  portable = portable.replace(
-    /^\s*var __(?:dirname|filename) = .*$/gm,
-    (line) => line.replace(/"(?:[^"\\]|\\.)*"/g, '""'),
-  );
+  portable = portableDirectories(portable);
   return {
     file,
     source,

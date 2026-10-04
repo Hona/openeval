@@ -92,6 +92,13 @@ evidence. Do not put evaluator scripts in candidate workspaces.
 
 ## Readable judgments and controls
 
+Retained code judgments stay scored when a metadata-only identity change leaves
+the exact self-contained executable unchanged. The reader verifies both recorded
+identities and rejects changed source, external package imports, unknown metadata,
+or a different execution protocol. This check makes no model calls and rewrites
+no evidence. A completed code verification is still required. Package/lockfile
+metadata alone must not make an unchanged historical scorecard appear unscored.
+
 `openeval prepare --output <new-directory>` assembles real candidate inputs and
 runs declared preparation in the candidate image, then archives the prepared
 workspace. `--only-eval` scopes it. This makes zero model calls, creates no

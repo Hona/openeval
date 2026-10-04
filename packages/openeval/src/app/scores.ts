@@ -1,7 +1,9 @@
 import type { BenchmarkDefinition, JudgeRun, Slot } from "../types";
+import type { CodeJudgeDefinition } from "../judge-context";
 import { modelScore } from "../view";
 import { isScored } from "../judgment";
 import { categoryKey, inCategories } from "../criterion-categories";
+import { recordedCodeMatches } from "../infra/judging/code-source";
 
 /** Scores are derived from a single selection snapshot; every eval has equal weight. */
 export function benchmarkScores(
@@ -14,12 +16,23 @@ export function benchmarkScores(
   const evals = definition.evals.filter(
     (item) => !evalId || item.id === evalId,
   );
-  // A code judgment counts only when it ran the eval's current judge.ts to completion.
+  const matches = new WeakMap<CodeJudgeDefinition, WeakMap<CodeJudgeDefinition, boolean>>();
+  const equivalent = (expected: CodeJudgeDefinition, recorded: CodeJudgeDefinition | undefined) => {
+    if (!recorded) return false;
+    let previous = matches.get(expected);
+    if (!previous) { previous = new WeakMap(); matches.set(expected, previous); }
+    const cached = previous.get(recorded);
+    if (cached !== undefined) return cached;
+    const value = recordedCodeMatches(expected, recorded);
+    previous.set(recorded, value);
+    return value;
+  };
+  // A code judgment counts only after completed verification of the matching executable.
   const current = (item: (typeof evals)[number], slot: Slot) => {
     const judge = slot.judgeRunId ? index.get(slot.judgeRunId) : undefined;
     return !item.code ||
       (judge?.code?.state === "completed" &&
-        judge.input.code?.hash === item.code.hash)
+         equivalent(item.code, judge.input.code))
       ? judge
       : undefined;
   };
