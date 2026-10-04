@@ -217,6 +217,31 @@ flowchart LR
 
 ## Use the SDK
 
+### Restore completed orphan work
+
+`restoreEvalRun(runDirectory, interruptedEvalRunId, backups)` finalizes a copied
+native session after a coordinator interruption. The CLI equivalent is:
+
+```sh
+openeval restore ./results/RUN eval_ID \
+  --database ./private-backup.db --database-hash SHA256 \
+  --workspace-archive ./workspace.tar --workspace-archive-hash SHA256
+```
+
+The active interrupted EvalRun must have no finalized evidence. OpenEval checks
+the backup hashes, original root session, model/variant, prompt, and native
+completion. It scrubs credentials from a copy and safely extracts the workspace
+without executing candidate files. The initial snapshot uses the frozen prepared
+input; `restoration.json` states that provenance rather than claiming a newly
+observed starting state. A new EvalRun replaces the interrupted coordinator
+record; the original remains immutable. No candidate prompt or model runs.
+Use `rejudge` on the returned EvalRun ID to produce a selected judgment.
+
+Do not use this operation to turn an incomplete native session into completion.
+Keep raw native backups private: they can contain credentials.
+
+### Run selected work
+
 ```ts
 import { runBenchmark } from "@hona/openeval";
 

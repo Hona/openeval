@@ -232,6 +232,16 @@ export type EvalRun = {
   stop?: EvalStop;
   /** The runner stopped before this session finished; the planner collects it again. */
   interrupted?: boolean;
+  /** A restored native session; the original interrupted coordinator record is retained. */
+  restoration?: {
+    evalRunId: string;
+    sessionId: string;
+    restoredAt: string;
+    completedAt: string;
+    databaseHash: string;
+    workspaceArchiveHash: string;
+    initial: string;
+  };
 };
 export type CriterionDefinition = { id: string; name: string };
 export type EvidenceCitation = (

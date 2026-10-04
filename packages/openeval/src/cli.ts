@@ -8,6 +8,7 @@ import {
   addModels,
   removeModels,
   retryEvalRun,
+  restoreEvalRun,
   judgeRun,
   serveResults,
   mergeBenchmarkRuns,
@@ -49,6 +50,7 @@ Commands:
   refresh-model-names <run> Refresh reporting names without running evals
   retry <run> <eval-run> Retry a candidate execution
   rejudge <run> <eval-run> Judge the saved evidence again
+  restore <run> <eval-run> Restore completed orphan work from hashed backups
 
 Options:
   --benchmark <dir>      Benchmark directory (default: current directory)
@@ -64,6 +66,10 @@ Options:
   --verification        Build only the standard verification image (image command)
   --output <dir>         New prepared-input directory (prepare command)
   --port <port>         Viewer port (default: 4173)
+  --database <file>      Native backup for restore
+  --database-hash <sha>  SHA-256 of the native backup
+  --workspace-archive <file> Workspace tar backup for restore
+  --workspace-archive-hash <sha> SHA-256 of the workspace tar
 
 Requires Bun 1.4.2+, Docker, and an authenticated OpenCode installation.`);
   } else if (command === "--version") {
@@ -170,6 +176,14 @@ Requires Bun 1.4.2+, Docker, and an authenticated OpenCode installation.`);
   } else if (command === "refresh-model-names") {
     if (!args[1]) throw new Error("refresh-model-names requires a benchmark run directory");
     console.log(JSON.stringify(await refreshModelNames(resolve(args[1])), null, 2));
+  } else if (command === "restore") {
+    const database = option("--database"), databaseHash = option("--database-hash");
+    const workspaceArchive = option("--workspace-archive"), workspaceArchiveHash = option("--workspace-archive-hash");
+    if (!args[1] || !args[2] || !database || !databaseHash || !workspaceArchive || !workspaceArchiveHash)
+      throw new Error("restore requires the run, interrupted EvalRun, native backup, workspace tar, and both SHA-256 hashes");
+    console.log(JSON.stringify(await restoreEvalRun(resolve(args[1]), args[2], {
+      database: resolve(database), databaseHash, workspaceArchive: resolve(workspaceArchive), workspaceArchiveHash,
+    }), null, 2));
   } else if (command === "retry" || command === "rejudge") {
     if (!args[1] || !args[2])
       throw new Error(
@@ -182,7 +196,7 @@ Requires Bun 1.4.2+, Docker, and an authenticated OpenCode installation.`);
     console.log(JSON.stringify(result, null, 2));
   } else
     throw new Error(
-      "Commands: image, plan, run, view, add-models, remove-models, refresh-model-names, merge-runs, retry, rejudge, snapshot",
+      "Commands: image, plan, run, view, add-models, remove-models, refresh-model-names, merge-runs, retry, rejudge, restore, snapshot",
     );
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));
