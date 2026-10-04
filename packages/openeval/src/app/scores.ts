@@ -2,6 +2,7 @@ import type { BenchmarkDefinition, JudgeRun, Slot } from "../types";
 import { modelScore } from "../view";
 import { isScored } from "../judgment";
 import { categoryKey, inCategories } from "../criterion-categories";
+import { recordedCodeMatches } from "../infra/judging/code-source";
 
 /** Scores are derived from a single selection snapshot; every eval has equal weight. */
 export function benchmarkScores(
@@ -19,7 +20,7 @@ export function benchmarkScores(
     const judge = slot.judgeRunId ? index.get(slot.judgeRunId) : undefined;
     return !item.code ||
       (judge?.code?.state === "completed" &&
-        judge.input.code?.hash === item.code.hash)
+         recordedCodeMatches(item.code, judge.input.code))
       ? judge
       : undefined;
   };
