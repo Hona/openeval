@@ -7,7 +7,8 @@ import {
   buildImage,
   addModels,
   removeModels,
-  retryEvalRun,
+  retryEvalRuns,
+  planEvalRunRetries,
   restoreEvalRun,
   judgeRun,
   serveResults,
@@ -48,7 +49,7 @@ Commands:
   add-models <run>       Add models with repeated --model flags
   remove-models <run>    Remove active models while retaining their evidence
   refresh-model-names <run> Refresh reporting names without running evals
-  retry <run> <eval-run> Retry a candidate execution
+  retry <run> <eval-run>... Retry failed or unresolved candidate work
   rejudge <run> <eval-run> Judge the saved evidence again
   restore <run> <eval-run> Restore completed orphan work from hashed backups
 
@@ -63,6 +64,7 @@ Options:
   --only-repetition <n>  Execute only this repetition (repeatable)
   --max-cost <usd>       Scheduling budget for this invocation
   --final-only          Judge only after candidates finish
+  --dry-run             Plan explicit retries without running them
   --verification        Build only the standard verification image (image command)
   --output <dir>         New prepared-input directory (prepare command)
   --port <port>         Viewer port (default: 4173)
@@ -184,15 +186,22 @@ Requires Bun 1.4.2+, Docker, and an authenticated OpenCode installation.`);
     console.log(JSON.stringify(await restoreEvalRun(resolve(args[1]), args[2], {
       database: resolve(database), databaseHash, workspaceArchive: resolve(workspaceArchive), workspaceArchiveHash,
     }), null, 2));
-  } else if (command === "retry" || command === "rejudge") {
+  } else if (command === "retry") {
+    const flags = args.findIndex((arg, index) => index >= 2 && arg.startsWith("--"));
+    const ids = args.slice(2, flags < 0 ? args.length : flags);
+    if (!args[1] || !ids.length) throw new Error("retry requires a run directory and explicit EvalRun IDs");
+    const result = args.includes("--dry-run")
+      ? await planEvalRunRetries(resolve(args[1]), ids)
+      : await retryEvalRuns(resolve(args[1]), ids, undefined,
+        { maxCostUSD: option("--max-cost") === undefined ? undefined : Number(option("--max-cost")) });
+    console.log(JSON.stringify(!args.includes("--dry-run") && ids.length === 1 && Array.isArray(result)
+      ? result[0] : result, null, 2));
+  } else if (command === "rejudge") {
     if (!args[1] || !args[2])
       throw new Error(
         `${command} requires a benchmark run directory and eval run ID`,
       );
-    const result =
-      command === "retry"
-        ? await retryEvalRun(resolve(args[1]), args[2])
-        : await judgeRun(resolve(args[1]), args[2]);
+    const result = await judgeRun(resolve(args[1]), args[2]);
     console.log(JSON.stringify(result, null, 2));
   } else
     throw new Error(

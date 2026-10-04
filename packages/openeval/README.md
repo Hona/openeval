@@ -217,6 +217,23 @@ flowchart LR
 
 ## Use the SDK
 
+### Retry unresolved work
+
+Use explicit EvalRun IDs for one new attempt per selected slot:
+
+```sh
+openeval retry ./results/RUN eval_FIRST eval_SECOND --dry-run
+openeval retry ./results/RUN eval_FIRST eval_SECOND --max-cost 50
+```
+
+`retryEvalRuns` retries failed, stopped, timed-out, and completed-but-unresolved
+recordings. Fully scored completed work is rejected. The original attempts and
+judgments remain immutable; new attempts replace only the named selections.
+Retries use the current authored time limit and require the other candidate
+inputs and image to match. Candidate and judge stages share the benchmark's
+concurrency limit. The cost option is a scheduling budget, not a billing ceiling.
+There is no automatic continuation or retry-until-success loop.
+
 ### Restore completed orphan work
 
 `restoreEvalRun(runDirectory, interruptedEvalRunId, backups)` finalizes a copied

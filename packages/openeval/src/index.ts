@@ -67,7 +67,7 @@ export { removeModels } from "./app/remove-models";
 export { refreshModelNames } from "./app/refresh-model-names";
 export type { CostEstimate } from "./app/cost-plan";
 export { mergeBenchmarkRuns } from "./app/merge-runs";
-export { retryEvalRun } from "./app/retry-run";
+export { retryEvalRun, retryEvalRuns, planEvalRunRetries } from "./app/retry-run";
 export { restoreEvalRun } from "./app/restore-eval-run";
 export { judgeRun, judgeRuns } from "./app/rejudge";
 export { judgeEvidence, recordEvidence } from "./app/judge-evidence";
