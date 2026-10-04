@@ -15,6 +15,7 @@ import {
   buildVerificationImage,
   VERIFICATION_IMAGE,
   prepareInputs,
+  refreshModelNames,
 } from "./index";
 import type { ModelRef } from "./index";
 
@@ -45,6 +46,7 @@ Commands:
   merge-runs <to> <from> Merge results into one aggregate
   add-models <run>       Add models with repeated --model flags
   remove-models <run>    Remove active models while retaining their evidence
+  refresh-model-names <run> Refresh reporting names without running evals
   retry <run> <eval-run> Retry a candidate execution
   rejudge <run> <eval-run> Judge the saved evidence again
 
@@ -165,6 +167,9 @@ Requires Bun 1.4.2+, Docker, and an authenticated OpenCode installation.`);
       retiredSlots: result.retiredSlots,
       status: result.benchmark.state,
     }, null, 2));
+  } else if (command === "refresh-model-names") {
+    if (!args[1]) throw new Error("refresh-model-names requires a benchmark run directory");
+    console.log(JSON.stringify(await refreshModelNames(resolve(args[1])), null, 2));
   } else if (command === "retry" || command === "rejudge") {
     if (!args[1] || !args[2])
       throw new Error(
@@ -177,7 +182,7 @@ Requires Bun 1.4.2+, Docker, and an authenticated OpenCode installation.`);
     console.log(JSON.stringify(result, null, 2));
   } else
     throw new Error(
-      "Commands: image, plan, run, view, add-models, remove-models, merge-runs, retry, rejudge, snapshot",
+      "Commands: image, plan, run, view, add-models, remove-models, refresh-model-names, merge-runs, retry, rejudge, snapshot",
     );
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));

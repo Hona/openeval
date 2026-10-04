@@ -150,6 +150,14 @@ scope flags select work while retaining existing scores. If a runner stops
 mid-run, the next `run` waits until its heartbeat is two minutes old, keeps the
 interrupted records, and collects that work again.
 
+To refresh renamed catalog labels without executing or rejudging anything:
+
+```sh
+bunx --bun @hona/openeval refresh-model-names ./results/RUN
+```
+
+This updates reporting names only and is safe while a runner is active.
+
 To remove a model from an existing aggregate, remove its entry from
 `benchmark.ts`, then retire its active selections:
 
