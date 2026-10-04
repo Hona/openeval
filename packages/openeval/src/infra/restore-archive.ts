@@ -1,13 +1,15 @@
 import { Database } from "bun:sqlite";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { resolve, dirname } from "node:path";
-import type { EvalRunInput, OpenCodeStreamEvent } from "../types";
+import type { BenchmarkDefinition, EvalDefinition, EvalRunInput, OpenCodeStreamEvent } from "../types";
 import { EvidenceCapture } from "./evidence";
 import { extractWorkspaceArchive } from "./containers/transfer";
 import { removeCredentials } from "./opencode/auth";
 import { readArchivedSession } from "./opencode/archive";
 import { parseModel, type SessionResult } from "./opencode/session";
 import { hash, writeJson } from "./files";
+import { CandidateContainer } from "./containers/oci";
+import { createSessionDatabase } from "./opencode/host";
 
 export type ArchiveRestore = {
   database: string;
@@ -15,6 +17,26 @@ export type ArchiveRestore = {
   workspaceArchive: string;
   workspaceArchiveHash: string;
 };
+
+/** Replay only frozen author preparation, without credentials or a model prompt. */
+export async function prepareRestoredInitial(
+  definition: BenchmarkDefinition,
+  item: EvalDefinition,
+  imageId: string,
+  workspace: string,
+  staging: string,
+) {
+  if (!item.settings.prepare?.length) return workspace;
+  await mkdir(staging, { recursive: true });
+  const database = resolve(staging, "opencode.db");
+  await createSessionDatabase(database, []);
+  await using container = await CandidateContainer.create(definition.container, imageId);
+  await container.prepare(workspace, database, definition.candidate.websearch,
+    item.settings.prepare, staging);
+  const initial = resolve(staging, "workspace");
+  await container.snapshot(initial, staging);
+  return initial;
+}
 
 /** A backup must belong to the original execution, not merely resemble its answer. */
 export function verifyArchivedInput(
@@ -88,7 +110,7 @@ export async function restoreArchivedCandidate(
       completedAt: new Date(completedAt).toISOString(),
       databaseHash: options.databaseHash,
       workspaceArchiveHash: options.workspaceArchiveHash,
-      initial: "frozen prepared input, not a newly observed candidate snapshot",
+      initial: "frozen input and author preparation replayed without model calls; not a newly observed candidate snapshot",
     };
     await writeJson(resolve(directory, "restoration.json"), receipt);
     return {

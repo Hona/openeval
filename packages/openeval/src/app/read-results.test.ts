@@ -108,3 +108,31 @@ test("activity reads every eval once and reports this invocation, the suite, and
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("restoration and a repaired recording count the original candidate cost only once", async () => {
+  const root = await mkdtemp(resolve(tmpdir(), "openeval-restored-cost-"));
+  try {
+    const time = new Date().toISOString();
+    {
+      using results = new Results(resolve(root, "run/runner.db"));
+      results.saveBenchmark({ id: "benchmark_cost", name: definition.name, source: definition.directory,
+        createdAt: time, updatedAt: time, state: "incomplete", definition, runtime,
+        scheduledSlotIds: [], execution: { startedAt: time, estimatedUSD: 0, spentUSD: 0, deferred: 0 } });
+      const slot = planBenchmark(definition, runtime, results)[0].slot;
+      const input = { evalId: slot.evalId, model: slot.model, repetition: 1, prompt: definition.evals[0].prompt,
+        candidateHash: slot.candidateHash, sourceHash: "workspace", imageId: runtime.imageId,
+        timeoutMs: 1000, earlyStop: false, runtime };
+      const original = results.startEval(slot, input);
+      results.finishEval({ ...original, state: "failed", interrupted: true, completedAt: time, elapsedMs: 0 });
+      for (let index = 0; index < 2; index++) {
+        const restored = results.startEval(results.slot(slot.id)!, input);
+        results.finishEval({ ...restored, state: "completed", completedAt: time, elapsedMs: 0,
+          session: { accounting: { costUSD: 3 } } as EvalRun["session"],
+          restoration: { evalRunId: original.id, sessionId: "native", restoredAt: time, completedAt: time,
+            databaseHash: "backup", workspaceArchiveHash: "workspace", initial: "constructed control" } });
+      }
+    }
+    const summary = await new ResultReader(root).summary("benchmark_cost");
+    expect(summary.overview.cost).toEqual({ usd: 3, reportedUSD: 3, complete: true, unaccounted: 0 });
+  } finally { await rm(root, { recursive: true, force: true }); }
+});

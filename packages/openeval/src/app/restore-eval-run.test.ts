@@ -111,6 +111,11 @@ test("restore retains the interrupted record, scrubs a copy, and selects the com
     expect((await evidence.query({ action: "response" })).text).toBe("READY");
     expect((await evidence.query({ action: "artifact", path: "answer.txt", revision: "final" })).text).toBe("final");
     await expect(restoreEvalRun(f.root, f.evalRunId, f.options)).rejects.toThrow("active interrupted");
+    const repaired = await restoreEvalRun(f.root, restored.id, f.options);
+    expect(repaired.replaces).toBe(restored.id);
+    expect(repaired.restoration?.evalRunId).toBe(f.evalRunId);
+    expect(readBenchmarkRun(f.root).evals.find(run => run.id === restored.id)).toEqual(restored);
+    await expect(restoreEvalRun(f.root, repaired.id, { ...f.options, workspaceArchiveHash: "0".repeat(64) })).rejects.toThrow("same original backup hashes");
   } finally { await rm(f.root, { recursive: true, force: true }); }
 }, 30_000);
 

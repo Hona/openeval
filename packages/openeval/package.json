@@ -1,6 +1,6 @@
 {
   "name": "@hona/openeval",
-  "version": "0.5.9",
+  "version": "0.5.10",
   "description": "Code and LLM evaluations with isolated agents, recorded OpenCode data, and a results viewer",
   "license": "MIT",
   "repository": {
