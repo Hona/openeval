@@ -28,6 +28,7 @@ async function fixture() {
   let archived: Parameters<typeof verifyArchivedInput>[2];
   {
     await using host = await OpenCode.create({
+      events: { persist: true },
       database: { path: database },
       config: { directory: resolve(root, "config"), project: false, content: JSON.stringify({ websearch: false }) },
       plugins: [{ id: "no-model-calls", async setup(context) {
@@ -73,7 +74,7 @@ async function fixture() {
     const run = results.startEval(slot, { evalId: "answer", model: slot.model, repetition: 1, prompt,
       candidateHash: "candidate", sourceHash: "source", imageId: "fixture", timeoutMs: 1000, earlyStop: false, runtime });
     results.finishEval({ ...run, state: "failed", interrupted: true, error: "Runner stopped",
-      completedAt: new Date(now).toISOString(), elapsedMs: 0 });
+      startedAt: new Date(now).toISOString(), completedAt: new Date(now).toISOString(), elapsedMs: 0 });
     evalRunId = run.id;
   }
   await Bun.write(resolve(root, "eval-runs", evalRunId, "evidence/events.jsonl"),

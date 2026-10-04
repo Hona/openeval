@@ -37,6 +37,9 @@ export async function restoreEvalRun(
     const restored = await archive.restoreArchivedCandidate(
       previous.input, creation.data.sessionID, initial, options, staging,
     );
+    const elapsedMs = Date.parse(restored.receipt.completedAt) - Date.parse(previous.startedAt);
+    if (!Number.isFinite(elapsedMs) || elapsedMs < 0)
+      throw new Error("Native completion predates the original EvalRun");
     const evidence = { ...restored.evidence };
     // This operation does not claim a live candidate. Validate selection again at publication.
     return results.transaction(() => {
@@ -52,7 +55,7 @@ export async function restoreEvalRun(
         state: "completed",
         startedAt: previous.startedAt,
         completedAt: restored.receipt.completedAt,
-        elapsedMs: Math.max(0, Date.parse(restored.receipt.completedAt) - Date.parse(previous.startedAt)),
+        elapsedMs,
         evidence,
         session: { ...restored.session, database: relative(root, resolve(destination, restored.session.database)) },
         restoration: { ...restored.receipt, evalRunId: previous.id },
