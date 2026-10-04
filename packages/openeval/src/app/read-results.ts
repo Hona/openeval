@@ -43,10 +43,17 @@ const costOf = (run: EvalRun | JudgeRun, results?: Results): Cost => {
     complete: usd !== undefined,
   };
 };
-// Execution IDs are unique, including after merging runs.
+// Restored records represent the same original execution, not additional model spend.
 const runCosts = (runs: (EvalRun | JudgeRun)[], results: Results) => {
   const unique = new Map(runs.map((run) => [run.id, run]));
-  return sumCosts([...unique.values()].map((run) => costOf(run, results)));
+  const executions = new Map<string, EvalRun | JudgeRun>();
+  for (const run of unique.values()) {
+    const restoration = "restoration" in run ? run.restoration : undefined;
+    const key = restoration?.evalRunId ?? run.id;
+    const previous = executions.get(key);
+    if (!previous || restoration) executions.set(key, run);
+  }
+  return sumCosts([...executions.values()].map((run) => costOf(run, results)));
 };
 const entryOf = (
   run: BenchmarkRun,

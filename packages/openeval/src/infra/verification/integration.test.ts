@@ -5,6 +5,8 @@ import { tmpdir } from "node:os";
 import { recordEvidence, judgeEvidence } from "../../app/judge-evidence";
 import { VERIFICATION_IMAGE } from "./image";
 import { prepareInputs } from "../../app/prepare-inputs";
+import { loadBenchmark } from "../../app/load-benchmark";
+import { prepareRestoredInitial } from "../restore-archive";
 
 // Explicit CI-only, no-model integration check. Ordinary unit tests need no engine.
 test.skipIf(process.env.OPENEVAL_VERIFY_INTEGRATION !== "1")("verify restored artifacts, retain outputs, and deny mutation of the trusted check", async () => {
@@ -79,5 +81,11 @@ test.skipIf(process.env.OPENEVAL_VERIFY_INTEGRATION !== "1")("prepare actual inp
     expect(await Bun.file(resolve(result.inputs[0].directory, "ready.txt")).text()).toBe("prepared");
     expect(await Bun.file(resolve(result.inputs[0].directory, "judge.ts")).exists()).toBe(false);
     expect(await Bun.file(resolve(root, "results/runner.db")).exists()).toBe(false);
+    const definition = await loadBenchmark(root);
+    const restored = await prepareRestoredInitial(definition, definition.evals[0], result.imageId,
+      resolve(root, "evals/example/workspace"), resolve(root, "restored-initial"));
+    expect(await Bun.file(resolve(restored, "ready.txt")).text()).toBe("prepared");
+    expect(await Bun.file(resolve(restored, "input.txt")).text()).toBe("original input");
+    expect(await Bun.file(resolve(root, "evals/example/workspace/ready.txt")).exists()).toBe(false);
   } finally { await rm(root, { recursive: true, force: true }); }
 }, 300000);

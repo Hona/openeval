@@ -228,12 +228,16 @@ openeval restore ./results/RUN eval_ID \
   --workspace-archive ./workspace.tar --workspace-archive-hash SHA256
 ```
 
-The active interrupted EvalRun must have no finalized evidence. OpenEval checks
+The active interrupted EvalRun must have no finalized evidence. A previously
+restored recording can also be repaired using the same original backup hashes.
+OpenEval checks
 the backup hashes, original root session, model/variant, prompt, and native
 completion. It scrubs credentials from a copy and safely extracts the workspace
-without executing candidate files. The initial snapshot uses the frozen prepared
-input; `restoration.json` states that provenance rather than claiming a newly
-observed starting state. A new EvalRun replaces the interrupted coordinator
+without executing candidate files. The initial snapshot replays the frozen
+author preparation in the original image, without credentials or model calls.
+This includes files added by preparation after the baseline commit.
+`restoration.json` states that provenance rather than claiming a newly
+observed starting state. A new EvalRun replaces the interrupted or restored
 record; the original remains immutable. No candidate prompt or model runs.
 Use `rejudge` on the returned EvalRun ID to produce a selected judgment.
 
