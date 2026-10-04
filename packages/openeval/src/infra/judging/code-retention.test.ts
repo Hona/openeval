@@ -7,7 +7,7 @@ const source = 'export default () => ({ scores: { works: true } });';
 const printer = new Bun.Transpiler({ loader: "js", target: "bun", deadCodeElimination: false });
 const current = (text = source): CodeJudgeDefinition => ({ file: "judge.ts", source: text, sourceMap: "",
   dependencies: {}, hash: fingerprint({ protocol: 1, source: printer.transformSync(text) }) });
-const recorded = (text = source, dependencies = { "/fixture/package.json": '{"name":"fixture"}', "/fixture/bun.lock": "unrelated lock" }): CodeJudgeDefinition => ({
+const recorded = (text = source, dependencies: Record<string, string> = { "/fixture/package.json": '{"name":"fixture"}', "/fixture/bun.lock": "unrelated lock" }): CodeJudgeDefinition => ({
   file: "judge.ts", source: text, sourceMap: "", dependencies, hash: fingerprint({ source: text, dependencies }),
 });
 
