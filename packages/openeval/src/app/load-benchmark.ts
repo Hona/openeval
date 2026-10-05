@@ -380,6 +380,18 @@ export async function loadBenchmark(
   ])
     if (search !== undefined && search !== false && search !== "exa")
       throw new Error("Websearch must be exa or false");
+  const maxCostUSD = definition.candidate?.maxCostUSD;
+  if (maxCostUSD !== undefined && (typeof maxCostUSD !== "number" || !Number.isFinite(maxCostUSD) || maxCostUSD <= 0))
+    throw new Error("candidate.maxCostUSD must be a positive finite number");
+  const network = definition.candidate?.network;
+  if (network !== undefined) {
+    if (!network || typeof network !== "object" || Array.isArray(network) ||
+        Object.keys(network).some((key) => key !== "allow") || !Array.isArray(network.allow) || !network.allow.length ||
+        network.allow.some((host) => typeof host !== "string" || !/^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/.test(host)))
+      throw new Error("candidate.network must be { allow: [lowercase hostnames] }");
+    if ((definition.candidate?.websearch ?? "exa") !== false)
+      throw new Error("candidate.network requires candidate.websearch: false");
+  }
   return {
     name: definition.name ?? basename(directory),
     ...(definition.suite ? { suite: definition.suite.trim() } : {}),
@@ -394,6 +406,8 @@ export async function loadBenchmark(
       ...(definition.candidate?.providers
         ? { providers: definition.candidate.providers }
         : {}),
+      ...(maxCostUSD !== undefined ? { maxCostUSD } : {}),
+      ...(network ? { network: { allow: [...new Set(network.allow)].sort() } } : {}),
     },
     judge: {
       ...(definition.judge?.model

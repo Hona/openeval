@@ -141,6 +141,7 @@ export const stateLabel = (status: string) =>
     stopped: "Stopped early",
     blocked: "Blocked",
     timed_out: "Timed out",
+    cost_limited: "Cost limit reached",
     queued: "Queued",
     in_progress: "In progress",
     completed: "Completed",

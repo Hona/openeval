@@ -236,3 +236,15 @@ test("saved judge inputs reproduce the planned identity", () => {
       judgeFingerprint(value, "answer"),
     );
 });
+
+test("a cost limit or network allowlist changes candidate identity only when declared", () => {
+  const limited = (candidate: Partial<BenchmarkDefinition["candidate"]>): BenchmarkDefinition => ({
+    ...definition,
+    candidate: { ...definition.candidate, ...candidate },
+  });
+
+  expect(hash(limited({}), "listed")).toBe(hash(definition, "listed"));
+  expect(hash(limited({ maxCostUSD: 300 }), "listed")).not.toBe(hash(definition, "listed"));
+  expect(hash(limited({ maxCostUSD: 300 }), "listed")).not.toBe(hash(limited({ maxCostUSD: 200 }), "listed"));
+  expect(hash(limited({ network: { allow: ["opencode.ai"] } }), "listed")).not.toBe(hash(definition, "listed"));
+});

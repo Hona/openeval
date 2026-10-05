@@ -5,3 +5,5 @@
 !noninteractive/
 !noninteractive/**
 !development-container
+!egress-proxy.mjs
+!model-only-network

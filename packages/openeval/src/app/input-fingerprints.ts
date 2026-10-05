@@ -70,6 +70,9 @@ export function candidateFingerprint(
       timeoutMs: candidateTimeout(definition, evalId),
       websearch: definition.candidate.websearch,
       provider: scope && { ...scope.settings, model: scope.override },
+      // Added only when declared, so existing fingerprints are unchanged.
+      ...(definition.candidate.maxCostUSD !== undefined ? { maxCostUSD: definition.candidate.maxCostUSD } : {}),
+      ...(definition.candidate.network ? { network: definition.candidate.network } : {}),
     },
     container: {
       engine: definition.container.engine,

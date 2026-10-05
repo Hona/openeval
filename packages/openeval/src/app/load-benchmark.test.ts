@@ -253,3 +253,28 @@ test.each([
 ])("rejects malformed model reference %s", (value) => {
   expect(() => modelRef(value)).toThrow("Invalid model reference");
 });
+
+test("cost limits and network allowlists are validated and kept only when declared", async () => {
+  const root = await mkdtemp(resolve(tmpdir(), "openeval-candidate-controls-"));
+  try {
+    await Bun.write(resolve(root, "evals/answer/prompt.md"), "Answer.");
+    await Bun.write(resolve(root, "evals/answer/judge.md"), "## Criterion: answer — Answer\nPass when correct.");
+    const declare = (candidate: string) => Bun.write(resolve(root, "benchmark.ts"),
+      `export default { models: ["example/model"], judge: { model: "example/judge" }, candidate: { ${candidate} } };`);
+    await declare("");
+    const original = await loadBenchmark(root);
+    expect(Object.hasOwn(original.candidate, "maxCostUSD")).toBe(false);
+    expect(Object.hasOwn(original.candidate, "network")).toBe(false);
+    await declare('maxCostUSD: 300, websearch: false, network: { allow: ["opencode.ai", "api.example.com", "opencode.ai"] }');
+    const limited = await loadBenchmark(root);
+    expect(limited.candidate.maxCostUSD).toBe(300);
+    expect(limited.candidate.network).toEqual({ allow: ["api.example.com", "opencode.ai"] });
+    for (const invalid of ["maxCostUSD: 0", "maxCostUSD: Infinity", 'websearch: false, network: { allow: [] }',
+      'websearch: false, network: { allow: ["https://opencode.ai"] }', 'websearch: false, network: { allow: ["OpenCode.ai"] }',
+      'network: { allow: ["opencode.ai"] }'])
+    {
+      await declare(invalid);
+      await expect(loadBenchmark(root)).rejects.toThrow("candidate.");
+    }
+  } finally { await rm(root, { recursive: true, force: true }); }
+});

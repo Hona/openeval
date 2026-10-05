@@ -26,7 +26,10 @@ export type SessionState =
   | "completed"
   | "stopped"
   | "failed"
-  | "timed_out";
+  | "timed_out"
+  | "cost_limited";
+/** Candidate egress: absent keeps public internet access; `allow` permits only these HTTPS hosts. */
+export type CandidateNetwork = { allow: readonly string[] };
 export type Stage = "candidate" | "judge";
 
 export type Judge = {
@@ -51,6 +54,10 @@ export type Benchmark = {
   candidate?: CandidateLimits & {
     websearch?: "exa" | false;
     providers?: ProviderDefinitions;
+    /** Stop an attempt once its recorded model cost reaches this many USD. One in-flight step can overshoot. */
+    maxCostUSD?: number;
+    /** Restrict the agent session to HTTPS through an SNI-checked proxy for these hosts. Requires websearch: false. */
+    network?: CandidateNetwork;
   };
   container?: {
     engine?: Engine;
@@ -120,6 +127,8 @@ export type BenchmarkDefinition = {
     timeoutMs: number;
     websearch: "exa" | false;
     providers?: ProviderDefinitions;
+    maxCostUSD?: number;
+    network?: CandidateNetwork;
   };
   container: { engine: Engine; image: string; cpus: number; memoryMiB: number };
   /** Selected categories; evals without a matching criterion are excluded. */
@@ -212,6 +221,8 @@ export type EvalRunInput = {
   sourceHash: string;
   imageId: string;
   timeoutMs: number;
+  maxCostUSD?: number;
+  network?: CandidateNetwork;
   earlyStop: boolean;
   runtime: BenchmarkRun["runtime"];
 };

@@ -6,6 +6,6 @@ export function canJudgeEval(
 ): run is EvalRun & { evidence: EvidenceRef } {
   return (
     !!run?.evidence &&
-    ["completed", "stopped", "timed_out", "failed"].includes(run.state)
+    ["completed", "stopped", "timed_out", "cost_limited", "failed"].includes(run.state)
   );
 }

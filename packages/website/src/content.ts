@@ -1026,6 +1026,10 @@ export const docs: Doc[] = [
                 "candidate.timeoutMs",
                 "Agent session limit: 45 minutes by default, at most 12 hours. Set it in benchmark.ts, or in eval.ts for one eval",
               ],
+              [
+                "candidate.maxCostUSD",
+                "Stops an attempt once its recorded model cost reaches the limit; the run is recorded as cost limited and judged like a timeout. One in-flight step can overshoot",
+              ],
               ["--final-only", "Judge after the candidate finishes"],
             ],
           ),
@@ -1360,6 +1364,16 @@ export const docs: Doc[] = [
                 "candidate.timeoutMs",
                 "45 minutes",
                 "Agent session limit, at most 12 hours; eval.ts candidate.timeoutMs overrides it for one eval",
+              ],
+              [
+                "candidate.maxCostUSD",
+                "None",
+                "Per-attempt model cost limit in USD; the session is interrupted when it is reached",
+              ],
+              [
+                "candidate.network",
+                "Public internet",
+                "{ allow: [hosts] } limits the agent session to HTTPS through an SNI-checked proxy for those hosts; requires candidate.websearch: false and disables webfetch. The agent can still read its own model credential, so this and maxCostUSD bound a cooperative agent",
               ],
               ["judge.timeoutMs", "10 minutes", "Judge execution timeout"],
               [

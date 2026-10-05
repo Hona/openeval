@@ -96,7 +96,7 @@ export function finishBenchmark(context: ExecutionContext) {
         (run) =>
           run.id === slot.evalRunId &&
           (run.state === "failed" ||
-            (run.state === "timed_out" && !canJudgeEval(run))),
+            (["timed_out", "cost_limited"].includes(run.state) && !canJudgeEval(run))),
       ) ||
       (judges.some(
         (run) =>
