@@ -46,6 +46,16 @@ export const parseModel = (ref: ModelRef) => {
   };
 };
 
+/** OpenCode removed plugin.awaitActivation after 2.0.3. Catalog reads such as
+ * model.list do not wait for plugins, but integration.list awaits activation.
+ */
+export const awaitPluginActivation = async (
+  client: Pick<OpenCodeClient, "integration">,
+  location: { directory: string },
+) => {
+  await client.integration.list({ location });
+};
+
 /** Reconnect streams and confirm completion from either events or the saved session outcome. */
 export async function runSession(
   client: OpenCodeClient,
@@ -64,7 +74,7 @@ export async function runSession(
   onEvent: (event: OpenCodeStreamEvent) => void,
 ): Promise<SessionResult> {
   const location = { directory: input.directory };
-  await client.plugin.awaitActivation({ location });
+  await awaitPluginActivation(client, location);
   const models = await client.model.list({ location });
   const selected = parseModel(input.model);
   const model = models.data.find(
@@ -164,12 +174,12 @@ export async function runSession(
           {
             sessionID: event.data.sessionID,
             requestID: event.data.id,
-            reply: "once",
+            decision: "once",
           },
           request(),
         );
       if (event.type === "form.created")
-        await client.form.cancel(
+        await client.session.form.cancel(
           {
             sessionID: event.data.form.sessionID,
             formID: event.data.form.id,

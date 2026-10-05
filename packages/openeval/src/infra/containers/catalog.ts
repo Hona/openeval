@@ -10,7 +10,11 @@ import type {
 import { CandidateContainer } from "./oci";
 import { createSessionDatabase } from "../opencode/host";
 import { createCredentialSnapshot, integrationFor } from "../opencode/auth";
-import { clientFor, parseModel } from "../opencode/session";
+import {
+  awaitPluginActivation,
+  clientFor,
+  parseModel,
+} from "../opencode/session";
 import { candidateProviders } from "../../app/input-fingerprints";
 
 const CATALOG_TIMEOUT_MS = 60_000;
@@ -78,7 +82,7 @@ async function readIntegrationNames(
       catalog.password,
     );
     const location = { directory: "/workspace" };
-    await client.plugin.awaitActivation({ location });
+    await awaitPluginActivation(client, location);
     const listed = (await client.model.list({ location })).data;
     return Object.fromEntries(
       models.flatMap((model) => {

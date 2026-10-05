@@ -57,6 +57,10 @@ adaptations. OpenEval 0.3.2 brings in the production tool-group plural translati
 OpenEval 0.3.3 records OpenCode catalog model names on each benchmark run and
 fingerprints only the provider configuration that a candidate receives.
 OpenEval 0.4.0 adds criterion categories and the viewer's Categories tab.
+OpenEval 0.5.12 moves the SDK, viewer, session UI dependencies, and candidate
+image to production `@opencode/*` 2.0.22. OpenCode 2.0.3 limited each model
+request to 32,000 output tokens. 2.0.22 raises that cap to 256,000, so the
+model's catalog output limit and remaining context apply instead.
 Source, declarations, and the original MIT
 license are checked in so a checkout can build without a local upstream repo.
 Vite includes dependency license notices in the distributed viewer.

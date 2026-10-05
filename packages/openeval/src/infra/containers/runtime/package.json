@@ -3,8 +3,8 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@opencode/server": "2.0.3",
-    "@opencode/plugin": "2.0.3",
+    "@opencode/server": "2.0.22",
+    "@opencode/plugin": "2.0.22",
     "effect": "4.0.0-rc.112"
   }
 }

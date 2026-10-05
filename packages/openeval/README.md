@@ -53,9 +53,6 @@ runner. Code-only benchmarks do not need a judge model.
 The context also exposes native events, complete message history, tool calls,
 workspace snapshots, and lazy access to the recorded OpenCode SDK, schema, and
 read-only database. See [code judges and data access](https://openev.al/docs/code-judges/).
-For executable artifacts, use [isolated verification](VERIFICATION.md), not
-host-side execution of `workspace.materialize()` copies. Optional structured
-scores add reasons, measurements, and links to retained verification outputs.
 
 ### Model-based: write a rubric
 
@@ -115,8 +112,8 @@ See the [canonical terminology](https://openev.al/docs/terminology/) and the
 
 Requires **Bun 1.4.2+**, **Docker**, and connected models in **OpenCode**.
 
-OpenEval pins the production OpenCode packages at **2.0.3**. Run the
-`image` command after upgrading to build `openeval-runtime:2.0.3`. Recorded runs
+OpenEval pins the production OpenCode packages at **2.0.22**. Run the
+`image` command after upgrading to build `openeval-runtime:2.0.22`. Recorded runs
 retain the OpenCode version that actually executed them.
 
 ```sh
@@ -149,14 +146,6 @@ The viewer opens at **http://127.0.0.1:4173**. `run` resumes the same aggregate;
 scope flags select work while retaining existing scores. If a runner stops
 mid-run, the next `run` waits until its heartbeat is two minutes old, keeps the
 interrupted records, and collects that work again.
-
-To refresh renamed catalog labels without executing or rejudging anything:
-
-```sh
-bunx --bun @hona/openeval refresh-model-names ./results/RUN
-```
-
-This updates reporting names only and is safe while a runner is active.
 
 To remove a model from an existing aggregate, remove its entry from
 `benchmark.ts`, then retire its active selections:
@@ -216,52 +205,6 @@ flowchart LR
 </details>
 
 ## Use the SDK
-
-### Retry unresolved work
-
-Use explicit EvalRun IDs for one new attempt per selected slot:
-
-```sh
-openeval retry ./results/RUN eval_FIRST eval_SECOND --dry-run
-openeval retry ./results/RUN eval_FIRST eval_SECOND --max-cost 50
-```
-
-`retryEvalRuns` retries failed, stopped, timed-out, and completed-but-unresolved
-recordings. Fully scored completed work is rejected. The original attempts and
-judgments remain immutable; new attempts replace only the named selections.
-Retries use the current authored time limit and require the other candidate
-inputs and image to match. Candidate and judge stages share the benchmark's
-concurrency limit. The cost option is a scheduling budget, not a billing ceiling.
-There is no automatic continuation or retry-until-success loop.
-
-### Restore completed orphan work
-
-`restoreEvalRun(runDirectory, interruptedEvalRunId, backups)` finalizes a copied
-native session after a coordinator interruption. The CLI equivalent is:
-
-```sh
-openeval restore ./results/RUN eval_ID \
-  --database ./private-backup.db --database-hash SHA256 \
-  --workspace-archive ./workspace.tar --workspace-archive-hash SHA256
-```
-
-The active interrupted EvalRun must have no finalized evidence. A previously
-restored recording can also be repaired using the same original backup hashes.
-OpenEval checks
-the backup hashes, original root session, model/variant, prompt, and native
-completion. It scrubs credentials from a copy and safely extracts the workspace
-without executing candidate files. The initial snapshot replays the frozen
-author preparation in the original image, without credentials or model calls.
-This includes files added by preparation after the baseline commit.
-`restoration.json` states that provenance rather than claiming a newly
-observed starting state. A new EvalRun replaces the interrupted or restored
-record; the original remains immutable. No candidate prompt or model runs.
-Use `rejudge` on the returned EvalRun ID to produce a selected judgment.
-
-Do not use this operation to turn an incomplete native session into completion.
-Keep raw native backups private: they can contain credentials.
-
-### Run selected work
 
 ```ts
 import { runBenchmark } from "@hona/openeval";

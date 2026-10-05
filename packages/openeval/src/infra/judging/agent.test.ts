@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { JUDGE_AGENT, judgeConfiguration } from "./agent";
 import { writeJson } from "../files";
+import { awaitPluginActivation } from "../opencode/session";
 
 test("loads and selects an isolated native judge agent without modifying build", async () => {
   const directory = await mkdtemp(
@@ -45,16 +46,25 @@ test("loads and selects an isolated native judge agent without modifying build",
       ],
     });
     const location = { directory: workspace };
-    await host.plugin.awaitActivation({ location });
+    await awaitPluginActivation(host, location);
     const { data: agent } = await host.agent.get({
       agentID: JUDGE_AGENT.id,
       location,
     });
     expect(agent.mode).toBe("primary");
     // Native defaults precede agent-specific rules; the final matching rule wins.
-    expect(agent.permissions.slice(-JUDGE_AGENT.permissions.length)).toEqual(
-      JUDGE_AGENT.permissions,
+    // OpenCode's built-in browser plugin can append only deny rules after them.
+    const start = agent.permissions.findLastIndex(
+      (rule) => rule.action === "*" && rule.effect === "deny",
     );
+    expect(
+      agent.permissions.slice(start, start + JUDGE_AGENT.permissions.length),
+    ).toEqual(JUDGE_AGENT.permissions);
+    expect(
+      agent.permissions
+        .slice(start + JUDGE_AGENT.permissions.length)
+        .every((rule) => rule.effect === "deny"),
+    ).toBe(true);
     expect(agent.system!.split(JUDGE_AGENT.system.trim())).toHaveLength(2);
     expect(agent.system!.split(rubric)).toHaveLength(2);
     expect(agent.system).not.toContain("Output selection");

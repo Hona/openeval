@@ -82,7 +82,7 @@ export const docs: Doc[] = [
             [
               ["Bun", "Version 1.4.2 or later"],
               ["Docker", "The daemon is running with Linux containers"],
-              ["OpenCode", "Version 2; the SDK runtime is pinned to 2.0.3"],
+              ["OpenCode", "Version 2; the SDK runtime is pinned to 2.0.22"],
             ],
           ),
           links(

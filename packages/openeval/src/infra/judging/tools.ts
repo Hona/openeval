@@ -3,6 +3,7 @@ import { Schema } from "effect";
 import type { EvidenceView } from "../../evidence";
 import type { JudgeRunInput } from "../../types";
 import type { EvidenceQueryAudit } from "../evidence";
+import { awaitPluginActivation } from "../opencode/session";
 import { JUDGE_TOOLS } from "./agent";
 import { evidenceTool, toolResult } from "./evidence-tool";
 import { criteriaSchema, STRICT_OBJECT } from "./contract";
@@ -113,7 +114,7 @@ export async function installJudgeTools(
       });
     },
   });
-  await host.plugin.awaitActivation({ location: { directory } });
+  await awaitPluginActivation(host, { directory });
   if (!reload) throw new Error("Judge tools did not activate");
   return {
     async open(

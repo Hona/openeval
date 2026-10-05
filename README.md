@@ -112,8 +112,8 @@ See the [canonical terminology](TERMINOLOGY.md) and the
 
 Requires **Bun 1.4.2+**, **Docker**, and connected models in **OpenCode**.
 
-OpenEval pins the production OpenCode packages at **2.0.3**. Run the
-`image` command after upgrading to build `openeval-runtime:2.0.3`. Recorded runs
+OpenEval pins the production OpenCode packages at **2.0.22**. Run the
+`image` command after upgrading to build `openeval-runtime:2.0.22`. Recorded runs
 retain the OpenCode version that actually executed them.
 
 ```sh
