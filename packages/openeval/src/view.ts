@@ -254,6 +254,7 @@ export type StageStatus =
   | "completed"
   | "stopped"
   | "timed_out"
+  | "cost_limited"
   | "failed"
   | "interrupted";
 /** One execution stage of a slot: the eval run or its judge run. */

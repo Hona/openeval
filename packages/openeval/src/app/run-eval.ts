@@ -30,6 +30,12 @@ export async function runEval(
     sourceHash: definition.sourceHash,
     imageId: context.runtime.imageId,
     timeoutMs,
+    ...(context.definition.candidate.maxCostUSD !== undefined
+      ? { maxCostUSD: context.definition.candidate.maxCostUSD }
+      : {}),
+    ...(context.definition.candidate.network
+      ? { network: context.definition.candidate.network }
+      : {}),
     earlyStop: !!controls.onEvidence,
     runtime: context.runtime,
   });
@@ -41,6 +47,8 @@ export async function runEval(
       workspace,
       prepare: definition.settings.prepare ?? [],
       timeoutMs,
+      maxCostUSD: context.definition.candidate.maxCostUSD,
+      network: context.definition.candidate.network,
       websearch: context.definition.candidate.websearch,
       container: context.definition.container,
       imageId: context.runtime.imageId,

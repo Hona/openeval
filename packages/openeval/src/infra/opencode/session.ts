@@ -23,7 +23,7 @@ export type SessionResult = {
   text: string;
   tools: ToolCall[];
   accounting?: Accounting;
-  state: "completed" | "stopped" | "failed" | "timed_out";
+  state: "completed" | "stopped" | "failed" | "timed_out" | "cost_limited";
   error?: string;
 };
 
@@ -65,6 +65,9 @@ export async function runSession(
     prompt: string;
     directory: string;
     timeoutMs: number;
+    /** Interrupt every session once the container's recorded model cost reaches this. */
+    maxCostUSD?: number;
+    onCostLimit?: () => void;
     signal?: AbortSignal;
     /** Reuse an existing judge session for another turn. */
     sessionId?: string;
@@ -87,6 +90,8 @@ export async function runSession(
       !model.variants.some((variant) => variant.id === selected.variant))
   )
     throw new Error(`Model or reasoning variant unavailable: ${input.model}`);
+  if (input.maxCostUSD !== undefined && !model.cost.some((tier) => tier.input > 0 || tier.output > 0))
+    throw new Error(`A cost limit needs catalog pricing; ${input.model} reports none`);
   const root = input.sessionId
     ? await client.session.get({ sessionID: input.sessionId })
     : await client.session.create({
@@ -101,6 +106,7 @@ export async function runSession(
   const streams = new AbortController();
   const done = Promise.withResolvers<void>();
   let timedOut = false,
+    costLimited = false,
     stopped = false,
     terminal: SessionInfo["outcome"],
     failure: string | undefined,
@@ -203,13 +209,31 @@ export async function runSession(
   });
   // A stream can remain open but miss its terminal event. A fresh session has
   // no previous outcome, so its persisted outcome safely confirms this prompt.
+  // Interrupting the root does not stop background subagents, so limits interrupt every known session.
+  const interruptAll = () => {
+    for (const id of ids)
+      void client.session.interrupt({ sessionID: id }, request()).catch(() => {});
+  };
   const status = retry(async () => {
     const info = await client.session.get({ sessionID: root.id }, request());
     if (!input.sessionId || info.time.idle !== root.time.idle)
       finish(info.outcome);
+    // Container-wide stats include subagents, failed steps, titles, and compaction.
+    if (input.maxCostUSD !== undefined && !costLimited && !timedOut && !terminal) {
+      const stats = await client.session.stats({ tools: "none" }, request());
+      if (stats.cost >= input.maxCostUSD) {
+        costLimited = true;
+        input.onCostLimit?.();
+        interruptAll();
+        stopDeadline ??= setTimeout(() => {
+          streams.abort();
+          done.resolve();
+        }, 10_000);
+      }
+    }
   }, 5000);
   const stop = () => {
-    if (terminal || timedOut) return;
+    if (terminal || timedOut || costLimited) return;
     stopped = true;
     void client.session
       .interrupt({ sessionID: root.id }, request())
@@ -222,9 +246,7 @@ export async function runSession(
   input.signal?.addEventListener("abort", stop, { once: true });
   const timer = setTimeout(() => {
     timedOut = true;
-    void client.session
-      .interrupt({ sessionID: root.id }, request())
-      .catch(() => {});
+    interruptAll();
   }, input.timeoutMs);
   const hardStop = setTimeout(() => {
     streams.abort();
@@ -292,14 +314,18 @@ export async function runSession(
     tools: [...tools.values()],
     state: timedOut
       ? "timed_out"
-      : terminal === "succeeded"
+      : costLimited
+        ? "cost_limited"
+        : terminal === "succeeded"
         ? "completed"
         : stopped
           ? "stopped"
           : "failed",
     error: timedOut
       ? "Session exceeded its time limit"
-      : terminal === "succeeded"
+      : costLimited
+        ? `Session reached its $${input.maxCostUSD} cost limit`
+        : terminal === "succeeded"
         ? undefined
         : stopped
           ? undefined

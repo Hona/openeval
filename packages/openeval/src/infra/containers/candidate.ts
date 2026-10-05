@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import type {
   BenchmarkDefinition,
+  CandidateNetwork,
   ModelRef,
   PreparationStep,
   SessionArchive,
@@ -25,13 +26,15 @@ type CandidateInput = {
   workspace: string;
   prepare: readonly PreparationStep[];
   timeoutMs: number;
+  maxCostUSD?: number;
+  network?: CandidateNetwork;
   websearch: "exa" | false;
   container: BenchmarkDefinition["container"];
   imageId: string;
   providers?: BenchmarkDefinition["candidate"]["providers"];
 };
 type CandidateResult = {
-  state: "completed" | "stopped" | "failed" | "timed_out";
+  state: "completed" | "stopped" | "failed" | "timed_out" | "cost_limited";
   session?: SessionArchive;
   evidence?: EvidenceRef;
   error?: string;
@@ -70,6 +73,7 @@ export async function executeCandidate(
       input.prepare,
       staging,
       input.providers,
+      input.network,
     );
     const initial = resolve(staging, "initial");
     await container.snapshot(initial, staging);
@@ -93,9 +97,10 @@ export async function executeCandidate(
         throw error;
       }
     };
-    const url = await container.start(input.timeoutMs);
+    const url = await container.start(input.timeoutMs, input.network);
     const client = clientFor(url, container.password);
-    let transportError: string | undefined;
+    let transportError: string | undefined,
+      costLimited = false;
     try {
       outcome = await runSession(
         client,
@@ -105,6 +110,10 @@ export async function executeCandidate(
           prompt: input.prompt,
           directory: "/workspace",
           timeoutMs: input.timeoutMs,
+          maxCostUSD: input.maxCostUSD,
+          onCostLimit: () => {
+            costLimited = true;
+          },
           signal: controls.signal,
           onCreated: (id) => {
             rootId = id;
@@ -144,6 +153,13 @@ export async function executeCandidate(
       ) {
         outcome.state = "timed_out";
         outcome.error = "Candidate session exceeded its time limit";
+      } else if (
+        !previous &&
+        (archived.outcome === "interrupted" || !archived.outcome) &&
+        costLimited
+      ) {
+        outcome.state = "cost_limited";
+        outcome.error = `Candidate session reached its $${input.maxCostUSD} cost limit`;
       } else if (
         !previous &&
         (archived.outcome === "interrupted" || !archived.outcome) &&

@@ -4,7 +4,7 @@ import { runtimeMs, runtimeClock, stageRuntime } from "@hona/openeval/view";
 const settled = (run: LiveEvalRun) =>
   run.status === "completed" || run.status === "failed";
 export const evalDone = (run: LiveEvalRun) =>
-  ["completed", "stopped", "failed", "timed_out"].includes(run.eval.status);
+  ["completed", "stopped", "failed", "timed_out", "cost_limited"].includes(run.eval.status);
 export const scored = (run: LiveEvalRun) =>
   typeof run.judge.score === "number" &&
   run.judge.score >= 0 &&
@@ -17,7 +17,7 @@ const stagesCompleted = (run: LiveEvalRun) =>
   (["completed", "stopped"].includes(run.eval.status) ? 1 : 0) +
   (scored(run) ? 1 : 0);
 const stagesNeedingAttention = (run: LiveEvalRun) =>
-  (["failed", "timed_out", "interrupted"].includes(run.eval.status) ? 1 : 0) +
+  (["failed", "timed_out", "cost_limited", "interrupted"].includes(run.eval.status) ? 1 : 0) +
   (["failed", "timed_out", "interrupted", "blocked"].includes(
     run.judge.status,
   ) || run.judge.score === null
@@ -158,7 +158,7 @@ export function activityProgress(groups: ActivityRun[], now: number) {
         ["queued", "in_progress", "watching"].includes(row.run.judge.status) ||
         (row.run.judge.status === "waiting" &&
           (evalPending ||
-            ["completed", "stopped", "timed_out"].includes(
+            ["completed", "stopped", "timed_out", "cost_limited"].includes(
               row.run.eval.status,
             )));
       if (!evalPending) finishes.set(`${row.key}:eval`, 0);

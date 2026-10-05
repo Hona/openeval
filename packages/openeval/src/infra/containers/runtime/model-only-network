@@ -1,0 +1,39 @@
+#!/bin/bash
+set -euo pipefail
+
+# Run once as root after preparation, with the allowed HTTPS hostnames as arguments. The agent user (dev) keeps loopback, which covers
+# the egress proxy and local development servers, plus replies to the host's control
+# connection. Only the proxy user may resolve DNS and open HTTPS connections.
+[ "$#" -gt 0 ] || { echo "No allowed hosts" >&2; exit 1; }
+printf '%s\n' "$@" > /etc/openeval-egress-allow
+chmod 0644 /etc/openeval-egress-allow
+
+for table in iptables ip6tables; do
+  $table -N OPENEVAL_DEV
+  $table -A OPENEVAL_DEV -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+  $table -A OPENEVAL_DEV -o lo -j ACCEPT
+  $table -A OPENEVAL_DEV -j REJECT
+  $table -N OPENEVAL_EGRESS
+  $table -A OPENEVAL_EGRESS -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+  $table -A OPENEVAL_EGRESS -o lo -j ACCEPT
+done
+iptables -A OPENEVAL_EGRESS -p udp --dport 53 -j ACCEPT
+iptables -A OPENEVAL_EGRESS -p tcp --dport 53 -j ACCEPT
+for network in 0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.168.0.0/16 224.0.0.0/4; do
+  iptables -A OPENEVAL_EGRESS -d "$network" -j REJECT
+done
+iptables -A OPENEVAL_EGRESS -p tcp --dport 443 -j ACCEPT
+for table in iptables ip6tables; do
+  $table -A OPENEVAL_EGRESS -j REJECT
+  $table -I OUTPUT 1 -m owner --uid-owner egress -j OPENEVAL_EGRESS
+  $table -I OUTPUT 1 -m owner --uid-owner dev -j OPENEVAL_DEV
+done
+
+setpriv --reuid=egress --regid=egress --init-groups --bounding-set=-all --inh-caps=-all --ambient-caps=-all \
+  bun /opt/opencode/egress-proxy.mjs /etc/openeval-egress-allow >/var/log/openeval-egress.log 2>&1 &
+for attempt in $(seq 1 50); do
+  if (exec 3<>/dev/tcp/127.0.0.1/3128) 2>/dev/null; then exit 0; fi
+  sleep 0.1
+done
+echo "Egress proxy did not start" >&2
+exit 1

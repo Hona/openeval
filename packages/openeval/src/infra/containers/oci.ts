@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import {
   CANDIDATE_TIMEOUT_MS,
   type BenchmarkDefinition,
+  type CandidateNetwork,
   type PreparationStep,
 } from "../../types";
 import { engineCommand } from "./docker";
@@ -156,13 +157,20 @@ export class CandidateContainer {
     steps: readonly PreparationStep[],
     staging: string,
     providers?: BenchmarkDefinition["candidate"]["providers"],
+    network?: CandidateNetwork,
   ) {
     await this.upload(workspace, "/workspace", staging);
     await this.upload(database, "/home/dev/.local/share/opencode", staging);
     const config = resolve(staging, "opencode.json");
     await writeJson(config, {
       plugins: ["/opt/opencode/noninteractive"],
-      permissions: [{ action: "*", resource: "*", effect: "allow" }],
+      permissions: [
+        { action: "*", resource: "*", effect: "allow" },
+        // Restricted egress already blocks other hosts; also remove the web tools from the agent.
+        ...(network
+          ? ["webfetch", "websearch"].map((action) => ({ action, resource: "*", effect: "deny" }))
+          : []),
+      ],
       websearch: websearch ? { provider: websearch } : false,
       ...(providers ? { providers } : {}),
     });
@@ -228,7 +236,14 @@ export class CandidateContainer {
       await rm(archive, { force: true });
     }
   }
-  async start(timeoutMs = CANDIDATE_TIMEOUT_MS) {
+  async start(timeoutMs = CANDIDATE_TIMEOUT_MS, network?: CandidateNetwork) {
+    // Preparation has finished; restrict the agent's egress before its server starts.
+    if (network)
+      await this.command(["exec", "--user", "root", this.name, "model-only-network", ...network.allow]);
+    const proxy = network
+      ? ["HTTPS_PROXY", "HTTP_PROXY", "https_proxy", "http_proxy"].flatMap((name) => ["--env", `${name}=http://127.0.0.1:3128`])
+          .concat(["--env", "NO_PROXY=localhost,127.0.0.1,::1", "--env", "no_proxy=localhost,127.0.0.1,::1"])
+      : [];
     // The server deadline survives a host runner crash.
     this.deadlineAt = Date.now() + Math.ceil(timeoutMs / 1000) * 1000;
     await this.command([
@@ -238,6 +253,7 @@ export class CandidateContainer {
       "--detach",
       "--env",
       `OPENCODE_SERVER_PASSWORD=${this.password}`,
+      ...proxy,
       this.name,
       "sh",
       "-c",

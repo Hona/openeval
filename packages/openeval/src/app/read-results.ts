@@ -506,7 +506,9 @@ function stageState(
           ? "stopped"
           : run.state === "timed_out"
             ? "timed_out"
-            : "failed";
+            : run.state === "cost_limited"
+              ? "cost_limited"
+              : "failed";
   return {
     executionId: run.id,
     status,
@@ -547,7 +549,7 @@ function liveRun(
         ? "interrupted"
         : "in_progress"
       : executing &&
-          ["failed", "timed_out"].includes(executing.state) &&
+          ["failed", "timed_out", "cost_limited"].includes(executing.state) &&
           (judge || !judgeReady)
         ? "failed"
         : slot.judgeRunId
@@ -562,7 +564,7 @@ function liveRun(
   );
   const judgeBlocked =
     !judgeReady &&
-    ["completed", "failed", "timed_out", "interrupted"].includes(
+    ["completed", "failed", "timed_out", "cost_limited", "interrupted"].includes(
       evalStage.status,
     );
   const judgeStage: StageState = {
@@ -593,7 +595,7 @@ function liveRun(
         }
       : {}),
   };
-  const attention = ["failed", "timed_out", "interrupted"].includes(
+  const attention = ["failed", "timed_out", "cost_limited", "interrupted"].includes(
     evalStage.status,
   )
     ? `Eval run ${evalStage.status.replaceAll("_", " ")}: ${candidate?.error ?? "no error recorded"}`
