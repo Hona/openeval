@@ -66,6 +66,10 @@ session once recorded model cost reaches the limit and records the run as cost l
 candidate.network: { allow } applies an iptables lockdown after preparation so the agent
 reaches only loopback and an SNI-checked CONNECT proxy for the listed HTTPS hosts.
 Neither setting changes existing candidate fingerprints when omitted.
+Both controls bound a cooperative agent. The OpenCode server and the agent share a
+user, so an agent can read the harness credential and call an allowed model host
+outside session accounting; review transcripts for credential access and reconcile
+provider spend when that matters.
 Source, declarations, and the original MIT
 license are checked in so a checkout can build without a local upstream repo.
 Vite includes dependency license notices in the distributed viewer.

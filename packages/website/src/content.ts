@@ -1373,7 +1373,7 @@ export const docs: Doc[] = [
               [
                 "candidate.network",
                 "Public internet",
-                "{ allow: [hosts] } limits the agent session to HTTPS through an SNI-checked proxy for those hosts; requires candidate.websearch: false and disables webfetch",
+                "{ allow: [hosts] } limits the agent session to HTTPS through an SNI-checked proxy for those hosts; requires candidate.websearch: false and disables webfetch. The agent can still read its own model credential, so this and maxCostUSD bound a cooperative agent",
               ],
               ["judge.timeoutMs", "10 minutes", "Judge execution timeout"],
               [
