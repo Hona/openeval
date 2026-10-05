@@ -11,6 +11,9 @@ chmod 0644 /etc/openeval-egress-allow
 for table in iptables ip6tables; do
   $table -N OPENEVAL_DEV
   $table -A OPENEVAL_DEV -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+  # The container resolver listens on loopback; DNS queries would be an exfiltration channel.
+  $table -A OPENEVAL_DEV -o lo -p udp --dport 53 -j REJECT
+  $table -A OPENEVAL_DEV -o lo -p tcp --dport 53 -j REJECT
   $table -A OPENEVAL_DEV -o lo -j ACCEPT
   $table -A OPENEVAL_DEV -j REJECT
   $table -N OPENEVAL_EGRESS

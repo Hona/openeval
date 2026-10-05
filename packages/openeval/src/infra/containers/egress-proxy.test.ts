@@ -66,3 +66,19 @@ test("the egress proxy permits only CONNECT to allowed public hosts with a match
     server.close();
   }
 });
+
+test("malformed ClientHello records are refused without stopping the proxy", async () => {
+  const truncated = Buffer.from([0x16, 0x03, 0x01, 0x00, 0x0a, 0x01, 0x00, 0x00, 0xff, 0x03, 0x03, 0x00, 0x00, 0x00, 0x00]);
+  expect(clientHelloServerName(truncated)).toBeUndefined();
+  const hello = await clientHello("opencode.ai");
+  expect(clientHelloServerName(Buffer.concat([hello.subarray(0, 5), Buffer.alloc(hello.length - 5, 0xff)]))).toBeUndefined();
+  const server = startProxy({ allow: new Set(["opencode.ai"]), port: 0, resolve: async () => [{ address: "203.0.113.10", family: 4 }] });
+  await new Promise((resolve) => server.once("listening", resolve));
+  const port = (server.address() as net.AddressInfo).port;
+  try {
+    await exchange(port, Buffer.from("CONNECT opencode.ai:443 HTTP/1.1\r\n\r\n"), truncated);
+    expect(await exchange(port, Buffer.from("CONNECT example.com:443 HTTP/1.1\r\n\r\n"))).toStartWith("HTTP/1.1 403");
+  } finally {
+    server.close();
+  }
+});

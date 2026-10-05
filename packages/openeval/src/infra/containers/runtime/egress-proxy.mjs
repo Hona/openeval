@@ -17,41 +17,60 @@ const privateAddress = (address) => {
     (lower.startsWith("::ffff:") && privateAddress(lower.slice(7)));
 };
 
-/** The server name from a complete TLS ClientHello record, or undefined when absent or malformed. */
+/** The single server name in a complete TLS ClientHello record; undefined when absent, repeated, or malformed. */
 export function clientHelloServerName(record) {
-  if (record.length < 5 || record[0] !== 0x16) return undefined;
-  const length = record.readUInt16BE(3);
-  if (record.length < 5 + length) return undefined;
-  let offset = 5;
-  if (record[offset] !== 0x01) return undefined;
-  offset += 4 + 2 + 32; // handshake header, version, random
-  offset += 1 + record[offset]; // session id
-  offset += 2 + record.readUInt16BE(offset); // cipher suites
-  offset += 1 + record[offset]; // compression methods
-  const end = offset + 2 + record.readUInt16BE(offset);
-  offset += 2;
-  while (offset + 4 <= end) {
-    const type = record.readUInt16BE(offset), size = record.readUInt16BE(offset + 2);
-    offset += 4;
-    if (type === 0) {
-      let cursor = offset + 2;
-      while (cursor + 3 <= offset + size) {
-        const kind = record[cursor], nameLength = record.readUInt16BE(cursor + 1);
-        if (kind === 0) return record.subarray(cursor + 3, cursor + 3 + nameLength).toString("ascii").toLowerCase();
-        cursor += 3 + nameLength;
+  try {
+    if (record.length < 5 || record[0] !== 0x16) return undefined;
+    const limit = 5 + record.readUInt16BE(3);
+    if (record.length < limit) return undefined;
+    // Every read stays inside this record; a malformed field returns undefined instead of reading past it.
+    const at = (offset, size) => {
+      if (offset + size > limit) throw new RangeError("Truncated ClientHello");
+      return offset;
+    };
+    let offset = 5;
+    if (record[at(offset, 4)] !== 0x01) return undefined;
+    offset += 4 + 2 + 32; // handshake header, version, random
+    offset += 1 + record[at(offset, 1)]; // session id
+    offset += 2 + record.readUInt16BE(at(offset, 2)); // cipher suites
+    offset += 1 + record[at(offset, 1)]; // compression methods
+    const end = at(offset + 2, 0) + record.readUInt16BE(at(offset, 2));
+    offset += 2;
+    at(end, 0);
+    let name;
+    while (offset + 4 <= end) {
+      const type = record.readUInt16BE(offset), size = record.readUInt16BE(offset + 2);
+      offset += 4;
+      at(offset, size);
+      if (type === 0) {
+        if (name !== undefined) return undefined;
+        const listEnd = offset + 2 + record.readUInt16BE(at(offset, 2));
+        if (listEnd > offset + size) return undefined;
+        for (let cursor = offset + 2; cursor < listEnd;) {
+          const kind = record[at(cursor, 3)], nameLength = record.readUInt16BE(cursor + 1);
+          at(cursor + 3, nameLength);
+          if (kind === 0) {
+            if (name !== undefined) return undefined;
+            name = record.subarray(cursor + 3, cursor + 3 + nameLength).toString("ascii").toLowerCase();
+          }
+          cursor += 3 + nameLength;
+        }
       }
-      return undefined;
+      offset += size;
     }
-    offset += size;
+    return name;
+  } catch {
+    return undefined;
   }
-  return undefined;
 }
 
 const refuse = (socket, status) => socket.end(`HTTP/1.1 ${status}\r\nConnection: close\r\n\r\n`);
 
-export function startProxy({ allow, port = 3128, host = "127.0.0.1", resolve = (name) => lookup(name, { all: true }) }) {
+// Only IPv4 egress is opened for the proxy user, so resolve IPv4 addresses only.
+export function startProxy({ allow, port = 3128, host = "127.0.0.1", resolve = (name) => lookup(name, { all: true, family: 4 }) }) {
   const server = net.createServer((client) => {
     let buffer = Buffer.alloc(0);
+    // Bound the CONNECT and ClientHello phase; an established tunnel may idle while a model reasons.
     client.setTimeout(30_000, () => client.destroy());
     const onHeader = async (chunk) => {
       buffer = Buffer.concat([buffer, chunk]);
@@ -81,10 +100,13 @@ export function startProxy({ allow, port = 3128, host = "127.0.0.1", resolve = (
         }
         client.off("data", onHello);
         if (clientHelloServerName(rest) !== name) return client.destroy();
-        const upstream = net.connect({ host: usable[0].address, port: 443 }, () => {
+        const upstream = net.connect({ host: usable[0].address, port: 443, timeout: 30_000 }, () => {
+          upstream.setTimeout(0);
+          client.setTimeout(0);
           upstream.write(rest);
           client.pipe(upstream).pipe(client);
         });
+        upstream.on("timeout", () => upstream.destroy());
         upstream.on("error", () => client.destroy());
         client.on("error", () => upstream.destroy());
         client.on("close", () => upstream.destroy());
@@ -95,6 +117,7 @@ export function startProxy({ allow, port = 3128, host = "127.0.0.1", resolve = (
     client.on("data", onHeader);
     client.on("error", () => {});
   });
+  server.maxConnections = 256;
   server.listen(port, host);
   return server;
 }

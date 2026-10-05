@@ -209,10 +209,19 @@ export async function runSession(
   });
   // A stream can remain open but miss its terminal event. A fresh session has
   // no previous outcome, so its persisted outcome safely confirms this prompt.
-  // Interrupting the root does not stop background subagents, so limits interrupt every known session.
+  // Interrupting the root does not stop background subagents, so limits interrupt every session. The
+  // container is dedicated to this attempt; listing also covers children the live stream missed.
   const interruptAll = () => {
     for (const id of ids)
       void client.session.interrupt({ sessionID: id }, request()).catch(() => {});
+    void client.session
+      .list({ directory: input.directory, limit: 1000 }, request())
+      .then((listed) => {
+        for (const session of listed.data)
+          if (!ids.has(session.id))
+            void client.session.interrupt({ sessionID: session.id }, request()).catch(() => {});
+      })
+      .catch(() => {});
   };
   const status = retry(async () => {
     const info = await client.session.get({ sessionID: root.id }, request());
